@@ -6,7 +6,7 @@
 			<Box dy="-1"/>
 		</NMovingWall>
 		<None name="Blobb">
-		<Box nx="64" fy="-1"/>
+		<Box nx="64" fy="-2"/>
 		</None>
 		<Wall mask="ALL">
 			<Box ny="1"/>
