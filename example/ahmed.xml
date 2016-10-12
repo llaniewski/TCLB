@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <CLBConfig version="2.0" output="output/">
 	<Units>
-		<Params size="1m" gauge="70"/>
+		<Params size="1m" gauge="30"/>
 		<Params nu="1.4e-5m2/s" gauge="0.0001"/>
 	</Units>
         <Geometry nx="6m" ny="1m" nz="1m">
@@ -14,7 +14,7 @@
 		</Wall>
 	</Geometry>
 	<Model>
-		<Params Velocity="0.01"/>
+		<Params Velocity="0.01" nubuffer="0.1666"/>
 	</Model>
 	<VTK Iterations="1000"/>
 	<Solve Iterations="10000"/>

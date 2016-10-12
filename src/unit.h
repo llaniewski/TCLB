@@ -11,6 +11,7 @@
 // m s kg K
 
 
+void gauss (double A[], double b[], double x[], int n);
 
 std::string strFromDouble(double val);
 
