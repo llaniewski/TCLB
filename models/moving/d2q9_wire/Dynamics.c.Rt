@@ -1,0 +1,181 @@
+<?R
+	source("conf.R") 
+	c_header();
+	f = PV(Density$name)
+	U = as.matrix(Density[,c("dx","dy")])
+
+	u = PV(paste("u[",1:2-1,"]",sep=""))
+	rho = PV("rho")
+	omega = PV("omega")
+	source("lib/feq.R")
+	source("lib/boundary.R")
+	EQ = MRT_eq(U,rho,u*rho, ortogonal=FALSE);
+?>
+
+
+CudaDeviceFunction real_t getRho(){
+	return <?R C(sum(f)) ?> ;
+}
+    
+CudaDeviceFunction vector_t getU(){
+	real_t d = <?R C(sum(f)) ?>;
+	vector_t u;
+<?R C(PV(c("u.x","u.y")), f %*% U * rho^(-1)) ?>
+	u.z = 0.0;
+	return u;
+}
+
+CudaDeviceFunction real_t getSolid(){
+	real_t dx = X - PX;
+	real_t dy = Y - PY;
+	real_t w = calcW(dx,dy);
+	return w;
+}
+
+
+CudaDeviceFunction float2 Color() {
+        float2 ret;
+        vector_t u = getU();
+        ret.x = sqrt(u.x*u.x + u.y*u.y);
+        ret.y = 1-getSolid();
+        return ret;
+}
+
+CudaDeviceFunction void SetEquilibrum(real_t d, real_t u[2])
+{
+	<?R C(f, EQ$feq) ?>
+}
+
+CudaDeviceFunction void Init() {
+	real_t u[2] = {Velocity,0.};
+	real_t d = Density;
+	SetEquilibrum(d,u);
+}
+
+CudaDeviceFunction void Run() {
+    switch (NodeType & NODE_BOUNDARY) {
+	case NODE_Solid:
+	case NODE_Wall:
+		BounceBack();
+		break;
+	case NODE_EVelocity:
+		EVelocity();
+		break;
+	case NODE_WPressure:
+		WPressure();
+		break;
+	case NODE_WVelocity:
+		WVelocity();
+		break;
+	case NODE_EPressure:
+		EPressure();
+		break;
+    }
+    if (NodeType & NODE_MRT)
+    {
+		CollisionMRT();
+    }
+}
+
+CudaDeviceFunction void BounceBack()
+{
+<?R FullBounceBack() ?>
+}
+
+CudaDeviceFunction void EVelocity()
+{
+        real_t rho, ru;
+	real_t ux0 = Velocity;
+	rho = ( f0 + f2 + f4 + 2.*(f1 + f5 + f8) ) / (1. + ux0);
+	ru = rho * ux0;
+	f3 = f1 - (2./3.) * ru;
+	f7 = f5 - (1./6.) * ru + (1./2.)*(f2 - f4);
+	f6 = f8 - (1./6.) * ru + (1./2.)*(f4 - f2);
+}
+
+CudaDeviceFunction void WPressure()
+{
+        real_t ru, ux0;
+	real_t rho = Density;
+	ux0 = -1. + ( f0 + f2 + f4 + 2.*(f3 + f7 + f6) ) / rho;
+	ru = rho * ux0;
+
+	f1 = f3 - (2./3.) * ru;
+	f5 = f7 - (1./6.) * ru + (1./2.)*(f4 - f2);
+	f8 = f6 - (1./6.) * ru + (1./2.)*(f2 - f4);
+}
+
+CudaDeviceFunction void WVelocity()
+{
+        real_t rho, ru;
+	real_t u[2] = {Velocity,0.};
+	rho = ( f0 + f2 + f4 + 2.*(f3 + f7 + f6) ) / (1. - u[0]);
+	ru = rho * u[0];
+	f1 = f3 + (2./3.) * ru;
+	f5 = f7 + (1./6.) * ru + (1./2.)*(f4 - f2);
+	f8 = f6 + (1./6.) * ru + (1./2.)*(f2 - f4);
+}
+
+CudaDeviceFunction void EPressure()
+{
+        real_t ru, ux0;
+	real_t rho = Density;
+	ux0 = -1. + ( f0 + f2 + f4 + 2.*(f1 + f5 + f8) ) / rho;
+	ru = rho * ux0;
+
+	f3 = f1 - (2./3.) * ru;
+	f7 = f5 - (1./6.) * ru + (1./2.)*(f2 - f4);
+	f6 = f8 - (1./6.) * ru + (1./2.)*(f4 - f2);
+}
+
+CudaDeviceFunction real_t calcW0(real_t d) {
+	d = d + SM_M;
+	if (SM == 0) {
+		if (d < 0) return 0;
+		return 1;
+	} else {
+		d = d / SM;
+		if (d < -1) return 0;
+		if (d > 1) return 1;
+		return ((3-d*d)*d+2)/4;
+	}
+}
+
+CudaDeviceFunction real_t calcW(real_t dx, real_t dy) {
+	return calcW0(sqrt(dx*dx+dy*dy) - PDR);
+}
+
+CudaDeviceFunction void CollisionMRT()
+{
+	real_t u[2], v[2], rho, R[9];
+	real_t B = getSolid();
+<?R
+	R = PV("R[",1:9-1,"]")
+	B = PV("B")
+	v = PV("v[",1:2-1,"]")
+	C(R, f %*% EQ$mat)
+?>
+	rho = R[0];
+	u[0] = R[1];
+	u[1] = R[2];
+<?R	
+	C(R, R - EQ$Req)
+	if (Options$BB) {
+	BB = function(R) ifelse(EQ$order %% 2 == 0, 1, -1)*R
+	C(R, omega*R*(1-B) + BB(R)*B);
+	} else {
+	C(R, omega*R)
+	}
+	if (Options$EDM) {
+		C(u, (1-B)*u + B*v)
+		C(R, R + EQ$Req)
+	} else {
+		C(R, R + (1-B)*EQ$Req)
+		C(u, v)
+		C(R, R + B*EQ$Req)
+	}
+	C(f, R %*% solve(EQ$mat))
+?>
+}
+
+
