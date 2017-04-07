@@ -18,7 +18,7 @@ CudaDeviceFunction real_t getRho(){
 }
     
 CudaDeviceFunction vector_t getU(){
-	real_t d = <?R C(sum(f)) ?>;
+	real_t rho = <?R C(sum(f)) ?>;
 	vector_t u;
 <?R C(PV(c("u.x","u.y")), f %*% U * rho^(-1)) ?>
 	u.z = 0.0;
@@ -41,7 +41,7 @@ CudaDeviceFunction float2 Color() {
         return ret;
 }
 
-CudaDeviceFunction void SetEquilibrum(real_t d, real_t u[2])
+CudaDeviceFunction void SetEquilibrum(real_t rho, real_t u[2])
 {
 	<?R C(f, EQ$feq) ?>
 }
@@ -147,27 +147,32 @@ CudaDeviceFunction real_t calcW(real_t dx, real_t dy) {
 
 CudaDeviceFunction void CollisionMRT()
 {
-	real_t u[2], v[2], rho, R[9];
+	real_t u[2], v[2], rho, R[9], Jx, Jy;
+	real_t omega = (3.0*nu-0.5)/(3.0*nu+0.5);
 	real_t B = getSolid();
+	v[0] = PX_DT;
+	v[1] = PY_DT;
 <?R
 	R = PV("R[",1:9-1,"]")
 	B = PV("B")
 	v = PV("v[",1:2-1,"]")
+	J = PV("J",c("x","y"))
+	G = PV("Gravitation",c("X","Y"))
 	C(R, f %*% EQ$mat)
-?>
-	rho = R[0];
-	u[0] = R[1];
-	u[1] = R[2];
-<?R	
+	C(V(rho, J),R[1:3])
+	C(u, J*rho^(-1))
 	C(R, R - EQ$Req)
 	if (Options$BB) {
-	BB = function(R) ifelse(EQ$order %% 2 == 0, 1, -1)*R
-	C(R, omega*R*(1-B) + BB(R)*B);
+		BB = function(R) ifelse(EQ$order %% 2 == 0, 1, -1)*R
+		C(R, omega*R*(1-B) + BB(R)*B);
 	} else {
-	C(R, omega*R)
+		C(R, omega*R)
+	}
+	if (Options$meanu) {
+		C(v,2*v-u);
 	}
 	if (Options$EDM) {
-		C(u, (1-B)*u + B*v)
+		C(u, (1-B)*(u+G) + B*v)
 		C(R, R + EQ$Req)
 	} else {
 		C(R, R + (1-B)*EQ$Req)
@@ -175,7 +180,10 @@ CudaDeviceFunction void CollisionMRT()
 		C(R, R + B*EQ$Req)
 	}
 	C(f, R %*% solve(EQ$mat))
+	C(J, J - f %*% EQ$mat[,2:3])
 ?>
+	AddToForceX(Jx);
+	AddToForceY(Jy);
 }
 
 

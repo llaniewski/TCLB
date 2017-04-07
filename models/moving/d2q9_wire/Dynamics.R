@@ -31,14 +31,14 @@ AddQuantity(name="Solid",unit="1")
 
 #AddSetting(name="omega", comment='one over relaxation time')
 #AddSetting(name="nu", omega='1.0/(3*nu + 0.5)', default=0.16666666, comment='viscosity')
-AddSetting(name="tau0", comment='one over relaxation time')
-AddSetting(name="nu", tau0='3*nu + 0.5', default=0.16666666, comment='viscosity')
+#AddSetting(name="tau0", comment='one over relaxation time')
+AddSetting(name="nu", default=0.16666666, comment='viscosity')
 AddSetting(name="Velocity", default=0, comment='inlet/outlet/init velocity', zonal=T)
 AddSetting(name="Density", default=1, comment='inlet/outlet/init density', zonal=T)
 AddSetting(name="Smag", default=1, comment='inlet density')
 
-AddQuantity( name="RhoB",adjoint=T)
-AddQuantity( name="UB",adjoint=T,vector=T)
+AddSetting(name="GravitationX")
+AddSetting(name="GravitationY")
 
 # Globals - table of global integrals that can be monitored and optimized
 
@@ -52,10 +52,10 @@ AddGlobal(name="Power", comment='reaction force X')
 AddGlobal(name="Power2", comment='reaction force Y')
 
 
-AddSetting(name="PDR", default=0, comment='plate radius')
+AddSetting(name="PDR", default=0, comment='wire radius')
 AddSetting(name="SM",   default=1, comment='smoothing diameter')
 AddSetting(name="SM_M", default=0, comment='smoothing bias')
-AddSetting(name="PX", default=0, comment='plate position X', zonal=T)
-AddSetting(name="PY", default=0, comment='plate position Y', zonal=T)
-AddSetting(name="PR", default=0, comment='plate angle', zonal=T)
+AddSetting(name="PX", default=0, comment='wire position X', zonal=T)
+AddSetting(name="PY", default=0, comment='wire position Y', zonal=T)
+AddSetting(name="PR", default=0, comment='wire angle', zonal=T)
 
