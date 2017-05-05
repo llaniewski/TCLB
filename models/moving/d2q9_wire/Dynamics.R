@@ -44,6 +44,8 @@ AddSetting(name="GravitationY")
 
 AddGlobal(name="ForceX", comment='reaction force X')
 AddGlobal(name="ForceY", comment='reaction force Y')
+AddGlobal(name="FluxX", comment='flux X')
+AddGlobal(name="FluxY", comment='flux Y')
 AddGlobal(name="Moment", comment='reaction force X')
 AddGlobal(name="PowerX", comment='reaction force Y')
 AddGlobal(name="PowerY", comment='reaction force X')

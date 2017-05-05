@@ -180,10 +180,12 @@ CudaDeviceFunction void CollisionMRT()
 		C(R, R + B*EQ$Req)
 	}
 	C(f, R %*% solve(EQ$mat))
-	C(J, J - f %*% EQ$mat[,2:3])
+	C(v, f %*% EQ$mat[,2:3])
 ?>
-	AddToForceX(Jx);
-	AddToForceY(Jy);
+	AddToForceX(v[0] - Jx - GravitationX);
+	AddToForceY(v[1] - Jy - GravitationY);
+	AddToFluxX((v[0] + Jx)*0.5);
+	AddToFluxY((v[1] - Jy)*0.5);
 }
 
 
