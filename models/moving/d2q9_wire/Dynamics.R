@@ -42,11 +42,11 @@ AddSetting(name="GravitationY")
 
 # Globals - table of global integrals that can be monitored and optimized
 
-AddGlobal(name="ForceX", comment='reaction force X')
-AddGlobal(name="ForceY", comment='reaction force Y')
-AddGlobal(name="FluxX", comment='flux X')
-AddGlobal(name="FluxY", comment='flux Y')
-AddGlobal(name="Moment", comment='reaction force X')
+AddGlobal(name="ForceX", comment='reaction force X',unit="N/m")
+AddGlobal(name="ForceY", comment='reaction force Y',unit="N/m")
+AddGlobal(name="FluxX", comment='flux X',unit="kg/s")
+AddGlobal(name="FluxY", comment='flux Y',unit="kg/s")
+AddGlobal(name="Moment", comment='reaction force X',unit="N")
 AddGlobal(name="PowerX", comment='reaction force Y')
 AddGlobal(name="PowerY", comment='reaction force X')
 AddGlobal(name="PowerR", comment='reaction force Y')
