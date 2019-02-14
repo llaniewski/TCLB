@@ -24,10 +24,15 @@ int cbPythonCall::Init () {
             } else {
                 oldpath = std::string( syspythonpath );
             }            
+            pugi::xml_attribute pn_pythonpath = node.attribute("pythonpath");
             
             oldpath.resize (oldpath.size()+1,':');
             oldpath.resize (oldpath.size()+1,'.');
-
+    
+            if (pn_pythonpath){
+                oldpath.resize (oldpath.size()+1,':');
+                oldpath.append(pn_pythonpath.value());
+            }
             setenv("PYTHONPATH",oldpath.c_str(),1);
             debug1("PYTHONPATH set to %s", oldpath.c_str() );
 
@@ -43,7 +48,7 @@ int cbPythonCall::DoIt () {
         
         pugi::xml_attribute module = node.attribute("module");
 		pugi::xml_attribute function = node.attribute("function");			
-        pugi::xml_attribute comp = node.attribute("pass_component");
+        pugi::xml_attribute comp = node.attribute("densities");
         pugi::xml_attribute quan = node.attribute("quantities");
 
 
@@ -149,11 +154,15 @@ int cbPythonCall::DoIt () {
  
 		        pValue = PyObject_CallObject(pFunc, pArgs);
                 Py_DECREF(pArgs);
+                long ret_value = 999;
 	            if (pValue != NULL) {
-	                output("Result of Python call: %ld\n", PyInt_AsLong(pValue));
+                    ret_value = PyInt_AsLong(pValue);
 	                Py_DECREF(pValue);
-	            }
-	            else {
+                } 
+
+                
+	            output("Result of Python call: %ld\n",ret_value);
+                if (ret_value != 0) {
 	                Py_DECREF(pFunc);
 	                Py_DECREF(pModule);
 	                PyErr_Print();

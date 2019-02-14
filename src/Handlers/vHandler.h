@@ -36,11 +36,13 @@ class vHandler {
 	double everyIter; ///< Interval by which it should be activated
 	pugi::xml_node node; ///< XML element connected to the Handler
 	Solver* solver; ///< The solver object connected to the Handler
+	vHandler();
 	virtual ~vHandler() {};
 	virtual int Init(); ///< Initialize the Handler
 	virtual int DoIt(); ///< Do what have to be done
 	virtual int Finish(); ///< Finalize the Handler
 	virtual int Type(); ///< Return the type of the Handler
+	int parSize;
 	virtual int NumberOfParameters(); ///< Return the type of the Handler
 	virtual int Parameters(int type, double* data);
 	inline  int GetParameters(double * data) { return this->Parameters(PAR_GET, data); };
@@ -52,7 +54,7 @@ class vHandler {
 	\param iter Iteration number for which to check
 	\return True if the iteration is right to DoIt
 */
-	inline const bool Now(int iter) {
+	inline const bool Now(double iter) {
 		if (everyIter) {
 			iter -= startIter;
 			return floor((iter)/everyIter) > floor((iter-1)/everyIter);
@@ -64,7 +66,7 @@ class vHandler {
 	\param iter Iteration from which to calculate the next one
 	\return Number of the next iteration to DoIt
 */
-	inline const int Next(int iter) {
+	inline const int Next(double iter) {
 		if (everyIter) {
 			iter -= startIter;
 			int k = floor((iter)/everyIter);
@@ -78,7 +80,7 @@ class vHandler {
 	\param iter Iteration from which to calculate the next one
 	\return Number of the next iteration to DoIt
 */
-	inline const int Prev(int iter) {
+	inline const int Prev(double iter) {
 		if (everyIter) {
 			iter -= startIter;
 			int k = floor((iter-1)/everyIter);
