@@ -750,15 +750,13 @@ offsets = function(d2=FALSE, cpu=FALSE) {
     list(get_offsets = 
       function(w,dw,cpu=def.cpu) {
 	if (is.numeric(dw)) {
-          tab1 = c(ifelse(dw<0,1,0),ifelse(dw<0,-1,0),0,0,0)
-          tab2 = c(0,0,0,ifelse(dw>0,-1,0),ifelse(dw>0,1,0))
-          tab3 = c(dw<0,TRUE,TRUE,TRUE,dw>0)
-	  dw = PV(as.integer(dw))
-	} else {
-          tab1 = c(1,1,1,-1,-1,-1,0,0,0)
-          tab2 = c(0,0,0,-1,-1,-1,1,1,1)
-          tab3 = rep(TRUE,9)
-	}
+	  dw = V(dw)
+        }
+        dw_plus  = sapply(dw@vec, function(x) if (is.numeric(x)) x > 0 else TRUE)
+        dw_minus = sapply(dw@vec, function(x) if (is.numeric(x)) x < 0 else TRUE)
+        tab1 = c(ifelse(dw_minus,1,0),ifelse(dw_minus,-1,0),0,0,0)
+        tab2 = c(0,0,0,ifelse(dw_plus,-1,0),ifelse(dw_plus,1,0))
+        tab3 = c(dw_minus,TRUE,TRUE,TRUE,dw_plus)
 	mins = PV(as.integer(mins))
         get_tab = cbind(tab1[p$x],tab1[p$y],tab1[p$z],tab2[p$x],tab2[p$y],tab2[p$z])
         get_sel = tab3[p$x] & tab3[p$y] & tab3[p$z]
