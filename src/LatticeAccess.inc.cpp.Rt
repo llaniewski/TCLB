@@ -25,7 +25,7 @@ template <class N> CudaDeviceFunction void LatticeContainer::getType(N & node)
 shmem.w =  PV("CudaThread.",c("x","y","z"))
 shmem.nw = PV("CudaNumberOfThreads.",c("x","y","z"))
 shmem.offset = function(f, dw) {
-	paste0("shmem_",f$nicename, "[", ToC(shmem.w[1] + dw[1] - f$minx, float=FALSE), " + (", ToC(shmem.nw[1] + f$maxx - f$minx, float=FALSE), ")*(", ToC(shmem.w[2] + dw[2] - f$miny, float=FALSE), " + (", ToC(shmem.nw[1] + f$maxy - f$miny, float=FALSE), ")*(", ToC(shmem.w[3] + dw[3] - f$minz, float=FALSE), "))]");
+	paste0("shmem_",f$nicename, "[", ToC(shmem.w[1] + dw[1] - f$minx, float=FALSE), " + (", ToC(shmem.nw[1] + f$maxx - f$minx, float=FALSE), ")*(", ToC(shmem.w[2] + dw[2] - f$miny, float=FALSE), " + (", ToC(shmem.nw[2] + f$maxy - f$miny, float=FALSE), ")*(", ToC(shmem.w[3] + dw[3] - f$minz, float=FALSE), "))]");
 }
   
   make.context = function(buf, pocket=FALSE) {
@@ -222,11 +222,17 @@ resolve.symmetries = function(D) {
 
 ?>
 template <class N> CudaDeviceFunction void LatticeContainer::pop<?%s s$suffix ?>(N & node) 
-{
-<?R for (f in rows(Fields)) if (f$preload) { ?>
-	preload_<?%s f$nicename ?>( node.x_, node.y_, node.z_, node.NodeType );
-<?R } ?>
-<?R
+{ <?R
+  preloaded = any(Fields$preload);
+  if (preloaded) { ?>
+  CudaSyncThreads(); <?R
+  }
+  for (f in rows(Fields)) if (f$preload) { ?>
+	preload_<?%s f$nicename ?>( node.x_, node.y_, node.z_, node.NodeType ); <?R
+  }
+  if (preloaded) { ?>
+  CudaSyncThreads(); <?R
+  }
   for (d in rows(Density)[s$load.densities]) {
     f = rows(Fields)[Fields$name == d$field][[1]] ?>
 	node.<?%s d$name ?> = load_<?%s f$nicename ?>< <?%d d$dx ?>, <?%d d$dy ?>, <?%d d$dz ?> >( node.x_, node.y_, node.z_ ); <?R
@@ -301,6 +307,9 @@ template <class N> CudaDeviceFunction void LatticeContainer::pop<?%s s$suffix ?>
     for (f in rows(Fields)) { ?>
 template <int DX, int DY, int DZ> CudaDeviceFunction real_t LatticeContainer::load_sym_<?%s f$nicename ?> (const int & x, const int & y, const int & z, const flag_t & nt) { return load_<?%s f$nicename ?><DX,DY,DZ>(x,y,z); }
 <?R if (f$preload) { ?>
+
+__shared__ real_t shmem_<?%s f$nicename ?>[34*34*1];
+
 template <int DX, int DY, int DZ> CudaDeviceFunction real_t LatticeContainer::get_<?%s f$nicename ?> (const int & x, const int & y, const int & z, const flag_t & nt) {
 	return <?%s shmem.offset(f, PV(c("DX", "DY", "DZ"))) ?>;
 }
@@ -312,43 +321,52 @@ template <int DX, int DY, int DZ> CudaDeviceFunction real_t LatticeContainer::ge
 	}
 
 	preload_z = function(f, dx, dy) {
-		preload_0(f, dx, dy, 0); ?>
-	if (<?R C(shmem.w[3] + f$minz) ?> < 0) { <?R
+		preload_0(f, dx, dy, 0);
+	if (f$minz < 0) { ?>
+	if (<?R C(shmem.w[3]) ?> < <?R C(-f$minz) ?>) { <?R
 		preload_0(f, dx, dy, f$minz); ?>
+	} <?R
 	}
-	if (<?R C(shmem.w[3] + f$maxy) ?> >= <?R C(shmem.nw[3]) ?> || <?R C(PV("z") + f$maxz) ?> >= nz) { <?R
+	if (f$maxz > 0) { ?>
+	if (<?R C(shmem.w[3] + f$maxz) ?> >= <?R C(shmem.nw[3]) ?> || <?R C(PV("z") + f$maxz) ?> >= fz) { <?R
 		preload_0(f, dx, dy, f$maxz); ?>
 	} <?R
 	}
+	}
 
 	preload_y = function(f, dx) {
-		preload_0(f, dx, 0, 0); ?>
-	if (<?R C(shmem.w[2] + f$miny) ?> < 0) { <?R
+		preload_z(f, dx, 0);
+	if (f$miny < 0) { ?>
+	if (<?R C(shmem.w[2]) ?> < <?R C(-f$miny) ?>) { <?R
 		preload_z(f, dx, f$miny); ?>
+	} <?R
 	}
-	if (<?R C(shmem.w[2] + f$maxy) ?> >= <?R C(shmem.nw[2]) ?> || <?R C(PV("y") + f$maxy) ?> >= ny) { <?R
+	if (f$maxy > 0) { ?>
+	if (<?R C(shmem.w[2] + f$maxy) ?> >= <?R C(shmem.nw[2]) ?> || <?R C(PV("y") + f$maxy) ?> >= fy) { <?R
 		preload_z(f, dx, f$maxy); ?>
 	} <?R
+	}
 	}
 
 	preload_x = function(f) {
 		if (f$maxx > 1 || f$minx < -1 || f$maxy > 1 || f$miny < -1 || f$maxz > 1 || f$minz < -1) {
 			stop("preload not implemented with multispeed")
 		}
-	preload_0(f,0,0,0); ?>
-	if (<?R C(shmem.w[1] + f$minx) ?> < 0) { <?R
+	preload_y(f,0);
+	if (f$minx < 0) { ?>
+	if (<?R C(shmem.w[1]) ?> < <?R C(-f$minx) ?>) { <?R
 		preload_y(f, f$minx); ?>
+	} <?R
 	}
+	if (f$maxx > 0) { ?>
 	if (<?R C(shmem.w[1] + f$maxx) ?> >= <?R C(shmem.nw[1]) ?>) { <?R
 		preload_y(f, f$maxx); ?>
 	} <?R
 	}
+	}
 
 	preload = function(f) preload_x(f)
 ?>
-
-		<?%s shmem.offset(f, PV(c(f$minx,0,0))) ?> = load_sym_<?%s f$nicename ?>< <?%d f$minx ?>, 0, 0 >(x,y,z,nt);
-	}
 
 CudaDeviceFunction void LatticeContainer::preload_<?%s f$nicename ?> (const int & x, const int & y, const int & z, const flag_t & nt) {
 	<?R preload(f) ?>
