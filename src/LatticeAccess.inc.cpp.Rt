@@ -293,7 +293,7 @@ template <class N> CudaDeviceFunction void LatticeContainer::pop<?%s s$suffix ?>
     for (f in rows(Fields)) { ?>
 template <int DX, int DY, int DZ> CudaDeviceFunction real_t LatticeContainer::load_sym_<?%s f$nicename ?> (const int & x, const int & y, const int & z, const flag_t & nt) { return load_<?%s f$nicename ?><DX,DY,DZ>(x,y,z); }
 
-CudaDeviceFunction real_t LatticeContainer::save_<?%s f$nicename ?>(const int & x, const int & y, const int & z,  const real_t& value) {
+CudaDeviceFunction void LatticeContainer::save_<?%s f$nicename ?>(const int & x, const int & y, const int & z,  const real_t& value) {
 <?R
   con = make.context("out");
   p = PV(c("x","y","z"));
