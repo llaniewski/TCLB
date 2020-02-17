@@ -79,6 +79,7 @@ class LatticeContainer {
   template<class N>  CudaDeviceFunction void getType(N & f);
 
 <?R for (f in rows(Fields)) { ?>
+        CudaDeviceFunction real_t save_<?%s f$nicename ?> (const int & x, const int & y, const int & z, const real_t& value);
         CudaDeviceFunction real_t load_<?%s f$nicename ?> (const int & x, const int & y, const int & z, const int & dx, const int & dy, const int & dz);
         template <int DX, int DY, int DZ>
         CudaDeviceFunction real_t load_<?%s f$nicename ?> (const int & x, const int & y, const int & z) {
