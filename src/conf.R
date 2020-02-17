@@ -136,7 +136,7 @@ AddDensity = function(name, dx=0, dy=0, dz=0, comment="", field=name, adjoint=F,
 	}
 }
 
-AddField = function(name, stencil2d=NA, stencil3d=NA, dx=0, dy=0, dz=0, comment="", adjoint=F, group="", parameter=F,average=F, sym=c("","","")) {
+AddField = function(name, stencil2d=NA, stencil3d=NA, dx=0, dy=0, dz=0, comment="", adjoint=F, group="", parameter=F,average=F, sym=c("","",""), preload=NA) {
 	if (missing(name)) stop("Have to supply name in AddField!")
 	if (missing(group)) group = name
 	comment = ifelse(comment == "", name, comment);
@@ -155,7 +155,8 @@ AddField = function(name, stencil2d=NA, stencil3d=NA, dx=0, dy=0, dz=0, comment=
 			average=average,
 			symX=sym[1],
 			symY=sym[2],
-			symZ=sym[3]
+			symZ=sym[3],
+			preload=preload
 		)
 
 		if (any(Fields$name == d$name)) {
@@ -166,6 +167,7 @@ AddField = function(name, stencil2d=NA, stencil3d=NA, dx=0, dy=0, dz=0, comment=
 			Fields$maxy[i] <<- max(Fields$maxy[i], d$maxy)
 			Fields$minz[i] <<- min(Fields$minz[i], d$minz)
 			Fields$maxz[i] <<- max(Fields$maxz[i], d$maxz)
+			if (! is.na(preload)) Fields$preload[i] <<- preload
 		} else {
 			Fields <<- rbind(Fields, d)
 		}
@@ -556,6 +558,7 @@ Fields$tangent_name = add.to.var.name(Fields$name,"d")
 Fields$area = with(Fields,(maxx-minx+1)*(maxy-miny+1)*(maxz-minz+1))
 Fields$simple_access = (Fields$area == 1)
 Fields$big = Fields$area > 27
+Fields$preload = ifelse(is.na(Fields$preload), Fields$area > 2, Fields$preload)
 
 if (ADJOINT==1) {
 
