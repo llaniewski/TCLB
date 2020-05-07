@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<CLBConfig output="output/">
+	<Geometry nx="1024" ny="1024">
+		<None name="city">
+			<Box dx="500" nx="100" dy="500" ny="300"/>
+			<Box dx="500" nx="150" dy="500" ny="150"/>
+		</None>
+		<None name="box">
+			<Box dx="450" nx="1" dy="450" ny="1"/>
+		</None>
+	</Geometry>
+	<Model>
+		<Param name="Population" value="300"/>
+		<Param name="Population" value="3000" zone="city"/>
+		<Param name="Sick" value="1" zone="box"/>
+		<Param name="Beta" value="0.00003"/>
+		<Param name="Alpha" value="0.001"/>
+	</Model>
+	<VTK/>
+	<VTK Iterations="1000"/>
+	<Log Iterations="100"/>
+	<Solve Iterations="100000"/>
+</CLBConfig>
