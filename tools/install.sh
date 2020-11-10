@@ -238,7 +238,7 @@ rdep)
 	;;
 rpython)
 	normal_install rjson
-	normal_install rPython
+	#normal_install rPython
 	;;
 rinside)
 	if test "x$1" == "xgithub"
