@@ -497,6 +497,13 @@ CudaDeviceFunction void CalcF() {
 	if (sol > 1.0) { sol =  1.0; }
 	if (sol > 1.0e-8) {
 <?R C( uP, uP*sol^{-1} ) ?>
+		if (SolidVelocityLimit != 0.0) {
+			real_t <?R C(PV("vl"), sum(uP*uP)) ?>;
+			if (vl > SolidVelocityLimit*SolidVelocityLimit) {
+				real_t d = SolidVelocityLimit/sqrt(vl);
+				<?R C( uP, uP*d ) ?>
+			}
+		}
 	} else {
 <?R
 	C(uP, 0)

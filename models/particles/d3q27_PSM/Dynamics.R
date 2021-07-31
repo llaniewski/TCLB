@@ -62,6 +62,9 @@ AddSetting(name="AccelX", default=0.0, comment='body acceleration X', unit="m/s2
 AddSetting(name="AccelY", default=0.0, comment='body acceleration Y', unit="m/s2")
 AddSetting(name="AccelZ", default=0.0, comment='body acceleration Z', unit="m/s2")
 
+AddSetting(name="SolidVelocityLimit", default="0.0", comment='cutoff for partcile velocity', unit="m/s")
+
+
 AddGlobal(name="TotalFluidMomentumX", unit="kgm/s")
 AddGlobal(name="TotalFluidMomentumY", unit="kgm/s")
 AddGlobal(name="TotalFluidMomentumZ", unit="kgm/s")
