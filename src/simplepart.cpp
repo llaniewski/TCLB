@@ -5,6 +5,8 @@
 #include <math.h>
 #include <vector>
 
+const double pi = 3.14159265358979;
+
 struct Particle {
   double x[3];
   double r;
@@ -67,6 +69,11 @@ int main(int argc, char *argv[]) {
     periodic[i] = false;
     periodicity[i] = 0.0;
   }
+  
+  double grav[3];
+  double grav_f=0, grav_phase=0;
+  for (int i = 0; i < 3; i++) grav[i] = 0.0;
+  
 
   if (argc != 2) {
     printf("Syntax: simplepart config.xml\n");
@@ -143,6 +150,24 @@ int main(int argc, char *argv[]) {
         } else if (attr_name == "z") {
           periodic[2] = true;
           periodicity[2] = attr.as_double();
+        } else {
+          ERROR("Unknown atribute '%s' in '%s'", attr.name(), node.name());
+          return -1;
+        }
+      }
+    } else if (node_name == "Gravity") {
+      for (pugi::xml_attribute attr = node.first_attribute(); attr; attr = attr.next_attribute()) {
+        std::string attr_name = attr.name();
+        if (attr_name == "x") {
+          grav[0] = attr.as_double();
+        } else if (attr_name == "y") {
+          grav[1] = attr.as_double();
+        } else if (attr_name == "z") {
+          grav[2] = attr.as_double();
+        } else if (attr_name == "f") {
+          grav_f = attr.as_double();
+        } else if (attr_name == "phase") {
+          grav_phase = attr.as_double();
         } else {
           ERROR("Unknown atribute '%s' in '%s'", attr.name(), node.name());
           return -1;
@@ -291,9 +316,11 @@ int main(int argc, char *argv[]) {
       fprintf(logging_f, "\n");
     }
     for (Particles::iterator p = particles.begin(); p != particles.end(); p++) {
+      double grav_m = cos(2*pi*grav_f*dt*iter + grav_phase);
       if (p->m > 0.0) {
         for (int i=0; i<3; i++) p->v[i] = p->v[i] + p->f[i] / p->m * dt;
       }
+      for (int i=0; i<3; i++) p->v[i] = p->v[i] + grav[i]*grav_m * dt;
       for (int i=0; i<3; i++) p->x[i] = p->x[i] + p->v[i] * dt;
     }
     iter++;
