@@ -195,8 +195,16 @@ CudaDeviceFunction void BounceBack()
 {
      real_t uf, uT;
      #define dump 1
+	vector_t force;
 <?R
   uT = PV("uT")
+  force = PV("force.",c("x","y","z"))
+  C(force, f %*% U * 2)
+?>
+	AddToWallForceX(force.x);
+	AddToWallForceY(force.y);
+	AddToWallForceZ(force.z);
+<?R
   V = cbind(1:27, bounce+1)
   sel = V[,1] > V[,2]
   V = V[sel,]
@@ -596,8 +604,8 @@ CudaDeviceFunction void Collision_PSM() {
 CudaDeviceFunction float2 Color() {
         float2 ret;
         vector_t u = getU();
-        ret.x = sqrt(u.x*u.x + u.y*u.y);
-	if (NodeType == NODE_Wall) ret.y = 0; else ret.y= 1;
+        ret.x = sqrt(u.x*u.x + u.y*u.y + u.z*u.z);
+	ret.y = 1 - getSolid();
         return ret;
 }
 

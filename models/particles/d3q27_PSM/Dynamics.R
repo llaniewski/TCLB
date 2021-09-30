@@ -58,9 +58,9 @@ AddSetting(name="VelocityZ", default="0.0", zonal=TRUE, comment='wall/inlet/outl
 
 AddSetting(name="Pressure", default="0Pa", comment='Inlet pressure', zonal=TRUE, unit="1Pa")
 
-AddSetting(name="AccelX", default=0.0, comment='body acceleration X', unit="m/s2")
-AddSetting(name="AccelY", default=0.0, comment='body acceleration Y', unit="m/s2")
-AddSetting(name="AccelZ", default=0.0, comment='body acceleration Z', unit="m/s2")
+AddSetting(name="AccelX", default=0.0, comment='body acceleration X', unit="m/s2", zonal=TRUE)
+AddSetting(name="AccelY", default=0.0, comment='body acceleration Y', unit="m/s2", zonal=TRUE)
+AddSetting(name="AccelZ", default=0.0, comment='body acceleration Z', unit="m/s2", zonal=TRUE)
 
 AddSetting(name="SolidVelocityLimit", default="0.0", comment='cutoff for partcile velocity', unit="m/s")
 
@@ -70,6 +70,11 @@ AddGlobal(name="TotalFluidMomentumY", unit="kgm/s")
 AddGlobal(name="TotalFluidMomentumZ", unit="kgm/s")
 AddGlobal(name="TotalFluidMass", unit="kg")
 AddGlobal(name="TotalFluidVolume", unit="m3")
+
+AddGlobal(name="WallForceX", unit="N")
+AddGlobal(name="WallForceY", unit="N")
+AddGlobal(name="WallForceZ", unit="N")
+
 
 AddNodeType(name="NVelocity", group="BOUNDARY")
 AddNodeType(name="EVelocity", group="BOUNDARY")
