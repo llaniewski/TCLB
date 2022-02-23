@@ -37,6 +37,10 @@ AC_ARG_WITH([hdf5-include],
 	AC_HELP_STRING([--with-hdf5-include=hdf5],
 		[specify the full path to your hdf5 installation (headers)]))
 
+AC_ARG_WITH([eigen],
+	AC_HELP_STRING([--with-eigen=eigen],
+		[specify the full path to your Eigen installation (headers)]))
+
 AC_ARG_ENABLE([graphics],
 	AC_HELP_STRING([--enable-graphics],
 		[make a GUI version]))
@@ -51,7 +55,7 @@ AC_ARG_ENABLE([cpp11],
 
 AC_ARG_WITH([cuda-arch],
 	AC_HELP_STRING([--with-cuda-arch=arch],
-		[specify the desired CUDA architecture (sm_11/sm_13/sm_20/sm_30/sm_60/sm_75)]))
+		[specify the desired CUDA architecture (sm_11/sm_13/sm_20/sm_30/sm_60/sm_75/sm_80)]))
 
 AC_ARG_WITH([nlopt],
 	AC_HELP_STRING([--with-nlopt=nlopt],
@@ -293,6 +297,12 @@ then
 		AC_DEFINE([GRID3D], [1], [Using 3D block grid in CUDA])
 
     	CUDA_SUFF="75"
+	elif test "$CUDA_ARCH" == "sm_80"
+	then
+		AC_MSG_RESULT([${CUDA_ARCH}])
+		AC_DEFINE([GRID3D], [1], [Using 3D block grid in CUDA])
+
+    	CUDA_SUFF="80"
 	else
 		AC_MSG_ERROR([unknown arch ${CUDA_ARCH}])
 	fi
@@ -355,6 +365,25 @@ AC_CHECK_LIB([mpi], [MPI_Recv],[],[
 		AC_MSG_ERROR([Didn't find MPI Library])
 	])
 ])
+
+
+AC_MSG_CHECKING([EIGEN path])
+
+if test "x${with_eigen}" != "xno"; then
+	if test "x${with_eigen}" != "x"; then
+		EIGEN_INCLUDE="${with_eigen}"
+		if test -d "${EIGEN_INCLUDE}"
+		then
+			CPPFLAGS="${CPPFLAGS} -I${EIGEN_INCLUDE}"
+		else
+			AC_MSG_ERROR([${EIGEN_INCLUDE}: No such directory])
+		fi
+	fi
+
+	AC_CHECK_HEADERS([Eigen/Dense],[],[has_hdf5="no"])
+	AC_DEFINE([WITH_EIGEN], [1], [Using Eigen])
+
+fi
 
 
 AC_MSG_CHECKING([HDF5 path])
