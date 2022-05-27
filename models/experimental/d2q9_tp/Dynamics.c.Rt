@@ -1,0 +1,275 @@
+<?R
+	source("conf.R")
+	c_header();
+
+	source("lib/feq.R")
+	source("lib/boundary.R")
+
+	U = d2q9[,1:2]
+
+
+	fa = PV(Density[Density$group=='fa',"name"])
+    fb = PV(Density[Density$group=='fb',"name"])
+    f = fa + fb
+	rho = PV("rho")
+    A = PV("A")
+    B = PV("B")
+	u = PV("u",c("x","y"))
+	J = PV("J",c("x","y"))
+    BC_Velocity=PV(c('VelocityX', 'VelocityY'))
+
+	EQ = MRT_eq(U, J=u*rho, ortogonal=FALSE)
+
+	ua = PV("ua", c("x","y"));
+	ub = PV("ub", c("x","y"));
+    Aeq = subst(EQ$Req, rho=A, ux=ua[1], uy=ua[2])
+	Beq = subst(EQ$Req, rho=B, ux=ub[1], uy=ub[2])
+?>
+
+#define pi 3.141592653589793116
+
+CudaDeviceFunction real_t getRho(){
+	return <?R C(sum(f)) ?> ;
+}
+
+CudaDeviceFunction real_t getPhi(){
+	return phi(0,0) ;
+}
+
+CudaDeviceFunction void CalcPhi(){
+	phi = (<?R C(sum(fa)) ?>)/(<?R C(sum(f)) ?>);
+}
+
+CudaDeviceFunction vector_t getU(){
+	real_t d = <?R C(sum(f)) ?>;
+	vector_t u;
+<?R C(PV(c("u.x","u.y")), f %*% U) ?>
+    u.x /= d;
+	u.y /= d;
+    u.x += GravitationX*0.5;
+    u.y += GravitationY*0.5;
+	u.z = 0.0;
+	return u;
+}
+
+CudaDeviceFunction vector_t getGradPhi(){
+	vector_t gradPhi = calcGradPhi();
+	gradPhi.z = 0;
+	return gradPhi;
+}
+
+
+CudaDeviceFunction float2 Color() {
+        float2 ret;
+        vector_t u = getU();
+        ret.x = sqrt(u.x*u.x + u.y*u.y);
+        ret.y = 1 - getPhi();
+        return ret;
+}
+
+
+
+
+CudaDeviceFunction vector_t calcGradPhi(){
+	vector_t gradPhi;
+	if (NodeType & NODE_BOUNDARY){
+			gradPhi.x = 0.0;
+			gradPhi.y = 0.0;
+	} else {
+			gradPhi.x = (phi(1,0) - phi(-1,0))/3.0 + (phi(1,1) - phi(-1,-1) + phi(1,-1) - phi(-1,1))/12.0;
+			gradPhi.y = (phi(0,1) - phi(0,-1))/3.0 + (phi(1,1) - phi(-1,-1) + phi(-1,1) - phi(1,-1))/12.0;
+	}
+	gradPhi.z = sqrt(gradPhi.x*gradPhi.x + gradPhi.y*gradPhi.y + 1e-12); // length
+	return gradPhi;
+}
+
+CudaDeviceFunction void SetEquilibrum(real_t rho, real_t ux, real_t uy, real_t pf)
+{
+	real_t A = rho*pf, B=rho*(1-pf);
+	real_t <?R C(ua,sep=",") ?>;
+	real_t <?R C(ub,sep=",") ?>;
+<?R
+	C(ua, u)
+	feq = Aeq %*% solve(EQ$mat)
+	C( fa, feq)
+	C(ub, u)
+	feq = Beq %*% solve(EQ$mat)
+	C( fb, feq)
+?>
+}
+
+CudaDeviceFunction void Init() {
+	real_t rho, ux, uy, pf;
+   	rho = (1+Pressure*3);
+	ux = VelocityX;
+    uy = VelocityY;
+    pf = PhaseF;
+    if (IamWall){
+        rho = 1;
+        ux = 0;
+        uy = 0;
+    }
+	SetEquilibrum(
+		rho,
+		ux,
+		uy,
+        pf
+	);
+}
+
+CudaDeviceFunction void Run() {
+    switch (NodeType & NODE_BOUNDARY) {
+	case NODE_Solid:
+	case NODE_Wall:
+		BounceBack();
+		break;
+	case NODE_EVelocity:
+		EVelocity();
+		break;
+	case NODE_WPressure:
+		WPressure();
+		break;
+	case NODE_WVelocity:
+		WVelocity();
+		break;
+	case NODE_EPressure:
+		EPressure();
+		break;
+	case NODE_NVelocity:
+		NVelocity();
+		break;
+	case NODE_SVelocity:
+		SVelocity();
+		break;
+    }
+    if (NodeType & NODE_MRT)
+    {
+		CollisionMRT();
+    }
+}
+
+CudaDeviceFunction void BounceBack()
+{
+<?R FullBounceBack() ?>
+}
+
+
+<?R
+	ftmp = PV("ftmp",1:9-1);
+	pf = PV("PhaseF")
+?>
+
+
+CudaDeviceFunction void EVelocity()
+{
+	real_t <?R C(ftmp, sep=",") ?>;
+	<?R
+		C(ftmp, fa+fb);
+		ZouHeRewrite(EQ, ftmp, c(1, 0), "velocity", BC_Velocity)
+		sel = as.vector((U %*% c(1,0)) < 0)
+		C(fa[sel], ftmp[sel] * pf)
+		C(fb[sel], ftmp[sel] * (1-pf))
+	?>
+}
+
+CudaDeviceFunction void WPressure()
+{
+<?R ZouHeRewrite(EQ, fa, c(-1, 0), "pressure") ?>
+}
+
+CudaDeviceFunction void WVelocity()
+{
+	real_t <?R C(ftmp, sep=",") ?>;
+	<?R
+		C(ftmp, fa+fb);
+		ZouHeRewrite(EQ, ftmp, c(-1, 0), "velocity", BC_Velocity)
+		sel = as.vector((U %*% c(-1,0)) < 0)
+		C(fa[sel], ftmp[sel] * pf)
+		C(fb[sel], ftmp[sel] * (1-pf))
+	?>
+}
+
+CudaDeviceFunction void EPressure()
+{
+{<?R ZouHeRewrite(EQ, fa, c(1, 0), "pressure", rhs=pf) ?>}
+{<?R ZouHeRewrite(EQ, fb, c(1, 0), "pressure", rhs=1-pf) ?>}
+}
+
+CudaDeviceFunction void NVelocity()
+{
+<?R ZouHeRewrite(EQ, fa, c(0,1), "velocity", BC_Velocity) ?>
+}
+
+CudaDeviceFunction void SVelocity()
+{
+<?R ZouHeRewrite(EQ, fa, c(0, -1), "velocity", BC_Velocity) ?>
+}
+
+CudaDeviceFunction void CollisionMRT()
+{
+    real_t RelaxationRate = 1.0/(3*Viscosity + 0.5);
+    real_t S2 = 1-RelaxationRate;
+    real_t S3 = S2;
+<?R
+	Ra = PV("Ra", 1:nrow(U)-1);
+	Rb = PV("Rb", 1:nrow(U)-1);
+	usepa = PV("usepa", c("x","y"));
+	usepb = PV("usepb", c("x","y"));
+?>
+ 	real_t <?R C(Ra, sep=",") ?>;
+	real_t <?R C(Rb, sep=",") ?>;
+	real_t <?R C(rho, sep=",") ?>;
+	real_t <?R C(A, sep=",") ?>;
+	real_t <?R C(B, sep=",") ?>;
+	real_t <?R C(u, sep=",") ?>;
+	real_t <?R C(ua, sep=",") ?>;
+	real_t <?R C(ub, sep=",") ?>;
+	real_t <?R C(usepa, sep=",") ?>;
+	real_t <?R C(usepb, sep=",") ?>;
+<?R
+    S=PV("S",1:nrow(U)-1);
+	S[EQ$order %% 2 == 0] = PV("S2")
+	S[EQ$order %% 2 == 1] = PV("S3")
+
+	C( Ra, fa %*% EQ$mat );
+	C( Rb, fb %*% EQ$mat );
+	C( A, Ra[1] );
+	C( B, Rb[1] );
+	C( rho, A + B);
+	#C( ua, Ra[2:3]*A^{-1});
+	#C( ub, Rb[2:3]*B^{-1});
+	#C( u, (A*ua + B*ub)*rho^{-1} )
+	
+	C( u, (Ra[2:3]+Rb[2:3])*rho^{-1} )
+	C( ua, u);
+	C( ub, u);
+?>
+	if (W != 0.0) {
+		vector_t gradPhi = calcGradPhi();
+		gradPhi.x = gradPhi.x / gradPhi.z;
+		gradPhi.y = gradPhi.y / gradPhi.z;
+		usepax = B/(rho*rho)*gradPhi.x/W;
+		usepay = B/(rho*rho)*gradPhi.y/W;
+		usepbx = A/(rho*rho)*gradPhi.x/W;
+		usepby = A/(rho*rho)*gradPhi.y/W;
+//		ux = 0; uy = 0;
+	} else {
+		usepax = 0.0;
+		usepay = 0.0;
+		usepbx = 0.0;
+		usepby = 0.0;
+	}
+<?R
+	C( ua , u - usepa*0.5 )
+	C( ub , u + usepb*0.5 )
+	C( Ra, S*(Ra - Aeq));
+    C( Rb, S*(Rb - Beq));
+	C( ua , u + usepa*0.5 )
+	C( ub , u - usepb*0.5 )
+	C( Ra, Ra + Aeq);
+    C( Rb, Rb + Beq);
+	C( fa, Ra %*% solve(EQ$mat));
+	C( fb, Rb %*% solve(EQ$mat));
+?>
+}
+
