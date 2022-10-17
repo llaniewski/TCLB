@@ -14,6 +14,7 @@ AddDensity(
 
 AddQuantity(name="P",unit="Pa")
 AddQuantity(name="U",unit="m/s",vector=T)
+AddQuantity(name="Solid",unit="1")
 
 AddSetting(name="nu", default=0.16666666, comment='Viscosity')
 AddSetting(name="nubuffer",default=0.01, comment='Viscosity in the buffer layer')
@@ -26,20 +27,25 @@ AddSetting(name="ForceY", default=0, comment='Force force Y')
 AddSetting(name="ForceZ", default=0, comment='Force force Z')
 AddSetting(name="Omega", default=1, comment='relaxation rate for 3rd order cumulants')
 
+AddGlobal(name="Density", comment='system density', unit="kg/m3")
 AddGlobal(name="Flux", comment='Volume flux', unit="m3/s")
 AddGlobal(name="Drag", comment='Force exerted on body in X-direction', unit="N")
 AddGlobal(name="Lift", comment='Force exerted on body in Z-direction', unit="N")
 AddGlobal(name="Lateral", comment='Force exerted on body in Y-direction', unit="N")
+AddGlobal(name="Mass", comment="Integral of density over the domain", unit="kg")
+AddGlobal(name="XMomentum", comment='Integral of momentum in X', unit="kgm/s")
+AddGlobal(name="YMomentum", comment='Integral of momentum in Y', unit="kgm/s")
+AddGlobal(name="ZMomentum", comment='Integral of momentum in Z', unit="kgm/s")
 
-AddNodeType("Buffer", "BOUNDARY")
-AddNodeType("WVelocityTurbulent", "BOUNDARY")
-AddNodeType("NVelocity", "BOUNDARY")
-AddNodeType("SVelocity", "BOUNDARY")
-AddNodeType("NPressure", "BOUNDARY")
-AddNodeType("SPressure", "BOUNDARY")
-AddNodeType("NSymmetry", "ADDITIONALS")
-AddNodeType("SSymmetry", "ADDITIONALS")
-AddNodeType("Body", "BODY")
+AddNodeType(name="Buffer", group="BOUNDARY")
+AddNodeType(name="WVelocityTurbulent", group="BOUNDARY")
+AddNodeType(name="NVelocity", group="BOUNDARY")
+AddNodeType(name="SVelocity", group="BOUNDARY")
+AddNodeType(name="NPressure", group="BOUNDARY")
+AddNodeType(name="SPressure", group="BOUNDARY")
+AddNodeType(name="NSymmetry", group="ADDITIONALS")
+AddNodeType(name="SSymmetry", group="ADDITIONALS")
+AddNodeType(name="Body", group="BODY")
 
 
 for (f in fname) AddField(f,dx=0,dy=0,dz=0) # Make f accessible also in present node (not only streamed)
@@ -53,7 +59,7 @@ if(Options$SMAG){
 
 #Interpolated BounceBack Node
 if(Options$IB){
-	AddNodeType("IB", group="HO_BOUNDARY")
+	AddNodeType(name="IB", group="HO_BOUNDARY")
 }
 
 #Averaging values
@@ -83,3 +89,10 @@ AddField(name="avgUX",dx=c(-1,1),average=TRUE)
 AddField(name="avgUY",dy=c(-1,1),average=TRUE)
 AddField(name="avgUZ",dz=c(1,-1),average=TRUE)
 }
+AddNodeType(name="EPressure", group="BOUNDARY")
+AddNodeType(name="EVelocity", group="BOUNDARY")
+AddNodeType(name="Solid", group="BOUNDARY")
+AddNodeType(name="Wall", group="BOUNDARY")
+AddNodeType(name="WPressure", group="BOUNDARY")
+AddNodeType(name="WVelocity", group="BOUNDARY")
+AddNodeType(name="MRT", group="COLLISION")

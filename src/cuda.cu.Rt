@@ -14,6 +14,13 @@
           ADTools.c (adjoint)
 */
 
+<?R
+
+if (exists('Extra_Dynamics_C_Header')) {
+	cat(Extra_Dynamics_C_Header)
+}
+?>
+
 #include "Consts.h"
 #include "cross.h"
 #include "cross.hpp"
@@ -84,7 +91,12 @@ CudaDeviceFunction CudaConstantMemory real_t <?%s v$name ?> = 0.0f; <?R
 #define Iam<?%s n ?> (NodeType & NODE_<?%s n ?>)
 <?R	}	?>
 
+
+
+
+
 #define NODE_H
+
 
 template < eOperationType I, eCalculateGlobals G, eStage S> struct Node_Run {
         int x_,y_,z_;
@@ -238,7 +250,8 @@ template <> struct Node_Run < <?%s T1 ?>, <?%s T2 ?>, <?%s T3 ?> > {
 		}
 	if (tp$stage) { ################################################################
 		if (tp$Stream == "Opt") { ?>
-	CudaDeviceFunction inline void Opt() {
+	CudaDeviceFunction inline void Opt() { <?R
+		if ("DesignSpace" %in% NodeTypes$name) { ?>
 	        if ((NodeType & NODE_DESIGNSPACE) == NODE_DesignSpace) { <?R
 		        for (d in rows(Density)) {
                                 if (d$parameter) { ?>
@@ -247,7 +260,8 @@ template <> struct Node_Run < <?%s T1 ?>, <?%s T2 ?>, <?%s T3 ?> > {
                 if (<?%s d$name ?> < 0.0f) <?%s d$name ?> = 0.0f; <?R
                                 }
                         }?>
-                }
+                } <?R
+		} ?>
         } <?R
 	        } ?>
 

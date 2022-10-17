@@ -25,13 +25,15 @@ SOURCE_PLAN+=Global.h gpu_anim.h LatticeContainer.h Lattice.h Region.h vtkLattic
 SOURCE_PLAN+=gl_helper.h Dynamics.h types.h Consts.h Solver.h pugixml.hpp pugiconfig.hpp
 SOURCE_PLAN+=Geometry.h def.h utils.h unit.h ZoneSettings.h SyntheticTurbulence.h Sampler.h spline.h TCLBForceGroupCommon.h
 SOURCE_PLAN+=RemoteForceInterface.cpp RemoteForceInterface.h RemoteForceInterface.hpp
-SOURCE_PLAN+=TCLBForceGroupCommon.h MPMD.hpp empty.cpp Particle.hpp
+SOURCE_PLAN+=TCLBForceGroupCommon.h MPMD.hpp empty.cpp Particle.hpp lammps.cpp
 SOURCE_PLAN+=BallTree.h BallTree.hpp BallTree.cpp
 SOURCE_PLAN+=xpath_modification.cpp xpath_modification.h
 SOURCE_PLAN+=hdf5Lattice.cpp hdf5Lattice.h
 SOURCE_PLAN+=glue.hpp
 SOURCE_PLAN+=mpitools.hpp
+SOURCE_PLAN+=pinned_allocator.hpp
 SOURCE_PLAN+=compare.cpp
+SOURCE_PLAN+=simplepart.cpp
 
 <?R
 	h = dir("src/Handlers","[.](h|cpp)(|.Rt)$")
@@ -42,7 +44,9 @@ SOURCE_PLAN+=<?R cat(h,sep=" ") ?>
 SOURCE_PLAN+=CommonHandler.h Handlers.h
 SOURCE_PLAN+=Factory.h HandlerFactory.h
 SOURCE_PLAN+=SUMMARY
-SOURCE_PLAN+=conf.doxygen
+SOURCE_PLAN+=docs-by-doxygen/conf.doxygen
+SOURCE_PLAN+=docs-by-doxygen/cfd-go-logo.png
+SOURCE_PLAN+=docs-by-doxygen/README.md
 SOURCE_ADJ =Dynamics_b.c ADTools.cu Dynamics_adj.c Dynamics_b.h types_b.h ADpre_.h ADpre__b.h
 SOURCE_REST=makefile dep.mk
 ADDITIONALS=README.md dictionary.h
@@ -68,7 +72,14 @@ rm:rm-files configure
 clean: <?%s paste(Models$name, "clean", sep="/", collapse=" ") ?>
 	
 wiki/Models.md : src/Models.md.Rt <?%s paste("wiki/", Models$model.md, sep="", collapse=" ") ?>
-	@echo "  RT         $@ (model)"
+	@echo "  RT         $@"
+	@$(MKPATH) $@
+	@$(RT) -q -f $< -I $(TOOLS),$(SRC) -w wiki/ -o $@ "MODELS=\"<?%s paste(Models$name,collapse=",")?>\"" || rm $@
+
+schemas : wiki/catalog.xml <?%s paste("wiki/schema/", Models$name, ".xsd", sep="", collapse=" ") ?>
+
+wiki/catalog.xml : src/catalog.xml.Rt
+	@echo "  RT         $@"
 	@$(MKPATH) $@
 	@$(RT) -q -f $< -I $(TOOLS),$(SRC) -w wiki/ -o $@ "MODELS=\"<?%s paste(Models$name,collapse=",")?>\"" || rm $@
 
@@ -90,7 +101,7 @@ travis : .travis.yml
 	by(Models, Models$group, function(m) {
 		if (length(m$opts[[1]]) > 0) {
 			mat = do.call(rbind,m$opts)
-			mat = ifelse(mat==1, "X","-")
+			mat = ifelse(mat!=0, "X","-")
 			mat = as.data.frame(mat)
 			row.names(mat) = m$name
 		} else {
@@ -131,7 +142,7 @@ for (d in destinations) {
 		add = paste("$(addprefix ",dest,"/,$(ADDITIONALS))",sep="")
 		src_all = paste(src_all,add)
 		rtopt = NULL
-		if (adjoint) rtopt = c(rtopt, "MODEL=TRUE")
+		if (adjoint) rtopt = c(rtopt, "ADJOINT=1")
 		rtopt = c(rtopt, paste0("MODEL=\\\"",m,"\\\""))
 		if (length(opts) > 0) {
 			opts = ifelse(opts==0,"FALSE","TRUE")
@@ -171,10 +182,11 @@ for (d in destinations) {
 	@echo ""
 	@cat <?%s d ?>/<?%s m ?>/SUMMARY	
 
-<?%s m ?>/doc: <?%s m ?>/source
-	@cd <?%s d ?>/<?%s m ?>; doxygen conf.doxygen
+<?%s m ?>/docs: <?%s m ?>/source
+	@cd <?%s d ?>/<?%s m ?>; doxygen docs-by-doxygen/conf.doxygen
 	@echo "  DONE       $@"
-
+	@echo "  Open CLB/<?%s m ?>/docs-by-doxygen/output/html/index.html in your browser."
+	
 <?%s d ?>/<?%s m ?>/main:<?%s src_all ?>
 	@cd <?%s d ?>/<?%s m ?>; $(MAKE)
 
@@ -186,6 +198,11 @@ wiki/<?%s Models$model.md[i] ?>:$(SRC)/Model.md.Rt $(SRC)/conf.R <?%s model_path
 	@$(MKPATH) $@
 	-@$(RT) -q -f $< -I $(TOOLS),$(SRC),<?%s model_path ?> -w wiki/ -o $@ <?%s rtopt ?> || rm $@
 
+wiki/schema/<?%s m ?>.xsd:$(SRC)/schema.xsd.Rt $(SRC)/conf.R doc/elements.yaml <?%s model_path ?>/*
+	@echo "  RT         $@ (model)"
+	@$(MKPATH) $@
+	@$(RT) -q -f $< -I $(TOOLS),$(SRC),<?%s model_path ?> -w ./ -o $@ <?%s rtopt ?> || mv $@ $@~
+
 # for model <?%s m ?> and destination <?%s d ?>
 
 <?%s d ?>/<?%s m ?>/Dynamics_b.c <?%s d ?>/<?%s m ?>/Dynamics_b.h <?%s d ?>/<?%s m ?>/types_b.h <?%s d ?>/<?%s m ?>/ADpre_.h <?%s d ?>/<?%s m ?>/ADpre__b.h : <?%s d ?>/<?%s m ?>/tapenade.run
@@ -194,11 +211,11 @@ wiki/<?%s Models$model.md[i] ?>:$(SRC)/Model.md.Rt $(SRC)/conf.R <?%s model_path
 
 <?%s d ?>/<?%s m ?>/tapenade.run : tools/makeAD <?%s d ?>/<?%s m ?>/Dynamics.c <?%s d ?>/<?%s m ?>/ADpre.h <?%s d ?>/<?%s m ?>/ADpre_b.h <?%s d ?>/<?%s m ?>/Dynamics.h <?%s d ?>/<?%s m ?>/Consts.h <?%s d ?>/<?%s m ?>/types.h <?%s d ?>/<?%s m ?>/ADset.sh <?%s d ?>/<?%s m ?>/ADpost.sed
 	@echo "  TAPENADE   $<"
-	@(cd <?%s d ?>/<?%s m ?>; ../../tools/makeAD)
+	@(cd <?%s d ?>/<?%s m ?>; ../../tools/makeAD "$(TAPENADE)")
 
 <?%s d ?>/<?%s m ?>/dep.mk:tools/dep.R <?%s src ?>
 	@echo "  AUTO-DEP   $@"
-	@cd <?%s d ?>/<?%s m ?>; $(RS) ../../$<
+	@$(RS) $< --args -d "<?%s d ?>/<?%s m ?>"
 
 <?%s d ?>/<?%s m ?>/makefile:$(SRC)/makefile.Rt <?%s model_path ?>/Dynamics.R $(SRC)/conf.R <?%s src_all ?>
 	@echo "  RT         $@"

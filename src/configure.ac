@@ -9,117 +9,138 @@ AC_CONFIG_HEADERS([CLB/config.h:src/config.h.in])
 AC_LANG([C++])
 
 AC_ARG_WITH([gcc],
-	AC_HELP_STRING([--with-gcc=compiler_bindir],
+	AS_HELP_STRING([--with-gcc=compiler_bindir],
 		[specify the directory containing gcc, e.g. /usr/bin]),
 	[COMPILER_BINDIR="$withval"])
 
 AC_ARG_ENABLE([cuda],
-	AC_HELP_STRING([--enable-cuda=cuda_home],
+	AS_HELP_STRING([--enable-cuda=cuda_home],
 		[specify the root of your cuda install, e.g. /usr/local/cuda]))
 
 AC_ARG_WITH([mpi-include],
-	AC_HELP_STRING([--with-mpi-include=mpi_include],
+	AS_HELP_STRING([--with-mpi-include=mpi_include],
 		[specify the full path to your mpi headers, e.g. /usr/include/mpi]),
 	[MPI_INCLUDE="$withval"])
 
 AC_ARG_WITH([mpi-lib],
-	AC_HELP_STRING([--with-mpi-lib=mpi_lib],
+	AS_HELP_STRING([--with-mpi-lib=mpi_lib],
 		[specify the full path to your mpi shared libraries, e.g. /usr/lib/openmpi/]),
 	[MPI_LIB="$withval"])
 
 AC_ARG_WITH([hdf5],
-	AC_HELP_STRING([--with-hdf5=hdf5],
+	AS_HELP_STRING([--with-hdf5=hdf5],
 		[specify the full path to your hdf5 installation]))
 AC_ARG_WITH([hdf5-lib],
-	AC_HELP_STRING([--with-hdf5-lib=hdf5],
+	AS_HELP_STRING([--with-hdf5-lib=hdf5],
 		[specify the full path to your hdf5 installation (libraries)]))
 AC_ARG_WITH([hdf5-include],
-	AC_HELP_STRING([--with-hdf5-include=hdf5],
+	AS_HELP_STRING([--with-hdf5-include=hdf5],
 		[specify the full path to your hdf5 installation (headers)]))
 
+AC_ARG_WITH([eigen],
+	AS_HELP_STRING([--with-eigen=eigen],
+		[specify the full path to your Eigen installation (headers)]))
+
 AC_ARG_ENABLE([graphics],
-	AC_HELP_STRING([--enable-graphics],
+	AS_HELP_STRING([--enable-graphics],
 		[make a GUI version]))
 
 AC_ARG_ENABLE([double],
-	AC_HELP_STRING([--enable-double],
+	AS_HELP_STRING([--enable-double],
 		[make a double precision version]))
 
 AC_ARG_ENABLE([cpp11],
-	AC_HELP_STRING([--enable-cpp11],
+	AS_HELP_STRING([--enable-cpp11],
 		[enable C++ 11 standard]))
 
 AC_ARG_WITH([cuda-arch],
-	AC_HELP_STRING([--with-cuda-arch=arch],
-		[specify the desired CUDA architecture (sm_11/sm_13/sm_20/sm_30/sm_60)]))
+	AS_HELP_STRING([--with-cuda-arch=arch],
+		[specify the desired CUDA architecture (sm_11/sm_13/sm_20/sm_30/sm_60/sm_70/sm_75/sm_80)]))
 
 AC_ARG_WITH([nlopt],
-	AC_HELP_STRING([--with-nlopt=nlopt],
+	AS_HELP_STRING([--with-nlopt=nlopt],
 		[specify the full path to your nlopt library]))
 
 AC_ARG_WITH([r],
-	AC_HELP_STRING([--with-r=r],
+	AS_HELP_STRING([--with-r=r],
 		[specify the full path to your r]))
 
 AC_ARG_ENABLE([rinside],
-	AC_HELP_STRING([--enable-rinside],
+	AS_HELP_STRING([--enable-rinside],
 		[specify the full path to your r]))
 
 AC_ARG_WITH([catalyst],
-	AC_HELP_STRING([--with-catalyst=path],
+	AS_HELP_STRING([--with-catalyst=path],
 		[specify the full path to your paraview source and build]))
 
+AC_ARG_WITH([lammps],
+	AS_HELP_STRING([--with-lammps=path],
+		[specify the full path to your LAMMPS/LIGGGHTS directory]))
+
+AC_ARG_WITH([lammps-lib],
+	AS_HELP_STRING([--with-lammps-lib=libfile],
+		[specify the name of the lammps/liggghts library (.so/.a)]))
+
+AC_ARG_WITH([tapenade],
+	AS_HELP_STRING([--with-tapenade=path],
+		[use tapenade for code differentiation for adjoint]))
+		
+
 AC_ARG_WITH([verbosity_level],
-	AC_HELP_STRING([--with-verbosity-level=level],
+	AS_HELP_STRING([--with-verbosity-level=level],
 		[specify level of debug messages 0-all, 1-much, 2-some, 3-normal]))
 
 AC_ARG_ENABLE([debug],
-	AC_HELP_STRING([--enable-debug],
+	AS_HELP_STRING([--enable-debug],
 		[enables debug version (gcc -g)]))
 
 AC_ARG_ENABLE([waitany],
-	AC_HELP_STRING([--enable-waitany],
+	AS_HELP_STRING([--enable-waitany],
 		[enables MPI WaitAny (default)]))
 
 AC_ARG_WITH([openmp],
-	AC_HELP_STRING([--with-openmp],
+	AS_HELP_STRING([--with-openmp],
 		[enable openMP in the CPU code]))
 
 AC_ARG_ENABLE([coverage],
-	AC_HELP_STRING([--enable-coverage],
+	AS_HELP_STRING([--enable-coverage],
 		[enable coverage testing]))
 
 AC_ARG_ENABLE([marklines],
-	AC_HELP_STRING([--enable-marklines],
+	AS_HELP_STRING([--enable-marklines],
 		[enable marking lines with pragma in RT]))
 
 AC_ARG_ENABLE([debug-kernel],
-	AC_HELP_STRING([--with-debug-kernel],
+	AS_HELP_STRING([--with-debug-kernel],
 		[enable NVCC pos compile stats for debug (lots of output!)]))
 
 AC_ARG_WITH([python],
-	AC_HELP_STRING([--with-python],
+	AS_HELP_STRING([--with-python],
 		[Enable CallPython handler, requires python-dev]))
 
 AC_ARG_WITH([python_config],
-	AC_HELP_STRING([--with-python-config],
-		[Set python(2)-config binary to call]))
+	AS_HELP_STRING([--with-python-config],
+		[Set python-config binary to call]))
 
+AC_ARG_WITH([python_bin],
+	AS_HELP_STRING([--with-python-bin],
+		[Set python binary to call]))
 
 AC_ARG_ENABLE([paranoid],
-	AC_HELP_STRING([--enable-paranoid],
+	AS_HELP_STRING([--enable-paranoid],
 		[Makes GCC paranoid.]))
 AC_ARG_ENABLE([profiling],
-	AC_HELP_STRING([--enable-profiling],
+	AS_HELP_STRING([--enable-profiling],
 		[enable profiling for R in rtemplate]))		
+AC_ARG_ENABLE([keepcode],
+	AS_HELP_STRING([--enable-keepcode],
+		[keeps the R code for rtemplate along with the generated file]))
 
 AC_ARG_WITH([cpp-flags],
-	AC_HELP_STRING([--with-cpp-flags=FLAGS],
+	AS_HELP_STRING([--with-cpp-flags=FLAGS],
 		[privide additionals flags for the compiler]),
 	[CONF_CPPFLAGS="$withval"])		
 NVFLAGS=""
-
-
 
 if test "x${COMPILER_BINDIR}" != "x"
 then
@@ -127,15 +148,31 @@ then
 
 fi
 
-test -z "$CXX" && CXX=mpic++
-test -z "$CC" && CC=mpicc
+if test -z "$CXX"
+then
+	if command -v "mpic++"
+	then
+		CXX="mpic++"
+	elif command -v "g++"
+	then
+		CXX="g++"
+	else
+		AC_MSG_ERROR([neither mpic++ or g++ found. You can specify compiler with CXX=...])
+	fi
+fi
+
+mpishow=$($CXX -showme 2>/dev/null)
+if ! test -z "$mpishow"
+then
+	CPPFLAGS="${CPPFLAGS} $(echo $(echo "$mpishow" | sed -e 's| |\n|g' | grep "^-I"))"
+fi
 
 # Checks for programs.
 AC_PROG_CXX
-AC_PROG_CC
+# AC_PROG_CC
 
 # Checks for header files.
-AC_CHECK_HEADERS([float.h malloc.h stddef.h stdint.h stdlib.h string.h wchar.h],[],[AC_MSG_ERROR([Cannot find standart headers])])
+AC_CHECK_HEADERS([float.h stddef.h stdint.h stdlib.h string.h wchar.h],[],[AC_MSG_ERROR([Cannot find standart headers])])
 AC_CHECK_LIB([m], [sqrt],[],[AC_MSG_ERROR([Didn't find math Library])])
 
 if test "x${enable_double}" != "xno"
@@ -252,7 +289,25 @@ then
 		AC_MSG_RESULT([${CUDA_ARCH}])
 		AC_DEFINE([GRID3D], [1], [Using 3D block grid in CUDA])
 
-    CUDA_SUFF="60"
+    	CUDA_SUFF="60"
+    elif test "$CUDA_ARCH" == "sm_70"
+    then
+        AC_MSG_RESULT([${CUDA_ARCH}])
+        AC_DEFINE([GRID3D], [1], [Using 3D block grid in CUDA])
+
+        CUDA_SUFF="70"
+	elif test "$CUDA_ARCH" == "sm_75"
+	then
+		AC_MSG_RESULT([${CUDA_ARCH}])
+		AC_DEFINE([GRID3D], [1], [Using 3D block grid in CUDA])
+
+    	CUDA_SUFF="75"
+	elif test "$CUDA_ARCH" == "sm_80"
+	then
+		AC_MSG_RESULT([${CUDA_ARCH}])
+		AC_DEFINE([GRID3D], [1], [Using 3D block grid in CUDA])
+
+    	CUDA_SUFF="80"
 	else
 		AC_MSG_ERROR([unknown arch ${CUDA_ARCH}])
 	fi
@@ -317,6 +372,25 @@ AC_CHECK_LIB([mpi], [MPI_Recv],[],[
 ])
 
 
+AC_MSG_CHECKING([EIGEN path])
+
+if test "x${with_eigen}" != "xno"; then
+	if test "x${with_eigen}" != "x"; then
+		EIGEN_INCLUDE="${with_eigen}"
+		if test -d "${EIGEN_INCLUDE}"
+		then
+			CPPFLAGS="${CPPFLAGS} -I${EIGEN_INCLUDE}"
+		else
+			AC_MSG_ERROR([${EIGEN_INCLUDE}: No such directory])
+		fi
+	fi
+
+	AC_CHECK_HEADERS([Eigen/Dense],[],[has_hdf5="no"])
+	AC_DEFINE([WITH_EIGEN], [1], [Using Eigen])
+
+fi
+
+
 AC_MSG_CHECKING([HDF5 path])
 need_hdf5="no"
 has_hdf5="no"
@@ -358,7 +432,7 @@ if test "x${with_hdf5}" != "xno"; then
 	fi
 	has_hdf5="yes"
 	AC_CHECK_HEADERS([hdf5.h],[],[has_hdf5="no"])
-	AC_CHECK_LIB([${hdf5_lib_name}], [H5Pset_fapl_mpio],[],[has_hdf5="no"])
+	AC_CHECK_LIB([hdf5], [H5Pset_fapl_mpio],[],[has_hdf5="no"])
 	if test "x${has_hdf5}" == "xyes"; then
 		AC_DEFINE([WITH_HDF5], [1], [Using HDF5])
 	else
@@ -372,18 +446,27 @@ fi
 if  test "x${with_python}" == "xyes"; then
    
     AC_CHECK_PROG(python_config,"${with_python_config}","${with_python_config}",python-config)
+    AC_CHECK_PROG(python_bin,"${with_python_bin}","${with_python_bin}",python)
     
+
     AC_MSG_NOTICE([python config: ${python_config}])
+    AC_MSG_NOTICE([python: ${python_bin}])
+
 
     AC_MSG_CHECKING([python embandinng: linker flags])
-    PF=$(${python_config} --ldflags)
+
+	if ${python_config} --ldflags --embed; then
+	    PF=$(${python_config} --ldflags --embed)
+	else
+	    PF=$(${python_config} --ldflags)
+	fi 
 	
     LDFLAGS="${LDFLAGS} ${PF}"
 
     AC_MSG_RESULT([${PF}])
 
 	AC_MSG_CHECKING([Python - numpy additional include path])
-	PYINC="$(python -c 'import numpy; print(numpy.get_include())')"
+	PYINC="$(${python_bin} -c 'import numpy; print(numpy.get_include())')"
 	CPPFLAGS="${CPPFLAGS} -I${PYINC}"
     AC_MSG_RESULT([${PYINC}])
     
@@ -516,6 +599,46 @@ then
 	
 fi
 
+if test "x${with_lammps}" != "x"
+then
+	if ! test -d "${with_lammps}"
+	then
+		AC_MSG_ERROR([lammps path ${with_lammps} is not a directory])
+	fi
+	LAMMPS="${with_lammps}"
+	LAMMPS="$(cd $LAMMPS; pwd)"
+	mkdir -p $LAMMPS/install/include/lammps
+	mkdir -p $LAMMPS/install/lib/
+	for i in lammps.h library.h input.h modify.h fix.h fix_external.h pointers.h lmptype.h lmpwindows.h atom.h domain.h
+	do
+		rm ${LAMMPS}/install/include/lammps/${i} 2>/dev/null
+		AC_CHECK_FILE([${LAMMPS}/src/${i}], [ln -s ../../../src/${i} ${LAMMPS}/install/include/lammps/${i}],[AC_MSG_ERROR([Cannot find ${i}])])
+	done
+
+	for i in error.h comm.h vector_liggghts.h neighbor.h math_extra_liggghts.h domain_I.h
+	do
+		touch ${LAMMPS}/install/include/lammps/${i}
+	done
+	if test "x${with_lammps_lib}" == "x"
+	then
+		LAMMPS_LIB="liblammps.so"
+		if test -L ${LAMMPS}/src/libliggghts.so
+		then
+			echo "It's LIGGGHTS we're working with"
+			LAMMPS_LIB="libliggghts.so"
+		fi
+	else
+		LAMMPS_LIB="${with_lammps_lib}"
+	fi
+	AC_CHECK_FILE([${LAMMPS}/src/$LAMMPS_LIB], [ln -s ../../src/$LAMMPS_LIB ${LAMMPS}/install/lib/$LAMMPS_LIB],[AC_MSG_ERROR([Cannot find $LAMMPS_LIB])])
+	LDFLAGS="${LDFLAGS} -L${LAMMPS}/install/lib -Wl,-rpath=${LAMMPS}/install/lib"
+	CPPFLAGS="${CPPFLAGS} -I${LAMMPS}/install/include"
+	LAMMPS_LIB_NAME=${LAMMPS_LIB#lib}
+	LAMMPS_LIB_NAME=${LAMMPS_LIB_NAME%.*}
+	AC_CHECK_HEADERS([lammps/library.h])
+	AC_CHECK_LIB([$LAMMPS_LIB_NAME],[lammps_open], [], [AC_MSG_ERROR([Cannot link with $LAMMPS_LIB_NAME])])
+	WITH_LAMMPS=1
+fi
 
 if test "x${with_r}" == "x"
 then
@@ -576,6 +699,44 @@ then
 		AC_DEFINE([WITH_R], [1], [Using R])
 	fi
 fi
+
+if test "x${with_tapenade}" != "xno"
+then
+	if test "x${with_tapenade}" == "xyes" || test "x${with_tapenade}" == "x"
+	then
+		if test -f "tapenade/bin/tapenade"
+		then
+			TAPENADE="$PWD/tapenade/bin/tapenade"
+		else
+			TAPENADE="tapenade"
+		fi
+	else
+		if test -d "${with_tapenade}"
+		then
+			TAPENADE="$(cd ${with_tapenade}; pwd)/bin/tapenade"
+		else
+			AC_MSG_ERROR([Path '${with_tapenade}' is not a directory])
+		fi
+	fi
+	
+	
+	AC_MSG_CHECKING([for tapenade])
+	if command -v "${TAPENADE}" >/dev/null 2>&1
+	then
+		AC_MSG_RESULT([yes])
+		TAPENADE="$(command -v "${TAPENADE}")"
+	else
+		AC_MSG_RESULT([no])
+		TAPENADE=""
+		if test "x${with_tapenade}" != "x"
+		then
+			AC_MSG_ERROR([Tapenade '$TAPENADE' is not a valid executable])
+		fi
+	fi
+fi
+		
+		
+
 
 if test "x${enable_debug}" == "xyes"
 then
@@ -663,6 +824,11 @@ then
 	RTOPT="${RTOPT} -p"
 fi
 
+if test "x${enable_keepcode}" == "xyes"
+then
+	RTOPT="${RTOPT} --keep-code"
+fi
+
 # Checks for typedefs, structures, and compiler characteristics.
 #AC_HEADER_STDBOOL
 #AC_C_INLINE
@@ -678,6 +844,14 @@ fi
 #AC_FUNC_STRTOD
 #AC_CHECK_FUNCS([floor memmove memset pow sqrt strchr strstr strtol strtoul])
 
+
+AC_MSG_RESULT([CXX      : $CXX])
+AC_MSG_RESULT([CPPFLAGS : $CPPFLAGS])
+AC_MSG_RESULT([LDFLAGS  : $LDFLAGS])
+AC_MSG_RESULT([NVFLAGS  : $NVFLAGS])
+
+
+
 AC_SUBST(CP)
 AC_SUBST(NVFLAGS)
 AC_SUBST(CROSS_CPU)
@@ -686,7 +860,9 @@ AC_SUBST(PV_BUILD_INC)
 AC_SUBST(PV_SOURCE)
 AC_SUBST(CROSS_CPU)
 AC_SUBST(WITH_CATALYST)
+AC_SUBST(WITH_LAMMPS)
 AC_SUBST(WITH_R)
+AC_SUBST(TAPENADE)
 AC_SUBST(PV_VERSION)
 AC_SUBST(RTOPT)
 AC_SUBST(CPP_OPT)

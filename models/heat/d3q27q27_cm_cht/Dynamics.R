@@ -98,24 +98,25 @@ AddQuantity(name="RawU", 			 unit="m/s", vector=T )
 
 
 #	Boundary things
-AddNodeType("ForceMeasurmentZone",	group="OBJECTIVEFORCE")
-AddNodeType("FluxMeasurmentZone1",  group="OBJECTIVEFLUX")
-AddNodeType("FluxMeasurmentZone2",  group="OBJECTIVEFLUX")
+AddNodeType(name="ForceMeasurmentZone", 	group="OBJECTIVEFORCE")
+AddNodeType(name="FluxMeasurmentZone1", group="OBJECTIVEFLUX")
+AddNodeType(name="FluxMeasurmentZone2", group="OBJECTIVEFLUX")
 
 AddNodeType(name="DarcySolid", group="ADDITIONALS")
-AddNodeType(name="Smoothing",  group="ADDITIONALS")
+AddNodeType(name="Smoothing", group="ADDITIONALS")
 
-AddNodeType(name="HeaterDirichletTemperatureEQ",  group="ADDITIONALS_HEAT")
+AddNodeType(name="HeaterDirichletTemperatureEQ", group="ADDITIONALS_HEAT")
 AddNodeType(name="HeaterDirichletTemperatureABB", group="ADDITIONALS_HEAT")
 AddNodeType(name="HeaterSource", 				  group="ADDITIONALS_HEAT")
 AddNodeType(name="HeaterNeumannHeatFluxCylinder", group="ADDITIONALS_HEAT")
 AddNodeType(name="HeaterNeumannHeatFluxEast", 	  group="ADDITIONALS_HEAT")
 
-AddNodeType(name="CM",						group="COLLISION")
-AddNodeType(name="CM_HIGHER",				group="COLLISION")
-AddNodeType(name="CM_HIGHER_NONLINEAR",		group="COLLISION")
-AddNodeType(name="Cumulants",				group="COLLISION")
-
+AddNodeType(name="CM", 						group="COLLISION")
+AddNodeType(name="CM_HIGHER", 				group="COLLISION")
+AddNodeType(name="CM_HIGHER_PROB", 			group="COLLISION")
+AddNodeType(name="CM_HIGHER_PROB_M_EQ", 	group="COLLISION")
+AddNodeType(name="Cumulants", 				group="COLLISION")
+AddNodeType(name="Cumulants_HIGHER", 				group="COLLISION")
 
 #	Benchmark things
 AddSetting(name="CylinderCenterX", 		default="0", comment='X coord of cylinder with imposed heat flux')
@@ -129,7 +130,7 @@ AddSetting(name="Sigma_GH", 		 	default="1", comment='Initial width of the Gauss
 
 #	Interpolated BounceBack Node
 if(Options$IBB){
-	AddNodeType("HeaterDirichletTemperatureIABB", group="HO_BOUNDARY_HEAT") 
+	AddNodeType(name="HeaterDirichletTemperatureIABB", group="HO_BOUNDARY_HEAT") 
 	AddNodeType("ThermalIBB", 					  group="HO_BOUNDARY_HEAT") 
 	AddNodeType("HydroIBB", 					  group="HO_BOUNDARY_HYDRO") 
 }
@@ -211,3 +212,11 @@ if (Options$AVG) {
 	AddField(name="avgUY",		dy=c(-1,1),average=TRUE)
 	AddField(name="avgUZ",		dz=c(1,-1),average=TRUE)
 }
+AddNodeType(name="EPressure", group="BOUNDARY")
+AddNodeType(name="EVelocity", group="BOUNDARY")
+AddNodeType(name="Solid", group="BOUNDARY")
+AddNodeType(name="Wall", group="BOUNDARY")
+AddNodeType(name="WPressure", group="BOUNDARY")
+AddNodeType(name="WVelocity", group="BOUNDARY")
+AddNodeType(name="BGK", group="COLLISION")
+AddNodeType(name="Body", group="BODY")

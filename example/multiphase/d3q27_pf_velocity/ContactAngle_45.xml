@@ -1,21 +1,14 @@
 <?xml version="1.0"?>
 <CLBConfig version="2.0" output="output/" permissive="true">
-	<!-- MODEL: d3q27_pf_velocity_autosym
-     Solid contact angle example to test out symmetry
-     in single plane.
-        Created: 14/12/2017
-        Responsible: @TravisMitchell
+	<!-- MODEL: d3q27_pf_velocity
+     Solid contact angle example
+	Created: 14/12/2017
+     	Responsible: @TravisMitchell
 -->
-	<Geometry nx="64" ny="64" nz="128">
+	<Geometry nx="128" ny="64" nz="128">
 		<MRT>
 			<Box/>
 		</MRT>
-		<SymmetryX_plus>
-			<Box dx="-1"/>
-		</SymmetryX_plus>
-		<SymmetryX_minus>
-			<Box nx="1"/>
-		</SymmetryX_minus>
 		<Wall mask="ALL" name="Upper">
 			<Box dy="-1"/>
 		</Wall>
@@ -33,7 +26,9 @@
 		<Param name="sigma" value="5e-5"/>
 		<Param name="M" value="0.05"/>
 		<Param name="IntWidth" value="4"/>
-		<Param name="ContactAngle" value="45"/>
+		<Param name="radAngle" value="45d"/>
+		<Param name="PhaseField" value="1.0" zone="droplet"/>
+		<Param name="PhaseField" value="0.0"/>
 		<Param name="Density_l" value="0.001"/>
 		<Param name="Density_h" value="1"/>
 	</Model>
