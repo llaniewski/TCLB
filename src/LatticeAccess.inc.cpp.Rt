@@ -25,7 +25,7 @@ template <class N> CudaDeviceFunction void LatticeContainer::getType(N & node)
 shmem.w =  PV("CudaThread.",c("x","y","z"))
 shmem.nw = PV("CudaNumberOfThreads.",c("x","y","z"))
 shmem.offset = function(f, dw) {
-	paste0("shmem_",f$nicename, "[", ToC(shmem.w[1] + dw[1] - f$minx, float=FALSE), " + (", ToC(shmem.nw[1] + f$maxx - f$minx, float=FALSE), ")*(", ToC(shmem.w[2] + dw[2] - f$miny, float=FALSE), " + (", ToC(shmem.nw[2] + f$maxy - f$miny, float=FALSE), ")*(", ToC(shmem.w[3] + dw[3] - f$minz, float=FALSE), "))]");
+	paste0("shmem_",f$nicename, "[", ToC(shmem.w[1] + dw[1] - f$minx, float=FALSE), "][", ToC(shmem.w[2] + dw[2] - f$miny, float=FALSE), "][", ToC(shmem.w[3] + dw[3] - f$minz, float=FALSE), "]");
 }
   
   make.context = function(buf, pocket=FALSE) {
@@ -308,7 +308,7 @@ template <class N> CudaDeviceFunction void LatticeContainer::pop<?%s s$suffix ?>
 template <int DX, int DY, int DZ> CudaDeviceFunction real_t LatticeContainer::load_sym_<?%s f$nicename ?> (const int & x, const int & y, const int & z, const flag_t & nt) { return load_<?%s f$nicename ?><DX,DY,DZ>(x,y,z); }
 <?R if (f$preload) { ?>
 
-__shared__ real_t shmem_<?%s f$nicename ?>[34*34*1];
+__shared__ real_t shmem_<?%s f$nicename ?>[34][18][1];
 
 template <int DX, int DY, int DZ> CudaDeviceFunction real_t LatticeContainer::get_<?%s f$nicename ?> (const int & x, const int & y, const int & z, const flag_t & nt) {
 	return <?%s shmem.offset(f, PV(c("DX", "DY", "DZ"))) ?>;
@@ -374,7 +374,7 @@ CudaDeviceFunction void LatticeContainer::preload_<?%s f$nicename ?> (const int 
 
 
 <?R } else { ?>
-template <int DX, int DY, int DZ> CudaDeviceFunction real_t LatticeContainer::get_<?%s f$nicename ?> (const int & x, const int & y, const int & z, const flag_t & nt) { return load_sym_<?%s f$nicename ?><DX,DY,DZ>(x,y,z); }
+template <int DX, int DY, int DZ> CudaDeviceFunction real_t LatticeContainer::get_<?%s f$nicename ?> (const int & x, const int & y, const int & z, const flag_t & nt) { return load_sym_<?%s f$nicename ?><DX,DY,DZ>(x,y,z,nt); }
 <?R } ?>
 
 CudaDeviceFunction void LatticeContainer::save_<?%s f$nicename ?>(const int & x, const int & y, const int & z,  const real_t& value) {
