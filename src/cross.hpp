@@ -202,13 +202,6 @@ CudaDeviceFunction inline void atomicSumWarpArr(T * sum, T * val, unsigned char 
 
     template <class T, class P> inline T data_cast(const P& x) { static_assert(sizeof(T)==sizeof(P),"Wrong sizes in data_cast"); T ret; memcpy(&ret, &x, sizeof(T)); return ret; }
 
-    #define __short_as_half(x__)      data_cast<half          , short int     >(x__)
-    #define __half_as_short(x__)      data_cast<short int     , half          >(x__)
-    #define __int_as_float(x__)       data_cast<float         , int           >(x__)
-    #define __float_as_int(x__)       data_cast<int           , float         >(x__)
-    #define __longlong_as_double(x__) data_cast<double        , long long int >(x__)
-    #define __double_as_longlong(x__) data_cast<long long int , double        >(x__)
-
     template <class T> struct real_to_bytes { };
     template <> struct real_to_bytes<double> {
       typedef unsigned long long int bytes;
