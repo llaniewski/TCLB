@@ -23,14 +23,12 @@
 
   #ifndef PARTICLE_REAL_TYPE
     typedef real_t particle_real_t;
-    typedef real_t balltree_real_t;
   #elif PARTICLE_REAL_TYPE == 32
     typedef float particle_real_t;
-    typedef float balltree_real_t;
   #elif PARTICLE_REAL_TYPE == 64
     typedef double particle_real_t;
-    typedef double balltree_real_t;
   #endif
+  typedef particle_real_t balltree_real_t;
 
   #define NO_CUT 65535
   #define CUT_MAX 65000
