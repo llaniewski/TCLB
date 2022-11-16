@@ -14,7 +14,7 @@
 using namespace LAMMPS_NS;
 
 
-typedef rfi::RemoteForceInterface< rfi::ForceIntegrator, rfi::RotParticle, rfi::ArrayOfStructures, real_t > RFI_t;
+typedef rfi::RemoteForceInterface< rfi::ForceIntegrator, rfi::RotParticle, rfi::ArrayOfStructures, particle_real_t > RFI_t;
 
 struct Info {
    MPMDHelper *MPMD;

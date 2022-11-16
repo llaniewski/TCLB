@@ -1,55 +1,72 @@
+#include "cross.h"
 #ifndef CROSS_CPU
-
-  __shared__ real_t  sumtab[MAX_THREADS];
-  __shared__ real_t* sumptr[MAX_THREADS];
-
-  #if __CUDA_ARCH__ < 200
-    #define CROSS_NEED_ATOMICADD
+  #ifdef CROSS_HALF
+    #include <cuda_fp16.h>
   #endif
-      
-  #ifdef CALC_DOUBLE_PRECISION
-    typedef unsigned long long int real_t_i;
-    #define R2I(x) __double_as_longlong(x)
-    #define I2R(x) __longlong_as_double(x)
-    #define CROSS_NEED_ATOMICADD
-  #else
-    #define R2I(x) __float_as_int(x)
-    #define I2R(x) __int_as_float(x)
-    typedef int      real_t_i;
-  #endif
-        
-  #ifdef CROSS_NEED_ATOMICADD
-      __device__ inline void atomicAddP(real_t* address, real_t val)
+
+    template <class T> struct real_to_bytes { };
+    template <> struct real_to_bytes<double> {
+      typedef unsigned long long int bytes;
+      typedef double real;
+      static __device__ bytes tobytes(real val) { return __double_as_longlong(val); }
+      static __device__ real toreal(bytes val) { return __longlong_as_double(val); }
+    };
+    template <> struct real_to_bytes<float> {
+      typedef unsigned int bytes;
+      typedef float real;
+      static __device__ bytes tobytes(real val) { return __float_as_int(val); }
+      static __device__ real toreal(bytes val) { return __int_as_float(val); }
+    };
+    #ifdef CROSS_HALF
+      template <> struct real_to_bytes<half> {
+        typedef unsigned short int bytes;
+        typedef half real;
+        static __device__ bytes tobytes(real val) { return __half_as_short(val); }
+        static __device__ real toreal(bytes val) { return __short_as_half(val); }
+      };
+    #endif
+
+  template <class T>
+      __device__ inline void atomicAddP(T* address, T val)
       {
+        typedef real_to_bytes<T> R2B;
           if (val != 0.0) {
-            real_t_i* address_as_ull = (real_t_i*) address;
-            real_t_i  old = *address_as_ull;
-            real_t_i  assumed, nw;
+            typename R2B::bytes* address_as_ull = reinterpret_cast<typename R2B::bytes*>(address);
+            typename R2B::bytes  old = *address_as_ull;
+            typename R2B::bytes  assumed, nw;
             do {
                 assumed = old;
-                nw = R2I(val + I2R(assumed));
+                nw = R2B::tobytes(val + R2B::toreal(assumed));
                 old = atomicCAS(address_as_ull, assumed, nw);
             } while (assumed != old);
           }
       }
-   #else
-      #define atomicAddP atomicAdd
-   #endif
 
-        
-    __device__ inline void atomicMaxP(real_t* address, real_t val)
-    {
-        if (val != 0.0) {
-          real_t_i* address_as_ull = (real_t_i*) address;
-          real_t_i  old = *address_as_ull;
-          real_t_i  assumed, nw;
-          do {
-              assumed = old;
-              nw = R2I(max(val,I2R(assumed)));
-              old = atomicCAS(address_as_ull, assumed, nw);
-          } while (assumed != old);
-        }
-    }
+
+  template <class T>
+      __device__ inline void atomicMaxP(T* address, T val)
+      {
+        typedef real_to_bytes<T> R2B;
+          if (val != 0.0) {
+            typename R2B::bytes* address_as_ull = reinterpret_cast<typename R2B::bytes*>(address);
+            typename R2B::bytes  old = *address_as_ull;
+            typename R2B::bytes  assumed, nw;
+            do {
+                assumed = old;
+                nw = R2B::tobytes(max(val,R2B::toreal(assumed)));
+                old = atomicCAS(address_as_ull, assumed, nw);
+            } while (assumed != old);
+          }
+      }
+
+  #if __CUDA_ARCH__ >= 200
+    template <> __device__ inline void atomicAddP(float* address, float val) { atomicAdd(address, val); }
+    #if __CUDA_ARCH__ >= 600
+      template <> __device__ inline void atomicAddP(double* address, double val) { atomicAdd(address, val); }
+    #endif
+  #endif
+
+
     #ifndef MAX_THREADS
       #error FUCK!
     #else
@@ -58,11 +75,15 @@
       #endif
     #endif
 
-      __device__ inline real_t blockSum(real_t val) {
+    template <class T>
+      __device__ inline T blockSum(T val) {
               int i = blockDim.x*blockDim.y;
               int k = blockDim.x*blockDim.y;
               int j = blockDim.x*threadIdx.y + threadIdx.x;
+              __shared__ T  sumtab[MAX_THREADS];
+              __syncthreads();
               sumtab[j] = val;
+              __syncthreads();
               while (i> 1) {
                       k = i >> 1;
                       i = i - k;
@@ -71,36 +92,22 @@
               }
               return sumtab[0];
       }
-      
-      __device__ inline void atomicSum_f(real_t * sum) {
-              int i = blockDim.x*blockDim.y;
-              int k = blockDim.x*blockDim.y;
+
+      template <class T>
+      __device__ inline void atomicSum(T * sum, T val)
+      {
               int j = blockDim.x*threadIdx.y + threadIdx.x;
-              while (i> 1) {
-                      k = i >> 1;
-                      i = i - k;
-                      if (j<k) sumtab[j] += sumtab[j+i];
-                      __syncthreads();
-              }
+              val = blockSum<T>(val);
               if (j==0) {
-                real_t val = sumtab[0];
                 if (val != 0.0) {
                   atomicAddP(sum, val);
                 }
               }
       }
 
-      __device__ inline void atomicSum(real_t * sum, real_t val)
-      {
-              __syncthreads();
-              int j = blockDim.x*threadIdx.y + threadIdx.x;
-              sumtab[j] = val;
-              __syncthreads();
-              atomicSum_f(sum);
-      }
-
 #if CUDART_VERSION >= 9000
-__device__ inline void atomicSumWarp(real_t * sum, real_t val)
+template <class T>
+__device__ inline void atomicSumWarp(T * sum, T val)
 {
 	#define FULL_MASK 0xffffffff
 	if (__any_sync(FULL_MASK, val != 0)) {
@@ -110,7 +117,8 @@ __device__ inline void atomicSumWarp(real_t * sum, real_t val)
 	}
 }
 
-__device__ inline void atomicSumWarpArr(real_t * sum, real_t * val, unsigned char len)
+template <class T, class P>
+__device__ inline void atomicSumWarpArr(T * sum, P * val, unsigned char len)
 {
 	#define FULL_MASK 0xffffffff
 	bool pred = false;
@@ -120,14 +128,15 @@ __device__ inline void atomicSumWarpArr(real_t * sum, real_t * val, unsigned cha
 			for (unsigned char i=0; i<len; i++) val[i] += __shfl_xor_sync(FULL_MASK, val[i], offset);
 		}
 		if (threadIdx.x < len) {
-			atomicAddP(sum+threadIdx.x,val[threadIdx.x]);
+			atomicAddP(sum+threadIdx.x,static_cast<T>(val[threadIdx.x]));
 		}
 	}
 }
 
 #elif CUDART_VERSION >= 7000
 
-__device__ inline void atomicSumWarp(real_t * sum, real_t val)
+template <class T>
+__device__ inline void atomicSumWarp(T * sum, T val)
 {
 	#define FULL_MASK 0xffffffff
 	if (__any(val != 0)) {
@@ -137,7 +146,8 @@ __device__ inline void atomicSumWarp(real_t * sum, real_t val)
 	}
 }
 
-__device__ inline void atomicSumWarpArr(real_t * sum, real_t * val, unsigned char len)
+template <class T>
+__device__ inline void atomicSumWarpArr(T * sum, T * val, unsigned char len)
 {
 	#define FULL_MASK 0xffffffff
 	bool pred = false;
@@ -163,11 +173,13 @@ __device__ inline void atomicSumWarpArr(real_t * sum, real_t * val, unsigned cha
       }
 */
 
-      __device__ inline void atomicMax(real_t * sum, real_t val)
+      template <class T>
+      __device__ inline void atomicMax(T * sum, T val)
       {
               int i = blockDim.x*blockDim.y;
               int k = blockDim.x*blockDim.y;
               int j = blockDim.x*threadIdx.y + threadIdx.x;
+              __shared__ T  sumtab[MAX_THREADS];
               __syncthreads();
               sumtab[j] = val;
               __syncthreads();
@@ -180,17 +192,42 @@ __device__ inline void atomicSumWarpArr(real_t * sum, real_t * val, unsigned cha
               if (j==0) atomicMaxP(sum,sumtab[0]);
       }
 
-      __device__ inline void atomicSumDiff(real_t * sum, real_t val, bool yes)
+      template <class T>
+      __device__ inline void atomicSumDiff(T * sum, T val, bool yes)
       {
-                __syncthreads();
-                int j = blockDim.x*threadIdx.y + threadIdx.x;
-                if (yes) {
-                  sumtab[j] = val;
-                } else {
-                  sumtab[j] = 0.0;
-                }
-                __syncthreads();
-                atomicSum_f(sum);
+                if (!yes) val = 0;
+                atomicSum(sum,val);
       }
+#else
 
+    template <class T, class P> inline T data_cast(const P& x) { static_assert(sizeof(T)==sizeof(P),"Wrong sizes in data_cast"); T ret; memcpy(&ret, &x, sizeof(T)); return ret; }
+
+    #define __short_as_half(x__)      data_cast<half          , short int     >(x__)
+    #define __half_as_short(x__)      data_cast<short int     , half          >(x__)
+    #define __int_as_float(x__)       data_cast<float         , int           >(x__)
+    #define __float_as_int(x__)       data_cast<int           , float         >(x__)
+    #define __longlong_as_double(x__) data_cast<double        , long long int >(x__)
+    #define __double_as_longlong(x__) data_cast<long long int , double        >(x__)
+
+    template <class T> struct real_to_bytes { };
+    template <> struct real_to_bytes<double> {
+      typedef unsigned long long int bytes;
+      typedef double real;
+      static __device__ bytes tobytes(real val) { return data_cast< bytes, real >(val); }
+      static __device__ real toreal(bytes val) { return data_cast< real, bytes >(val); }
+    };
+    template <> struct real_to_bytes<float> {
+      typedef unsigned int bytes;
+      typedef float real;
+      static __device__ bytes tobytes(real val) { return data_cast< bytes, real >(val); }
+      static __device__ real toreal(bytes val) { return data_cast< real, bytes >(val); }
+    };
+    #ifdef CROSS_HALF
+      template <> struct real_to_bytes<half> {
+        typedef unsigned short int bytes;
+        typedef half real;
+        static __device__ bytes tobytes(real val) { return data_cast< bytes, real >(val); }
+        static __device__ real toreal(bytes val) { return data_cast< real, bytes >(val); }
+      };
+    #endif
 #endif

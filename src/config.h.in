@@ -17,6 +17,9 @@
 /* Storage type used */
 #undef STORAGE_TYPE
 
+/* Storage type used */
+#undef PARTICLE_REAL_TYPE
+
 /* Using shift for storage */
 #undef STORAGE_SHIFT
 

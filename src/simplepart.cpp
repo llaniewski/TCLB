@@ -29,6 +29,8 @@ struct Particle {
 };
 
 typedef std::vector<Particle> Particles;
+typedef rfi::RemoteForceInterface< rfi::ForceIntegrator, rfi::RotParticle, rfi::ArrayOfStructures, particle_real_t > RFI_t;
+
 
 int main(int argc, char *argv[]) {
   int ret;
@@ -42,7 +44,8 @@ int main(int argc, char *argv[]) {
     return -1;
   }
   MPMD.Identify();
-  rfi::RemoteForceInterface<rfi::ForceIntegrator, rfi::RotParticle> RFI;
+  RFI_t RFI;
+  
   RFI.name = "SIMPLEPART";
 
   MPMDIntercomm inter = MPMD["TCLB"];

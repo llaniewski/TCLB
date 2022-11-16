@@ -53,6 +53,10 @@ AC_ARG_WITH([storage],
 	AS_HELP_STRING([--with-storage],
 		[type of storage used: half, half-shift, float, float-shift, double]))
 
+AC_ARG_WITH([particle-precision],
+	AS_HELP_STRING([--with-particle-precision],
+		[type of storage used: float, double]))
+
 AC_ARG_ENABLE([cpp11],
 	AS_HELP_STRING([--enable-cpp11],
 		[enable C++ 11 standard]))
@@ -204,6 +208,17 @@ then
 elif test "x${with_storage}" != "x"
 then
 	AC_MSG_ERROR([Not suppported type of storage: x${with_storage}])
+fi
+
+if test "x${with_particle_precision}" == "xfloat"
+then
+	AC_DEFINE([PARTICLE_REAL_TYPE], [32], [Using half as particle precision])
+elif test "x${with_particle_precision}" == "xdouble"
+then
+	AC_DEFINE([PARTICLE_REAL_TYPE], [64], [Using half as particle precision])
+elif test "x${with_particle_precision}" != "x"
+then
+	AC_MSG_ERROR([Not suppported type of particle precision: x${with_particle_precision}])
 fi
 
 OPENMP="${with_openmp}"

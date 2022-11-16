@@ -10,11 +10,7 @@
   typedef struct {real_t x,y,z;} vector_t;
 
   #ifndef STORAGE_TYPE
-    #ifdef CALC_DOUBLE_PRECISION
-      typedef double storage_t;
-    #else
-      typedef float storage_t;
-    #endif
+    typedef real_t storage_t;
   #elif STORAGE_TYPE == 16
       typedef short int storage_t;
   #elif STORAGE_TYPE == 32
@@ -23,6 +19,17 @@
       typedef long long int storage_t;
   #endif
   typedef unsigned short int cut_t;
+
+  #ifndef PARTICLE_REAL_TYPE
+    typedef real_t particle_real_t;
+    typedef real_t balltree_real_t;
+  #elif PARTICLE_REAL_TYPE == 32
+    typedef float particle_real_t;
+    typedef float balltree_real_t;
+  #elif PARTICLE_REAL_TYPE == 64
+    typedef double particle_real_t;
+    typedef double balltree_real_t;
+  #endif
 
   #define NO_CUT 65535
   #define CUT_MAX 65000

@@ -10,7 +10,7 @@
 
 typedef char tr_flag_t;
 typedef int tr_addr_t;
-typedef double tr_real_t;
+typedef balltree_real_t tr_real_t;
 
 struct tr_elem {
     tr_flag_t flag;

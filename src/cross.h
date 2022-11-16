@@ -105,6 +105,7 @@
     #define CudaFuncAttributes cudaFuncAttributes
     #define CudaFuncGetAttributes(a__,b__) HANDLE_ERROR( cudaFuncGetAttributes(a__, b__) )
     #define ISFINITE(l__) isfinite(l__)
+
   #else
     #include <assert.h>
     #include <time.h>
