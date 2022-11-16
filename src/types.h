@@ -13,6 +13,7 @@
     typedef real_t storage_t;
   #elif STORAGE_TYPE == 16
       typedef short int storage_t;
+      #define CROSS_HALF
   #elif STORAGE_TYPE == 32
       typedef int storage_t;
   #elif STORAGE_TYPE == 64
