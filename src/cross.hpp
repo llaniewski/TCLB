@@ -8,26 +8,26 @@
     template <> struct real_to_bytes<double> {
       typedef unsigned long long int bytes;
       typedef double real;
-      static __device__ bytes tobytes(real val) { return __double_as_longlong(val); }
-      static __device__ real toreal(bytes val) { return __longlong_as_double(val); }
+      static CudaDeviceFunction bytes tobytes(real val) { return __double_as_longlong(val); }
+      static CudaDeviceFunction real toreal(bytes val) { return __longlong_as_double(val); }
     };
     template <> struct real_to_bytes<float> {
       typedef unsigned int bytes;
       typedef float real;
-      static __device__ bytes tobytes(real val) { return __float_as_int(val); }
-      static __device__ real toreal(bytes val) { return __int_as_float(val); }
+      static CudaDeviceFunction bytes tobytes(real val) { return __float_as_int(val); }
+      static CudaDeviceFunction real toreal(bytes val) { return __int_as_float(val); }
     };
     #ifdef CROSS_HALF
       template <> struct real_to_bytes<half> {
         typedef unsigned short int bytes;
         typedef half real;
-        static __device__ bytes tobytes(real val) { return __half_as_short(val); }
-        static __device__ real toreal(bytes val) { return __short_as_half(val); }
+        static CudaDeviceFunction bytes tobytes(real val) { return __half_as_short(val); }
+        static CudaDeviceFunction real toreal(bytes val) { return __short_as_half(val); }
       };
     #endif
 
   template <class T>
-      __device__ inline void atomicAddP(T* address, T val)
+      CudaDeviceFunction inline void atomicAddP(T* address, T val)
       {
         typedef real_to_bytes<T> R2B;
           if (val != 0.0) {
@@ -44,7 +44,7 @@
 
 
   template <class T>
-      __device__ inline void atomicMaxP(T* address, T val)
+      CudaDeviceFunction inline void atomicMaxP(T* address, T val)
       {
         typedef real_to_bytes<T> R2B;
           if (val != 0.0) {
@@ -60,9 +60,9 @@
       }
 
   #if __CUDA_ARCH__ >= 200
-    template <> __device__ inline void atomicAddP(float* address, float val) { atomicAdd(address, val); }
+    template <> CudaDeviceFunction inline void atomicAddP(float* address, float val) { atomicAdd(address, val); }
     #if __CUDA_ARCH__ >= 600
-      template <> __device__ inline void atomicAddP(double* address, double val) { atomicAdd(address, val); }
+      template <> CudaDeviceFunction inline void atomicAddP(double* address, double val) { atomicAdd(address, val); }
     #endif
   #endif
 
@@ -76,7 +76,7 @@
     #endif
 
     template <class T>
-      __device__ inline T blockSum(T val) {
+      CudaDeviceFunction inline T blockSum(T val) {
               int i = blockDim.x*blockDim.y;
               int k = blockDim.x*blockDim.y;
               int j = blockDim.x*threadIdx.y + threadIdx.x;
@@ -94,7 +94,7 @@
       }
 
       template <class T>
-      __device__ inline void atomicSum(T * sum, T val)
+      CudaDeviceFunction inline void atomicSum(T * sum, T val)
       {
               int j = blockDim.x*threadIdx.y + threadIdx.x;
               val = blockSum<T>(val);
@@ -107,7 +107,7 @@
 
 #if CUDART_VERSION >= 9000
 template <class T>
-__device__ inline void atomicSumWarp(T * sum, T val)
+CudaDeviceFunction inline void atomicSumWarp(T * sum, T val)
 {
 	#define FULL_MASK 0xffffffff
 	if (__any_sync(FULL_MASK, val != 0)) {
@@ -118,7 +118,7 @@ __device__ inline void atomicSumWarp(T * sum, T val)
 }
 
 template <class T, class P>
-__device__ inline void atomicSumWarpArr(T * sum, P * val, unsigned char len)
+CudaDeviceFunction inline void atomicSumWarpArr(T * sum, P * val, unsigned char len)
 {
 	#define FULL_MASK 0xffffffff
 	bool pred = false;
@@ -136,7 +136,7 @@ __device__ inline void atomicSumWarpArr(T * sum, P * val, unsigned char len)
 #elif CUDART_VERSION >= 7000
 
 template <class T>
-__device__ inline void atomicSumWarp(T * sum, T val)
+CudaDeviceFunction inline void atomicSumWarp(T * sum, T val)
 {
 	#define FULL_MASK 0xffffffff
 	if (__any(val != 0)) {
@@ -147,7 +147,7 @@ __device__ inline void atomicSumWarp(T * sum, T val)
 }
 
 template <class T>
-__device__ inline void atomicSumWarpArr(T * sum, T * val, unsigned char len)
+CudaDeviceFunction inline void atomicSumWarpArr(T * sum, T * val, unsigned char len)
 {
 	#define FULL_MASK 0xffffffff
 	bool pred = false;
@@ -165,7 +165,7 @@ __device__ inline void atomicSumWarpArr(T * sum, T * val, unsigned char len)
   #warning "no atomicSumWarp for this CUDA version"
 #endif
 
-/*      __device__ inline void atomicSum(real_t * sum, real_t val) {
+/*      CudaDeviceFunction inline void atomicSum(real_t * sum, real_t val) {
         typedef cub::BlockReduce<real_t, 32, cub::BLOCK_REDUCE_WARP_REDUCTIONS, 20> BlockReduce;
         __shared__ typename BlockReduce::TempStorage temp_storage;
         real_t ret = BlockReduce(temp_storage).Sum(val);
@@ -174,7 +174,7 @@ __device__ inline void atomicSumWarpArr(T * sum, T * val, unsigned char len)
 */
 
       template <class T>
-      __device__ inline void atomicMax(T * sum, T val)
+      CudaDeviceFunction inline void atomicMax(T * sum, T val)
       {
               int i = blockDim.x*blockDim.y;
               int k = blockDim.x*blockDim.y;
@@ -193,7 +193,7 @@ __device__ inline void atomicSumWarpArr(T * sum, T * val, unsigned char len)
       }
 
       template <class T>
-      __device__ inline void atomicSumDiff(T * sum, T val, bool yes)
+      CudaDeviceFunction inline void atomicSumDiff(T * sum, T val, bool yes)
       {
                 if (!yes) val = 0;
                 atomicSum(sum,val);
@@ -213,21 +213,21 @@ __device__ inline void atomicSumWarpArr(T * sum, T * val, unsigned char len)
     template <> struct real_to_bytes<double> {
       typedef unsigned long long int bytes;
       typedef double real;
-      static __device__ bytes tobytes(real val) { return data_cast< bytes, real >(val); }
-      static __device__ real toreal(bytes val) { return data_cast< real, bytes >(val); }
+      static CudaDeviceFunction bytes tobytes(real val) { return data_cast< bytes, real >(val); }
+      static CudaDeviceFunction real toreal(bytes val) { return data_cast< real, bytes >(val); }
     };
     template <> struct real_to_bytes<float> {
       typedef unsigned int bytes;
       typedef float real;
-      static __device__ bytes tobytes(real val) { return data_cast< bytes, real >(val); }
-      static __device__ real toreal(bytes val) { return data_cast< real, bytes >(val); }
+      static CudaDeviceFunction bytes tobytes(real val) { return data_cast< bytes, real >(val); }
+      static CudaDeviceFunction real toreal(bytes val) { return data_cast< real, bytes >(val); }
     };
     #ifdef CROSS_HALF
       template <> struct real_to_bytes<half> {
         typedef unsigned short int bytes;
         typedef half real;
-        static __device__ bytes tobytes(real val) { return data_cast< bytes, real >(val); }
-        static __device__ real toreal(bytes val) { return data_cast< real, bytes >(val); }
+        static CudaDeviceFunction bytes tobytes(real val) { return data_cast< bytes, real >(val); }
+        static CudaDeviceFunction real toreal(bytes val) { return data_cast< real, bytes >(val); }
       };
     #endif
 #endif
