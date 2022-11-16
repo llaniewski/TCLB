@@ -13,9 +13,15 @@
 #ifndef STORAGE_TYPE
   #define storage_to_real(x__) x__
   #define real_to_storage(x__) x__
-#else
-  inline CudaDeviceFunction real_t storage_to_real(storage_t v) { return real_to_bytes<real_t>::toreal(v); }
-  inline CudaDeviceFunction storage_t real_to_storage(real_t v) { return real_to_bytes<real_t>::tobytes(v); }
+#elif STORAGE_TYPE == 16
+  inline CudaDeviceFunction real_t storage_to_real(storage_t v) { return real_to_bytes<half>::toreal(v); }
+  inline CudaDeviceFunction storage_t real_to_storage(real_t v) { return real_to_bytes<half>::tobytes(v); }
+#elif STORAGE_TYPE == 32
+  inline CudaDeviceFunction real_t storage_to_real(storage_t v) { return real_to_bytes<float>::toreal(v); }
+  inline CudaDeviceFunction storage_t real_to_storage(real_t v) { return real_to_bytes<float>::tobytes(v); }
+#elif STORAGE_TYPE == 64
+  inline CudaDeviceFunction real_t storage_to_real(storage_t v) { return real_to_bytes<double>::toreal(v); }
+  inline CudaDeviceFunction storage_t real_to_storage(real_t v) { return real_to_bytes<double>::tobytes(v); }
 #endif
 
 #ifdef STORAGE_SHIFT
