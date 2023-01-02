@@ -330,14 +330,14 @@ do
 		
 		case "$PMS" in
 		apt-get)
-			OS=ubuntu1204
+			OS=xenial
 			if test "$(lsb_release -si)" == "Ubuntu"
 			then
-				OS="ubuntu$(lsb_release -sr | sed 's/[.]//g')"
+				OS="$(lsb_release -sc)"
 			fi
 			try "Downloading HIP key file" wget $WGETOPT https://repo.radeon.com/rocm/rocm.gpg.key -O tmp.key
 			try "Planting HIP key" $SUDO apt-key add tmp.key
-			echo "deb [arch=amd64] https://repo.radeon.com/rocm/apt/$HIP xenial main" >tmp.list
+			echo "deb [arch=amd64] https://repo.radeon.com/rocm/apt/$HIP $OS main" >tmp.list
 			try "Planting repo list (/etc/apt/sources.list.d/rocm.list)" $SUDO cp tmp.list /etc/apt/sources.list.d/rocm.list
 			try "Updating APT" $SUDO apt-get update -qq
 			try "Installing HIP from APT" $SUDO apt-get install -y rocm-dev

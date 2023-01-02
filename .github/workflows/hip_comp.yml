@@ -1,4 +1,4 @@
-name: GPU
+name: HIP
 
 on: [ push, pull_request]
 
@@ -21,7 +21,7 @@ jobs:
         rdep: true
         openmpi: true
         rinside: true
-        hip: 4.0.1
+        hip: 5.4
     - name: Configure
       uses: ./.github/actions/configure
       with:
