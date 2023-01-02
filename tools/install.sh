@@ -308,7 +308,7 @@ do
 			KEYRINGVER='1.0-1'
 			PINFILE="cuda-${OS}.pin"
 			try "Downloading CUDA pin file" wget $WGETOPT http://developer.download.nvidia.com/compute/cuda/repos/${OS}/x86_64/${PINFILE} -O tmp.pinfile
-			try "Downloading CUDA pin file" wget $WGETOPT http://developer.download.nvidia.com/compute/cuda/repos/${OS}/x86_64/cuda-keyring_${KEYRINGVER}_all.deb -O tmp.keyring.deb
+			try "Downloading CUDA keyring file" wget $WGETOPT http://developer.download.nvidia.com/compute/cuda/repos/${OS}/x86_64/cuda-keyring_${KEYRINGVER}_all.deb -O tmp.keyring.deb
 			try "Installing CUDA dist" $SUDO dpkg -i tmp.keyring.deb
 			try "Planting pin file" $SUDO mv tmp.pinfile /etc/apt/preferences.d/cuda-repository-pin-600
 			try "Updating APT" $SUDO apt-get update -qq
@@ -319,6 +319,32 @@ do
 			;;
 		*)
 			pms_error CUDA ;;
+		esac
+		;;
+	hip)
+		shift
+		test -z "$1" && error "Version number needed for hip install"
+		HIP=$1
+		shift
+		echo "#### Installing HIP library ####"
+		
+		case "$PMS" in
+		apt-get)
+			OS=ubuntu1204
+			if test "$(lsb_release -si)" == "Ubuntu"
+			then
+				OS="ubuntu$(lsb_release -sr | sed 's/[.]//g')"
+			fi
+			try "Downloading HIP key file" wget $WGETOPT https://repo.radeon.com/rocm/rocm.gpg.key -O tmp.key
+			try "Planting HIP key" $SUDO apt-key add tmp.key
+			echo "deb [arch=amd64] https://repo.radeon.com/rocm/apt/$HIP xenial main" >tmp.list
+			try "Planting repo list (/etc/apt/sources.list.d/rocm.list)" $SUDO cp tmp.list /etc/apt/sources.list.d/rocm.list
+			try "Updating APT" $SUDO apt-get update -qq
+			try "Installing HIP from APT" $SUDO apt-get install -y rocm-dev
+			try "Clean APT" $SUDO apt-get clean
+			;;
+		*)
+			pms_error HIP ;;
 		esac
 		;;
 	openmpi)
