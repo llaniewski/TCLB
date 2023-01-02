@@ -335,13 +335,12 @@ do
 			then
 				OS="$(lsb_release -sc)"
 			fi
-			try "Downloading HIP key file" wget $WGETOPT https://repo.radeon.com/rocm/rocm.gpg.key -O tmp.key
-			try "Planting HIP key" $SUDO apt-key add tmp.key
-			echo "deb [arch=amd64] https://repo.radeon.com/rocm/apt/$HIP $OS main" >tmp.list
-			try "Planting repo list (/etc/apt/sources.list.d/rocm.list)" $SUDO cp tmp.list /etc/apt/sources.list.d/rocm.list
-			try "Updating APT" $SUDO apt-get update -qq
-			try "Installing HIP from APT" $SUDO apt-get install -y rocm-dev
-			try "Clean APT" $SUDO apt-get clean
+			
+			AMDGPU_DEB=amdgpu-install_5.3.50300-1_all.deb
+			try "Updating APT" $SUDO apt-get update
+			try "Download AMDGPU install deb" wget https://repo.radeon.com/amdgpu-install/5.3/ubuntu/$OS/$AMDGPU_DEB
+			try "Installing deb" $SUDO apt-get install ./$AMDGPU_DEB
+			try "Running AMDGPU install" $SUDO amdgpu-install --usecase=rocm
 			;;
 		*)
 			pms_error HIP ;;
