@@ -837,7 +837,11 @@ fi
 
 if test "x${enable_paranoid}" == "xyes"
 then
-	CPPFLAGS="${CPPFLAGS} -Wall -Werror -Wno-unused-but-set-variable -Wno-unused-variable -Wno-format-overflow"
+	CPPFLAGS="${CPPFLAGS} -Wall -Werror -Wno-unused-but-set-variable -Wno-unused-variable"
+	if test "x${CROSS_HIP}" != "x1"
+	then
+		CPPFLAGS="${CPPFLAGS} -Wno-format-overflow"
+	fi
 fi
 
 if test "x${enable_profiling}" == "xyes"
