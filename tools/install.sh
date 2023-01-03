@@ -340,7 +340,8 @@ do
 			try "Updating APT" $SUDO apt-get update
 			try "Download AMDGPU install deb" wget https://repo.radeon.com/amdgpu-install/5.3/ubuntu/$OS/$AMDGPU_DEB
 			try "Installing deb" $SUDO apt-get install ./$AMDGPU_DEB
-			try "Running AMDGPU install" $SUDO amdgpu-install --usecase=rocm
+			echo "Running AMDGPU install"
+			$SUDO amdgpu-install -y --usecase=rocm
 			;;
 		*)
 			pms_error HIP ;;
