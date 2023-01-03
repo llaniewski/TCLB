@@ -1,6 +1,6 @@
-name: CPU
+name: TESTS_GCC
 
-on: [ ]
+on: [ push, pull_request ]
 
 jobs:
   test:
