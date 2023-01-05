@@ -342,17 +342,16 @@ do
 		echo "#### Installing HIP library ####"
 		echo $HIP
 		IFS=. read V1 V2 V3 <<< $HIP
-		echo "Installing version: $V1.$V2.$V3"
+		echo "Installing version: $HIP ($V1|$V2|$V3)"
 		case "$PMS" in
 		apt-get)
 			OS=xenial
 			if test "$(lsb_release -si)" == "Ubuntu"
 			then
 				OS="$(lsb_release -sc)"
-			fi
-			
-			AMDGPU_DEB=$(printf amdgpu-install_%d.%d.%d%02d%02d-1_all.deb "$V1" "$V2" "$V1" "$V2" "$V3")
-			AMDGPU_VER=$(printf %d.%d "$V1" "$V2")
+			fi			
+			AMDGPU_DEB="$(printf amdgpu-install_%d.%d.%d%02d%02d-1_all.deb "$V1" "$V2" "$V1" "$V2" "$V3")"
+			AMDGPU_VER="$HIP"
 			try "Updating APT" $SUDO apt-get update
 			try "Download AMDGPU install deb" wget https://repo.radeon.com/amdgpu-install/$AMDGPU_VER/ubuntu/$OS/$AMDGPU_DEB
 			try "Installing deb" $SUDO apt-get install ./$AMDGPU_DEB
