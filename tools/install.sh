@@ -350,7 +350,7 @@ do
 			CUDA_APT=${CUDA%-*}
 			CUDA_APT=${CUDA_APT/./-}
 			try "Installing CUDA form APT" $SUDO apt-get install -y cuda-compiler-${CUDA_APT} cuda-libraries-${CUDA_APT} cuda-libraries-dev-${CUDA_APT}
-			try "Clean APT" $SUDO apt-get clean
+#			try "Clean APT" $SUDO apt-get clean
 			;;
 		*)
 			pms_error CUDA ;;
@@ -388,13 +388,13 @@ do
 		yum)
 			try "Installing openmpi from yum" $SUDO yum install -y openmpi
 			try "Installing openmpi-devel from yum" $SUDO yum install -y openmpi-devel
-			try "Clean yum" $SUDO yum clean packages
+#			try "Clean yum" $SUDO yum clean packages
 			echo "Don't forget to load mpi module before compilation."
 			;;
 		apt-get)
 			try "Updating APT" $SUDO apt-get update -qq
 			try "Installing OpenMPI from APT" $SUDO apt-get install -y openmpi-bin libopenmpi-dev
-			try "Clean APT" $SUDO apt-get clean
+#			try "Clean APT" $SUDO apt-get clean
 			;;
 		brew)
 			try "Installing OpenMPI from brew" brew install openmpi

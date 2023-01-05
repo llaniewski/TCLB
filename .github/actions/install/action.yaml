@@ -54,11 +54,11 @@ runs:
   steps:
     - shell: bash
       env:
-        JSON_INP: ${{ toJSON(inputs.*.value) }}
+        JSON_INP: ${{ toJSON(inputs) }}
       run: echo "$JSON_INP" >inputs.json
-    - uses: actions/cache@v3
+    - uses: actions/cache/restore@v3
       with:
-        path: /var/cache/apt/archives/
+        path: /var/cache/apt/archives/*.deb
         key: ${{ runner.os }}-${{ hashFiles('inputs.json') }}
     - if: inputs.essentials != 'false'
       name: "Installing essentials"
@@ -125,3 +125,7 @@ runs:
       name: "Installing Tapenade"
       shell: bash
       run: tools/install.sh ${{inputs.options}} tapenade
+    - uses: actions/cache/save@v3
+      with:
+        path: /var/cache/apt/archives/*.deb
+        key: ${{ runner.os }}-${{ hashFiles('inputs.json') }}
