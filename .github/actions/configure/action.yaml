@@ -35,7 +35,8 @@ runs:
   using: 'composite'
   steps:
     - shell: bash
-      id: compile
+      id: configure
+      name: "Running configure"
       run: |
         make configure
         CONFOPT=""
