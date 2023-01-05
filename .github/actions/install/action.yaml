@@ -46,56 +46,59 @@ inputs:
   tapenade:
     description: install tapenade
     default: false
+  options:
+    descriptions: options for install script
+    default: "--group --retry 3 --retry-delay 5 --sudo"
 runs:
   using: 'composite'
   steps:
     - if: inputs.essentials != 'false'
       shell: bash
-      run: tools/install.sh --group --sudo essentials
+      run: tools/install.sh ${{inputs.options}} essentials
     - if: inputs.r != 'false'
       shell: bash
-      run: tools/install.sh --group --sudo r
+      run: tools/install.sh ${{inputs.options}} r
     - if: inputs.rdep != 'false'
       shell: bash
-      run: tools/install.sh --group --sudo rdep
+      run: tools/install.sh ${{inputs.options}} rdep
     - if: inputs.rpython != 'false'
       shell: bash
-      run: tools/install.sh --group --sudo rpython
+      run: tools/install.sh ${{inputs.options}} rpython
     - if: inputs.reticulate != 'false'
       shell: bash
-      run: tools/install.sh --group --sudo reticulate
+      run: tools/install.sh ${{inputs.options}} reticulate
     - if: inputs.rinside != 'false'
       shell: bash
-      run: tools/install.sh --group --sudo rinside
+      run: tools/install.sh ${{inputs.options}} rinside
     - if: inputs.cuda != 'false'
       shell: bash
       run: |
-        tools/install.sh --group --sudo cuda ${{ inputs.cuda }}
+        tools/install.sh ${{inputs.options}} cuda ${{ inputs.cuda }}
         CUDA_PATH=/usr/local/cuda-${{ inputs.cuda }}
         echo "$CUDA_PATH/bin" >>$GITHUB_PATH
         echo "LD_LIBRARY_PATH=$CUDA_PATH/lib64:$LD_LIBRARY_PATH" >>$GITHUB_ENV
         echo "CUDA_PATH=$CUDA_PATH" >>$GITHUB_OUTPUT
     - if: inputs.hip != 'false'
       shell: bash
-      run: tools/install.sh --group --sudo hip ${{ inputs.hip }}
+      run: tools/install.sh ${{inputs.options}} hip ${{ inputs.hip }}
     - if: inputs.openmpi != 'false'
       shell: bash
-      run: tools/install.sh --group --sudo openmpi
+      run: tools/install.sh ${{inputs.options}} openmpi
     - if: inputs.lcov != 'false'
       shell: bash
-      run: tools/install.sh --group --sudo lcov
+      run: tools/install.sh ${{inputs.options}} lcov
     - if: inputs.submodules != 'false'
       shell: bash
-      run: tools/install.sh --group --sudo submodules
+      run: tools/install.sh ${{inputs.options}} submodules
     - if: inputs.gitdep != 'false'
       shell: bash
-      run: tools/install.sh --group --sudo gitdep
+      run: tools/install.sh ${{inputs.options}} gitdep
     - if: inputs.python-dev != 'false'
       shell: bash
-      run: tools/install.sh --group --sudo python-dev
+      run: tools/install.sh ${{inputs.options}} python-dev
     - if: inputs.module != 'false'
       shell: bash
-      run: tools/install.sh --group --sudo module
+      run: tools/install.sh ${{inputs.options}} module
     - if: inputs.tapenade != 'false'
       shell: bash
-      run: tools/install.sh --group --sudo tapenade
+      run: tools/install.sh ${{inputs.options}} tapenade

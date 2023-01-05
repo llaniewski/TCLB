@@ -36,37 +36,55 @@ function try {
 	comment=$1
 	log=$(echo $comment | sed 's|[ /]|.|g').log
 	shift
-	if $DRY
-	then
-		echo "$comment:"
-		echo "         $@"
-	elif $GRPOUTPUT
-	then
-		echo "::group::$comment"
-		if "$@"
+	for RETRY in $(seq $TRYCOUNT)
+	do
+		FIRST=false; LAST=false; RTXT=""
+		test "$RETRY" == 1 && FIRST=true	
+		test "$RETRY" == "$TRYCOUNT" && LAST=true
+		$FIRST || RTXT=" (retry $RETRY/$TRYCOUNT)"
+		if $DRY
 		then
-			echo "::endgroup::"
-		else
-			echo "---- FAILED ----"
-			echo "::endgroup::"
-			exit -1;
-		fi
-	else
-		echo -n "$comment... "
-		if "$@" >$log 2>&1
+			echo "$comment$RTXT:"
+			echo "         $@"
+			return 0;
+		elif $GRPOUTPUT
 		then
-			echo "OK"
+			echo "::group::$comment$RTXT"
+			if "$@"
+			then
+				echo "::endgroup::"
+				return 0;
+			else
+				echo "---- FAILED ----"
+				echo "::endgroup::"
+				if $LAST
+				then
+					exit -1;
+				fi
+			fi
 		else
-			echo "FAILED"
-			echo "----------------- CMD ----------------"
-			echo $@
-			echo "----------------- LOG ----------------"
-			cat  $log
-			echo "--------------------------------------"
-			exit -1;
+			echo -n "$comment$RTXT... "
+			if "$@" >$log 2>&1
+			then
+				echo "OK"
+				return 0;
+			else
+				echo "FAILED"
+				if $LAST
+				then
+					echo "----------------- CMD ----------------"
+					echo $@
+					echo "----------------- LOG ----------------"
+					cat  $log
+					echo "--------------------------------------"
+					exit -1;
+				fi
+			fi
 		fi
-	fi
-	return 0;
+		test $TRYDELAY != "0" && sleep $TRYDELAY
+	done
+	echo "That's weird. We should not arrive here."
+	exit -1;
 }
 
 function install_rpackage_github {
@@ -143,6 +161,8 @@ trap rm_tmp EXIT
 
 DRY=false
 GRPOUTPUT=false
+TRYCOUNT=1
+TRYDELAY=5
 WGETOPT=""
 PMS=""
 GITHUB=false
@@ -199,6 +219,8 @@ do
 		;;
 	--dry) DRY=true ;;
 	--group) GRPOUTPUT=true ;;
+	--retry) shift; TRYCOUNT="$1" ;;
+	--retry-delay) shift; TRYDELAY="$1" ;;
 	--skipssl) WGETOPT="--no-check-certificate" ;;
 	--pms) shift; PMS="$1" ;;
 	--github) GITHUB=true ;;
