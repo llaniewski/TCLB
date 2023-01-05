@@ -52,6 +52,14 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    - shell: bash
+      env:
+        JSON_INP: ${{ toJSON(inputs.*.value) }}
+      run: echo "$JSON_INP" >inputs.json
+    - uses: actions/cache@v3
+      with:
+        path: /var/cache/apt/archives/
+        key: ${{ runner.os }}-${{ hashFiles('inputs.json') }}
     - if: inputs.essentials != 'false'
       name: "Installing essentials"
       shell: bash
