@@ -51,51 +51,51 @@ runs:
   steps:
     - if: inputs.essentials != 'false'
       shell: bash
-      run: tools/install.sh --sudo essentials
+      run: tools/install.sh --group --sudo essentials
     - if: inputs.r != 'false'
       shell: bash
-      run: tools/install.sh --sudo r
+      run: tools/install.sh --group --sudo r
     - if: inputs.rdep != 'false'
       shell: bash
-      run: tools/install.sh --sudo rdep
+      run: tools/install.sh --group --sudo rdep
     - if: inputs.rpython != 'false'
       shell: bash
-      run: tools/install.sh --sudo rpython
+      run: tools/install.sh --group --sudo rpython
     - if: inputs.reticulate != 'false'
       shell: bash
-      run: tools/install.sh --sudo reticulate
+      run: tools/install.sh --group --sudo reticulate
     - if: inputs.rinside != 'false'
       shell: bash
-      run: tools/install.sh --sudo rinside
+      run: tools/install.sh --group --sudo rinside
     - if: inputs.cuda != 'false'
       shell: bash
       run: |
-        tools/install.sh --sudo cuda ${{ inputs.cuda }}
+        tools/install.sh --group --sudo cuda ${{ inputs.cuda }}
         CUDA_PATH=/usr/local/cuda-${{ inputs.cuda }}
         echo "$CUDA_PATH/bin" >>$GITHUB_PATH
         echo "LD_LIBRARY_PATH=$CUDA_PATH/lib64:$LD_LIBRARY_PATH" >>$GITHUB_ENV
         echo "CUDA_PATH=$CUDA_PATH" >>$GITHUB_OUTPUT
     - if: inputs.hip != 'false'
       shell: bash
-      run: tools/install.sh --sudo hip ${{ inputs.hip }}
+      run: tools/install.sh --group --sudo hip ${{ inputs.hip }}
     - if: inputs.openmpi != 'false'
       shell: bash
-      run: tools/install.sh --sudo openmpi
+      run: tools/install.sh --group --sudo openmpi
     - if: inputs.lcov != 'false'
       shell: bash
-      run: tools/install.sh --sudo lcov
+      run: tools/install.sh --group --sudo lcov
     - if: inputs.submodules != 'false'
       shell: bash
-      run: tools/install.sh --sudo submodules
+      run: tools/install.sh --group --sudo submodules
     - if: inputs.gitdep != 'false'
       shell: bash
-      run: tools/install.sh --sudo gitdep
+      run: tools/install.sh --group --sudo gitdep
     - if: inputs.python-dev != 'false'
       shell: bash
-      run: tools/install.sh --sudo python-dev
+      run: tools/install.sh --group --sudo python-dev
     - if: inputs.module != 'false'
       shell: bash
-      run: tools/install.sh --sudo module
+      run: tools/install.sh --group --sudo module
     - if: inputs.tapenade != 'false'
       shell: bash
-      run: tools/install.sh --sudo tapenade
+      run: tools/install.sh --group --sudo tapenade
