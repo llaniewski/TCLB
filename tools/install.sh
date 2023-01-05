@@ -40,6 +40,17 @@ function try {
 	then
 		echo "$comment:"
 		echo "         $@"
+	elif $GRPOUTPUT
+	then
+		echo "::group::$comment"
+		if "$@"
+		then
+			echo "::endgroup::"
+		else
+			echo "---- FAILED ----"
+			echo "::endgroup::"
+			exit -1;
+		fi
 	else
 		echo -n "$comment... "
 		if "$@" >$log 2>&1
@@ -131,6 +142,7 @@ trap rm_tmp EXIT
 
 
 DRY=false
+GRPOUTPUT=false
 WGETOPT=""
 PMS=""
 GITHUB=false
@@ -186,6 +198,7 @@ do
 		exit 0;
 		;;
 	--dry) DRY=true ;;
+	--group) GRPOUTPUT=true ;;
 	--skipssl) WGETOPT="--no-check-certificate" ;;
 	--pms) shift; PMS="$1" ;;
 	--github) GITHUB=true ;;
@@ -327,7 +340,9 @@ do
 		HIP=$1
 		shift
 		echo "#### Installing HIP library ####"
-		
+		echo $HIP
+		IFS=. read V1 V2 V3 <<< $HIP
+		echo "Installing version: $V1.$V2.$V3"
 		case "$PMS" in
 		apt-get)
 			OS=xenial
@@ -336,12 +351,12 @@ do
 				OS="$(lsb_release -sc)"
 			fi
 			
-			AMDGPU_DEB=amdgpu-install_5.3.50300-1_all.deb
+			AMDGPU_DEB=$(printf amdgpu-install_%d.%d.%d%02d%02d-1_all.deb "$V1" "$V2" "$V1" "$V2" "$V3")
+			AMDGPU_VER=$(printf %d.%d "$V1" "$V2")
 			try "Updating APT" $SUDO apt-get update
-			try "Download AMDGPU install deb" wget https://repo.radeon.com/amdgpu-install/5.3/ubuntu/$OS/$AMDGPU_DEB
+			try "Download AMDGPU install deb" wget https://repo.radeon.com/amdgpu-install/$AMDGPU_VER/ubuntu/$OS/$AMDGPU_DEB
 			try "Installing deb" $SUDO apt-get install ./$AMDGPU_DEB
-			echo "Running AMDGPU install"
-			$SUDO amdgpu-install -y --usecase=rocm
+			try "Installing ROCm (amdgpu-install)" $SUDO amdgpu-install -y --usecase=rocm
 			;;
 		*)
 			pms_error HIP ;;
