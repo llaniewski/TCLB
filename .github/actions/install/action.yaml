@@ -132,7 +132,7 @@ runs:
       shell: bash
       run: tools/install.sh ${{inputs.options}} tapenade
     - shell: bash
-      run: mkdir -p apt_deb/ && mv /var/cache/apt/archives/*.deb apt_deb/
+      run: mkdir -p apt_deb/ && sudo mv /var/cache/apt/archives/*.deb apt_deb/
     - uses: actions/cache/save@v3
       with:
         path: apt_deb/
