@@ -61,7 +61,11 @@ runs:
         path: apt_deb/
         key: ${{ runner.os }}-${{ hashFiles('inputs.json') }}
     - shell: bash
-      run: test -d "apt_deb" && sudo mv apt_deb/*.deb /var/cache/apt/archives/
+      run: |
+        if test -d "apt_deb"
+        then
+          sudo mv apt_deb/*.deb /var/cache/apt/archives/
+        fi
     - if: inputs.essentials != 'false'
       name: "Installing essentials"
       shell: bash
