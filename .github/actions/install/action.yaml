@@ -156,8 +156,8 @@ runs:
     - if: inputs.r != 'false'
       uses: actions/cache/save@v3
       with:
-        path: ${{ steps.rlibpath.outputs.value }}/
-        key: ${{ steps.keys.outputs.rkey }}-${{ hashFiles(format('{0}/**/DESCRIPTION',steps.rlibpath.outputs.value)) }}
+        path: ${{ steps.r.outputs.rlibpath }}/
+        key: ${{ steps.keys.outputs.rkey }}-${{ hashFiles(format('{0}/**/DESCRIPTION',steps.r.outputs.rlibpath)) }}
     - shell: bash
       run: mkdir -p cache_apt/ && sudo mv /var/cache/apt/archives/*.deb cache_apt/
     - uses: actions/cache/save@v3
