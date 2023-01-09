@@ -158,7 +158,7 @@ runs:
       run: |
         mkdir -p cache_apt/ && sudo mv /var/cache/apt/archives/*.deb cache_apt/
         echo "apthash=$(sha256sum cache_apt/*.deb | sha256sum | cut -c 1-15)" >>$GITHUB_OUTPUT
-        echo "rhash=$(sha256sum ${{ steps.r.outputs.rlibpath }}/**/DESCRIPTION | sha256sum | cut -c 1-15)" >>$GITHUB_OUTPUT
+        echo "rhash=$(cat ${{ steps.r.outputs.rlibpath }}/**/DESCRIPTION | grep -v '^Built' | sha256sum | cut -c 1-15)" >>$GITHUB_OUTPUT
     - if: inputs.r != 'false'
       uses: actions/cache/save@v3
       with:
