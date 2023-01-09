@@ -2,13 +2,22 @@
 
 # --------------- UTILITY FUNCTIONS -------------------------
 function usage {
-	echo "install.sh [--dry] [--skipssl] r|rdep|cuda|submodules|openmpi|cover|python-dev|rpython|reticulate|module [VERSION]"
+	echo "Usage: Help               : tools/install.sh --help"
+	echo "       Install dependency : tools/install.sh [--dry] r|rdep|openmpi|reticulate"
+	echo "       Install R package  : tools/install.sh --rpackage [package name or github 'user/repo']"
 	exit -2
 }
 
 function error {
-	echo $@
+	echo "$@"
 	exit -1
+}
+
+function verb {
+	if $VERB
+	then
+		echo "$@"
+	fi
 }
 
 function rm_tmp {
@@ -167,51 +176,69 @@ WGETOPT=""
 PMS=""
 GITHUB=false
 RSTUDIO_REPO=false
+SUDO=""
+VERB=false
+
+#test -n "$1" || usage
+case "$1" in
+-v|--verbose) VERB=true; shift ;;
+"") usage ;;
+esac
 
 for i in apt-get yum brew
 do
 	if test -f "$(command -v $i)"
 	then 
-		echo "Discovered Package Manager: $i"
+		verb "Discovered Package Manager: $i"
 		PMS=$i
 		break
 	fi
 done
-
-SUDO=""
 
 while test -n "$1"
 do
 	case "$1" in
 	--help)
 		echo ""
-		echo "$0 [--dry] [--skipssl] ... [things to install]"
-		echo ""
-		echo "  Options:"
-		echo "    --dry       : Don't execute anything, just print out"
-		echo "    --skipssl   : Don't check ssl certs"
-		echo "    --pms       : Select Package Menagment System (apt/yum/brew)"
-		echo "    --github    : Prefere github as source of packages"
-		echo "    --sudo      : Try using sudo for installation of system packages"
-		echo "    --rstudio-repo : use rstudio APT repository for installing R"
+		echo "$0 [-v] [--dry] [--skipssl] ... [things to install]"
 		echo ""
 		echo "  Things to install:"
-		echo "    cuda       *: Install the nVidia CUDA compilers and libraries"
-		echo "    openmpi    *: Install the OpenMPI libraries and headers"
-		echo "    r          *: Install R Language"
-		echo "    essentials *: Install essential system packages for TCLB"
-		echo "    rdep        : Install R packages needed by TCLB"
-		echo "    rinside     : Install rInside package needed for compiling TCLB with R"
-		echo "    python-dev *: Install Python libraries and headers for compiling TCLB with Python"
+		echo "    cuda VERSION   *: Install the nVidia CUDA compilers and libraries"
+		echo "    hip  VERSION   *: Install the AMD ROCm/HIP compilers and libraries"
+		echo "    openmpi        *: Install the OpenMPI libraries and headers"
+		echo "    r              *: Install R Language"
+		echo "    rdep            : Install R packages needed by TCLB"
+		echo "    essentials     *: Install essential system packages for TCLB (macos)"
 		echo ""
 		echo "  Other things to install:"
-		echo "    rpython     : Install Python backend for R/RTemplate, noting that rPython is deprecated and reticulate is required"
-		echo "    reticulate  : Install Python backend for R/RTemplate"
-		echo "    lcov       *: Install coverage analyzing software 'lcov'"
-		echo "    submodules  : Update github submodules"
-		echo "    gitdep      : Update files copied from other git repositories"
-		echo "    module     *: Install module (for CentOS)"
-		echo "    -r/-rpackage PACKAGE : install R package"
+		echo "    rinside         : Install 'rInside' package needed for compiling TCLB with R"
+		echo "    python-dev     *: Install Python libraries and headers for compiling TCLB with Python"
+		echo "    reticulate      : Install 'reticulate' package needed for using python in rtemplate (<?python ... ?>)"
+		echo "    module          : Install 'module' commandline tool"
+		echo "    tapenade        : Install TAPENADE for automatic differentiation"
+		echo "    lcov            : Install 'lcov' tool for checking code coverage"
+		echo ""
+		echo "  Install R package:"
+		echo "    -r|--rpackage PACKAGE   : Install package from CRAN"
+		echo "    -r|--rpackage USER/REPO : Install package from GitHub"
+		echo ""
+		echo "  Utilities:"
+		echo "    submodules      : Clone and/or update git submodules (eg. tests)"
+		echo "    gitdep          : Update files pulled from other repositories (according to .gitdep file)"
+		echo ""
+		echo "  Options:"
+		echo "    --dry           : Don't execute anything, just print out"
+		echo "    --sudo          : Try using sudo for installation of system packages"
+		echo "    --skipssl       : Don't check ssl certs"
+		echo "    --pms           : Select Package Menagment System (apt/yum/brew)"
+		echo "    -v|--verbose    : Print verbose output"
+		echo "    --github        : Prefere github as source of packages"
+		echo "    --pms PSM       : select the package manager to use"
+		echo "    --rstudio-repo  : use rstudio APT repository for installing R"
+		echo "    --retry N       : retry failed steps N times"
+		echo "    --retry-delay M : delay M seconds between retries"
+		echo "    --group         : Use github actions workflow annotation for output"
+		echo "    --help          : display this help message"
 		echo ""
 		echo "  *) needs sudo"
 		echo ""
@@ -225,22 +252,23 @@ do
 	--pms) shift; PMS="$1" ;;
 	--github) GITHUB=true ;;
 	--rstudio-repo) RSTUDIO_REPO=true ;;
+        -v|--verbose) error "-v/--verbose should be the first argument" ;;
 	--sudo)
 		if test "$UID" == "0"
 		then
-			echo "--sudo: running as root"
+			verb "--sudo: running as root"
 		else
 			if test -f "$(command -v sudo)"
 			then
 				SUDO="sudo -n"
 				if $SUDO true 2>/dev/null
 				then
-					echo "--sudo: sudo working without password"
+					verb "--sudo: sudo working without password"
 				else
 					error "--sudo: sudo requires a password"
 				fi
 			else
-				error "No sudo"
+				error "No sudo command"
 			fi
 		fi
 		;;
@@ -285,6 +313,10 @@ do
 	-r|--rpackage)
 		shift
 		test -z "$1" && error "usage tools/install.sh [--github] --rpackage package_name"
+		case "$1" in
+		*/*) GITHUB=true ;;
+		esac
+		
 		if $GITHUB
 		then
 			install_rpackage_github "$1"
@@ -362,7 +394,6 @@ do
 		HIP=$1
 		shift
 		echo "#### Installing HIP library ####"
-		echo $HIP
 		IFS=. read V1 V2 V3 <<< $HIP
 		echo "Installing version: $HIP ($V1|$V2|$V3)"
 		case "$PMS" in
