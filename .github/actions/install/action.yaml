@@ -53,55 +53,49 @@ runs:
   using: 'composite'
   steps:
     - shell: bash
+      id: keys
       run: |
-        echo "essentials : ${{ inputs.essentials }}" >>tmp.inp.apt
-        echo "r          : ${{ inputs.r }}"          >>tmp.inp.apt
-        echo "rdep       : ${{ inputs.rdep }}"       >>tmp.inp.r
-        echo "rpython    : ${{ inputs.rpython }}"    >>tmp.inp.r
-        echo "reticulate : ${{ inputs.reticulate }}" >>tmp.inp.r
-        echo "rinside    : ${{ inputs.rinside }}"    >>tmp.inp.r
-        echo "cuda       : ${{ inputs.cuda }}"       >>tmp.inp.apt
-        echo "hip        : ${{ inputs.hip }}"        >>tmp.inp.apt
-        echo "openmpi    : ${{ inputs.openmpi }}"    >>tmp.inp.apt
-        echo "lcov       : ${{ inputs.lcov }}"       >>tmp.inp.apt
-        echo "python-dev : ${{ inputs.python-dev }}" >>tmp.inp.apt
-        echo "--- APT inputs ---"
-        cat tmp.inp.apt
-        echo "--- R package inputs ---"
-        cat tmp.inp.r
+        echo "apt"               >tmp.inp.apt
+        echo "${{ runner.os }}" >>tmp.inp.apt
+        echo "rpack"             >tmp.inp.r
+        echo "${{ runner.os }}" >>tmp.inp.r
+        test "${{ inputs.essentials }}" != "false" && echo "ess"                     >>tmp.inp.apt
+        test "${{ inputs.r }}"          != "false" && echo "r"                       >>tmp.inp.apt
+        test "${{ inputs.rdep }}"       != "false" && echo "rdep"                    >>tmp.inp.r
+        test "${{ inputs.rpython }}"    != "false" && echo "rpython"                 >>tmp.inp.r
+        test "${{ inputs.reticulate }}" != "false" && echo "reticulate"              >>tmp.inp.r
+        test "${{ inputs.rinside }}"    != "false" && echo "rinside"                 >>tmp.inp.r
+        test "${{ inputs.cuda }}"       != "false" && echo "cuda ${{ inputs.cuda }}" >>tmp.inp.apt
+        test "${{ inputs.hip }}"        != "false" && echo "hip ${{ inputs.hip }}"   >>tmp.inp.apt
+        test "${{ inputs.openmpi }}"    != "false" && echo "openmpi"                 >>tmp.inp.apt
+        test "${{ inputs.lcov }}"       != "false" && echo "lcov"                    >>tmp.inp.apt
+        test "${{ inputs.python-dev }}" != "false" && echo "pydev"                   >>tmp.inp.apt
+        echo "aptkey=$(echo $(cat tmp.inp.apt) | sed 's/ /-/g')" >>$GITHUB_OUTPUT
+        echo "rkey=$(echo $(cat tmp.inp.r) | sed 's/ /-/g')" >>$GITHUB_OUTPUT
     - uses: actions/cache/restore@v3
       with:
         path: cache_apt/
-        key: ${{ runner.os }}-apt-${{ hashFiles('tmp.inp.apt') }}
-        restore-keys: |
-          ${{ runner.os }}-apt-${{ hashFiles('tmp.inp.apt') }}-
-          ${{ runner.os }}-apt-
+        key: ${{ steps.keys.outputs.aptkey }}
+        restore-keys: ${{ steps.keys.outputs.aptkey }}-
     - shell: bash
-      run: |
-        if test -d "cache_apt"
-        then
-          sudo mv cache_apt/*.deb /var/cache/apt/archives/
-        fi
+      run: test -d "cache_apt" && sudo mv cache_apt/*.deb /var/cache/apt/archives/
     - if: inputs.essentials != 'false'
       name: "Installing essentials"
       shell: bash
       run: tools/install.sh ${{inputs.options}} essentials
     - if: inputs.r != 'false'
       name: "Installing R"
+      id: r
       shell: bash
-      run: tools/install.sh ${{inputs.options}} r
-    - if: inputs.r != 'false'
-      id: rlibpath
-      shell: bash
-      run: echo "value=$(R --slave -e 'cat(Sys.getenv("R_LIBS_USER"));')" >>$GITHUB_OUTPUT
+      run: |
+        tools/install.sh ${{inputs.options}} r
+        echo "rlibpath=$(R --slave -e 'cat(path.expand(Sys.getenv("R_LIBS_USER")));')" >>$GITHUB_OUTPUT
     - if: inputs.r != 'false'
       uses: actions/cache/restore@v3
       with:
-        path: ${{ steps.rlibpath.outputs.value }}/
-        key: ${{ runner.os }}-r-${{ hashFiles('tmp.inp.r') }}
-        restore-keys: |
-          ${{ runner.os }}-r-${{ hashFiles('tmp.inp.r') }}-
-          ${{ runner.os }}-r-
+        path: ${{ steps.r.outputs.rlibpath }}/
+        key: ${{ steps.keys.outputs.rkey }}
+        restore-keys: ${{ steps.keys.outputs.rkey }}-
     - if: inputs.rdep != 'false'
       name: "Installing R packages"
       shell: bash
@@ -163,10 +157,10 @@ runs:
       uses: actions/cache/save@v3
       with:
         path: ${{ steps.rlibpath.outputs.value }}/
-        key: ${{ runner.os }}-r-${{ hashFiles('tmp.inp.r') }}-${{ hashFiles(format('{0}/**/DESCRIPTION',steps.rlibpath.outputs.value)) }}
+        key: ${{ steps.keys.outputs.rkey }}-${{ hashFiles(format('{0}/**/DESCRIPTION',steps.rlibpath.outputs.value)) }}
     - shell: bash
       run: mkdir -p cache_apt/ && sudo mv /var/cache/apt/archives/*.deb cache_apt/
     - uses: actions/cache/save@v3
       with:
         path: cache_apt/
-        key: ${{ runner.os }}-${{ hashFiles('tmp.inp.apt') }}-${{ hashFiles('cache_apt/*.deb') }}
+        key: ${{ steps.keys.outputs.aptkey }}-${{ hashFiles('cache_apt/*.deb') }}
