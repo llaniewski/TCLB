@@ -91,25 +91,17 @@ runs:
       shell: bash
       run: tools/install.sh ${{inputs.options}} r
     - if: inputs.r != 'false'
+      id: rlibpath
+      shell: bash
+      run: echo "value=$(R --slave -e 'cat(Sys.getenv("R_LIBS_USER"));')" >>$GITHUB_OUTPUT
+    - if: inputs.r != 'false'
       uses: actions/cache/restore@v3
       with:
-        path: cache_r/
+        path: ${{ steps.rlibpath.outputs.value }}/
         key: ${{ runner.os }}-r-${{ hashFiles('tmp.inp.r') }}
         restore-keys: |
           ${{ runner.os }}-r-${{ hashFiles('tmp.inp.r') }}-
           ${{ runner.os }}-r-
-    - if: inputs.r != 'false'
-      shell: bash
-      run: |
-        if test -d "cache_r"
-        then
-          RP=$(R --slave -e 'cat(Sys.getenv("R_LIBS_USER"));');
-          if ! test -z "$RP"
-          then
-            mkdir -p "$RP/"
-            mv cache_r/* $RP/
-          fi
-        fi
     - if: inputs.rdep != 'false'
       name: "Installing R packages"
       shell: bash
@@ -168,21 +160,13 @@ runs:
       shell: bash
       run: tools/install.sh ${{inputs.options}} tapenade
     - if: inputs.r != 'false'
-      shell: bash
-      run: |
-        RP=$(R --slave -e 'cat(Sys.getenv("R_LIBS_USER"));');
-        if ! test -z "$RP"
-        then
-          mkdir -p cache_r/ && mv $RP/* cache_r/
-        fi
-    - if: inputs.r != 'false'
       uses: actions/cache/save@v3
       with:
-        path: cache_r/
-        key: ${{ runner.os }}-r-${{ hashFiles('tmp.inp.r') }}-${{ hashFiles('cache_r/**') }}
+        path: ${{ steps.rlibpath.outputs.value }}/
+        key: ${{ runner.os }}-r-${{ hashFiles('tmp.inp.r') }}-${{ hashFiles(format('{0}/**/DESCRIPTION',steps.rlibpath.outputs.value)) }}
     - shell: bash
       run: mkdir -p cache_apt/ && sudo mv /var/cache/apt/archives/*.deb cache_apt/
     - uses: actions/cache/save@v3
       with:
         path: cache_apt/
-        key: ${{ runner.os }}-${{ hashFiles('tmp.inp.apt') }}-${{ hashFiles('cache_apt/**') }}
+        key: ${{ runner.os }}-${{ hashFiles('tmp.inp.apt') }}-${{ hashFiles('cache_apt/*.deb') }}
