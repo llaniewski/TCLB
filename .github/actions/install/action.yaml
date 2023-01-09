@@ -153,14 +153,18 @@ runs:
       name: "Installing Tapenade"
       shell: bash
       run: tools/install.sh ${{inputs.options}} tapenade
+    - shell: bash
+      id: hashes
+      run: |
+        mkdir -p cache_apt/ && sudo mv /var/cache/apt/archives/*.deb cache_apt/
+        echo "apthash=$(sha256sum cache_apt/*.deb | sha256sum | cut -c 1-15)
+        echo "rhash=$(sha256sum ${{ steps.r.outputs.rlibpath }}/**/DESCRIPTION | sha256sum | cut -c 1-15)
     - if: inputs.r != 'false'
       uses: actions/cache/save@v3
       with:
         path: ${{ steps.r.outputs.rlibpath }}/
-        key: ${{ steps.keys.outputs.rkey }}-${{ hashFiles(format('{0}/**/DESCRIPTION',steps.r.outputs.rlibpath)) }}
-    - shell: bash
-      run: mkdir -p cache_apt/ && sudo mv /var/cache/apt/archives/*.deb cache_apt/
+        key: ${{ steps.keys.outputs.rkey }}-${{ steps.hashes.outputs.rhash }}
     - uses: actions/cache/save@v3
       with:
         path: cache_apt/
-        key: ${{ steps.keys.outputs.aptkey }}-${{ hashFiles('cache_apt/*.deb') }}
+        key: ${{ steps.keys.outputs.aptkey }}-${{ steps.hashes.outputs.apthash }}
