@@ -78,7 +78,7 @@ runs:
         key: ${{ steps.keys.outputs.aptkey }}
         restore-keys: ${{ steps.keys.outputs.aptkey }}-
     - shell: bash
-      run: test -d "cache_apt" && sudo mv cache_apt/*.deb /var/cache/apt/archives/
+      run: test -d "cache_apt" && sudo mv cache_apt/*.deb /var/cache/apt/archives/ || true
     - if: inputs.essentials != 'false'
       name: "Installing essentials"
       shell: bash
