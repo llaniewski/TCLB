@@ -179,7 +179,6 @@ RSTUDIO_REPO=false
 SUDO=""
 VERB=false
 
-#test -n "$1" || usage
 case "$1" in
 -v|--verbose) VERB=true; shift ;;
 "") usage ;;
