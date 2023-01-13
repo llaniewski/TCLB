@@ -509,7 +509,7 @@ do
 		fi
 		if test -d ../tapenade
 		then
-			echo "Looks like tapenade already is installed at '$(cd ../tapenadel; pwd))'"
+			echo "Looks like tapenade already is installed at '$(cd ../tapenade; pwd))'"
 			exit -1
 		fi
 		try "Downloading Tapenade ($VER)" wget $WGETOPT http://www-sop.inria.fr/ecuador/tapenade/distrib/tapenade_$VER.tar
