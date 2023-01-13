@@ -47,12 +47,16 @@ inputs:
     description: install tapenade
     default: false
   options:
-    descriptions: options for install script
+    description: options for install script
     default: "--group --retry 3 --retry-delay 5 --sudo"
+  cache:
+    description: use github cache to store apt packages and r packages
+    default: false
 runs:
   using: 'composite'
   steps:
-    - shell: bash
+    - if: inputs.cache != 'false'
+      shell: bash
       id: keys
       run: |
         echo "apt"               >tmp.inp.apt
@@ -72,12 +76,14 @@ runs:
         test "${{ inputs.python-dev }}" != "false" && echo "pydev"                   >>tmp.inp.apt
         echo "aptkey=$(echo $(cat tmp.inp.apt) | sed 's/ /-/g')" >>$GITHUB_OUTPUT
         echo "rkey=$(echo $(cat tmp.inp.r) | sed 's/ /-/g')" >>$GITHUB_OUTPUT
-    - uses: actions/cache/restore@v3
+    - if: inputs.cache != 'false'
+      uses: actions/cache/restore@v3
       with:
         path: cache_apt/
         key: ${{ steps.keys.outputs.aptkey }}
         restore-keys: ${{ steps.keys.outputs.aptkey }}-
-    - shell: bash
+    - if: inputs.cache != 'false'
+      shell: bash
       run: test -d "cache_apt" && sudo mv cache_apt/*.deb /var/cache/apt/archives/ || true
     - if: inputs.essentials != 'false'
       name: "Installing essentials"
@@ -90,7 +96,7 @@ runs:
       run: |
         tools/install.sh ${{inputs.options}} r
         echo "rlibpath=$(R --slave -e 'cat(path.expand(Sys.getenv("R_LIBS_USER")));')" >>$GITHUB_OUTPUT
-    - if: inputs.r != 'false'
+    - if: inputs.cache != 'false' && inputs.r != 'false'
       uses: actions/cache/restore@v3
       with:
         path: ${{ steps.r.outputs.rlibpath }}/
@@ -153,18 +159,20 @@ runs:
       name: "Installing Tapenade"
       shell: bash
       run: tools/install.sh ${{inputs.options}} tapenade
-    - shell: bash
+    - if: inputs.cache != 'false'
+      shell: bash
       id: hashes
       run: |
         mkdir -p cache_apt/ && sudo mv /var/cache/apt/archives/*.deb cache_apt/
         echo "apthash=$(sha256sum cache_apt/*.deb | sha256sum | cut -c 1-15)" >>$GITHUB_OUTPUT
         echo "rhash=$(cat ${{ steps.r.outputs.rlibpath }}/**/DESCRIPTION | grep -v '^Built' | sha256sum | cut -c 1-15)" >>$GITHUB_OUTPUT
-    - if: inputs.r != 'false'
+    - if: inputs.cache != 'false' && inputs.r != 'false'
       uses: actions/cache/save@v3
       with:
         path: ${{ steps.r.outputs.rlibpath }}/
         key: ${{ steps.keys.outputs.rkey }}-${{ steps.hashes.outputs.rhash }}
-    - uses: actions/cache/save@v3
+    - if: inputs.cache != 'false'
+      uses: actions/cache/save@v3
       with:
         path: cache_apt/
         key: ${{ steps.keys.outputs.aptkey }}-${{ steps.hashes.outputs.apthash }}
