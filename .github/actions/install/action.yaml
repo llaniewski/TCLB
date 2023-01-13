@@ -62,7 +62,7 @@ runs:
       shell: bash
       run: |
         sudo gem install apt-spy2
-        sudo apt-spy2 fix
+        sudo apt-spy2 fix --commit
     - if: inputs.cache != 'false'
       shell: bash
       id: keys
