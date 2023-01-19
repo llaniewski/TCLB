@@ -237,12 +237,12 @@ public:
   
   inline void CopyToGPU () {
     DEBUG_M;
-    CudaMemcpy(gpuTab,   cpuTab,   sizeof(real_t*) * time_seg(), cudaMemcpyHostToDevice);
-    CudaMemcpy(gpuConst, cpuConst, sizeof(real_t)  * grad_offset(), cudaMemcpyHostToDevice);
+    CudaMemcpy(gpuTab,   cpuTab,   sizeof(real_t*) * time_seg(), CudaMemcpyHostToDevice);
+    CudaMemcpy(gpuConst, cpuConst, sizeof(real_t)  * grad_offset(), CudaMemcpyHostToDevice);
     DEBUG_M;
     for (int i=0; i<grad_offset(); i++) if (cpuValues[i] != NULL) {
       assert(cpuTab[i] != NULL);
-      CudaMemcpy(cpuTab[i],   cpuValues[i],  sizeof(real_t) * len, cudaMemcpyHostToDevice);
+      CudaMemcpy(cpuTab[i],   cpuValues[i],  sizeof(real_t) * len, CudaMemcpyHostToDevice);
     }
   }
 
@@ -258,7 +258,7 @@ public:
     for (int i=grad_offset(); i<time_seg(); i++) if (cpuValues[i] != NULL) {
       assert(cpuTab[i] != NULL);
       debug0("Copying gradient data from GPU (%d)\n", i);
-      CudaMemcpy(cpuValues[i], cpuTab[i],  sizeof(real_t) * len, cudaMemcpyDeviceToHost);
+      CudaMemcpy(cpuValues[i], cpuTab[i],  sizeof(real_t) * len, CudaMemcpyDeviceToHost);
     }
   }
 

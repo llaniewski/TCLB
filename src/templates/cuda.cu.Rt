@@ -205,7 +205,7 @@ template <class Accessor> struct Node_Run <Accessor, <?%s T1 ?>, <?%s T2 ?>, <?%
                 if (g$op == "SUM") { ?>
                 atomicSum(<?%s where_to_put_it ?>, <?%s g$var ?>); <?R
                 } else if (g$op == "MAX") { ?>
-                atomicMax(<?%s where_to_put_it ?>, <?%s g$var ?>); <?R
+                atomicMaxReduce(<?%s where_to_put_it ?>, <?%s g$var ?>); <?R
                 }
         } ?>
 	}

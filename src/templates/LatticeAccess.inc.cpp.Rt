@@ -10,6 +10,28 @@
 #include "Lattice.h"
 #include <mpi.h>
 
+#ifndef STORAGE_TYPE
+  #define storage_to_real(x__) x__
+  #define real_to_storage(x__) x__
+#elif STORAGE_TYPE == 16
+  #include <cuda_fp16.h>
+  inline CudaDeviceFunction real_t storage_to_real(storage_t v) { return __short_as_half(v); }
+  inline CudaDeviceFunction storage_t real_to_storage(real_t v) { return __half_as_short(v); }
+#elif STORAGE_TYPE == 32
+  inline CudaDeviceFunction real_t storage_to_real(storage_t v) { return __int_as_float(v); }
+  inline CudaDeviceFunction storage_t real_to_storage(real_t v) { return __float_as_int(v); }
+#elif STORAGE_TYPE == 64
+  inline CudaDeviceFunction real_t storage_to_real(storage_t v) { return __longlong_as_double(v); }
+  inline CudaDeviceFunction storage_t real_to_storage(real_t v) { return __double_as_longlong(v); }
+#endif
+
+#ifdef STORAGE_SHIFT
+  inline CudaDeviceFunction real_t storage_to_real_shift(const storage_t& v, const real_t& shft) { return storage_to_real(v) + shft; }
+  inline CudaDeviceFunction storage_t real_to_storage_shift(const real_t& v, const real_t& shft) { return real_to_storage(v - shft); }
+#else
+  #define storage_to_real_shift(x__,y__) storage_to_real(x__)
+  #define real_to_storage_shift(x__,y__) real_to_storage(x__)
+#endif
 
 /// Get only type of node
 template <class N> CudaDeviceFunction void LatticeContainer::getType(N & node) 
@@ -37,11 +59,11 @@ CudaDeviceFunction real_t LatticeContainer::getZ(const index& idx_)
 /// Push all densities
 
 <?R
-  
+
   make.context = function(buf, pocket=FALSE) {
     MContext = list()
-    MContext$Pocket = ""       
-    MContext$PocketMove = FALSE     
+    MContext$Pocket = ""
+    MContext$PocketMove = FALSE
     MContext$Offset = list()
     for ( i in 1:length(Margin) ) MContext$Offset[[i]] = PV(0L)
     if (missing(buf)) stop("No Buffor provided");
@@ -55,7 +77,7 @@ CudaDeviceFunction real_t LatticeContainer::getZ(const index& idx_)
     }
     MContext
   }
-  
+
   move.pocket = function(i,offset, MContext) {
       off = MContext$Offset[[i]]
       v = offset - off;
@@ -64,8 +86,8 @@ CudaDeviceFunction real_t LatticeContainer::getZ(const index& idx_)
       }
       MContext$Offset[[i]] = offset;
       MContext
-  }  
-  
+  }
+
   if.apply = function(table, conditions, selection, fun) {
     n = length(conditions)
     if (ncol(table) != n) stop("number of columns in table should be equal to the number of conditions in if.apply")
@@ -104,7 +126,7 @@ CudaDeviceFunction real_t LatticeContainer::getZ(const index& idx_)
 
 #  No x move:
   no.x.move = FALSE
-     
+
   field.access.one = function(d,m,off,access) {
           if (access == "get") {  ?>
         <?%s d ?> = <?%s m ?>[<?R C(off,float=FALSE) ?>]; <?R
@@ -118,8 +140,8 @@ CudaDeviceFunction real_t LatticeContainer::getZ(const index& idx_)
         atomicAddP(&( <?%s m ?>[<?R C(off,float=FALSE) ?>] ),<?%s d ?>); <?R
    } else stop("Unknown access type in field.access.one");
   }
-     
-     
+
+
   field.access = function(d,f,p,dp,access,pattern,MContext) {
     if (pattern == "get") {
      ret = f$get_offsets(p,dp)
@@ -173,9 +195,9 @@ CudaDeviceFunction real_t LatticeContainer::getZ(const index& idx_)
    })
   }
  }
- 
 
- 
+
+
  all_stages = c(rows(Stages),list(
 	list(
 		load.densities = rep(TRUE, nrow(DensityAll)),
@@ -193,6 +215,24 @@ CudaDeviceFunction real_t LatticeContainer::getZ(const index& idx_)
 		suffix="_param"
 	)
  ))
+
+
+
+  storage_convert = function(type, val, f){
+    shift = f$shift
+    if (shift$type == "no_shift") {
+      sprintf("%s(%s)", type, val)
+    } else if (shift$type == "single_shift") {
+      sprintf("%s_shift(%s, static_cast<real_t>(%.15g))", type, val, shift$val)
+    } else {
+      stop("unknown type of shift")
+    }
+  }
+
+  storage_to_real = function(val,f) storage_convert("storage_to_real",val,f)
+  real_to_storage = function(val,f) storage_convert("real_to_storage",val,f)
+
+
 
  txtlapply(all_stages, function(s) {
 # lapply(1:length(s_list), function(s_i) {
@@ -227,8 +267,9 @@ resolve.symmetries = function(D) {
 }
 
 ?>
-template <class N> CudaDeviceFunction void LatticeContainer::pop<?%s s$suffix ?>(N & node) 
+template <class N> CudaDeviceFunction void LatticeContainer::pop<?%s s$suffix ?>(N & node)
 {
+	storage_t val;
 <?R
   con = make.context("in",pocket=TRUE);
   for (d in rows(Density)[s$load.densities]) { ?>
@@ -236,24 +277,26 @@ template <class N> CudaDeviceFunction void LatticeContainer::pop<?%s s$suffix ?>
     f = rows(Fields)[Fields$name == d$field][[1]]
     p = PV(c("node.idx_.x","node.idx_.y","node.idx_.z"));
     dp = c(-d$dx, -d$dy, -d$dz)
-    con=load.field(paste("node",d$name,sep="."), f, p, dp,con)
+    con=load.field("val", f, p, dp,con) ?>
+	<?%s paste("node",d$name,sep=".") ?> = <?%s storage_to_real("val",f)?>; <?R
   }
   if (Options$autosym) resolve.symmetries(Density[s$load.densities,,drop=FALSE])
 ?>
 }
 
-template <class N> CudaDeviceFunction void LatticeContainer::push<?%s s$suffix ?>(N & node) 
-{
+template <class N> CudaDeviceFunction void LatticeContainer::push<?%s s$suffix ?>(N & node)
+{	storage_t val;
 <?R
   con = make.context("out",pocket=TRUE);
   for (f in rows(Fields)[s$save.fields]) { ?>
-//--------------------------- <?%s f$name ?> ----------------------<?R
+//--------------------------- <?%s f$name ?> ----------------------
+  val = <?%s real_to_storage(paste("node",f$name,sep="."),f) ?>; <?R
     p = PV(c("node.idx_.x","node.idx_.y","node.idx_.z"));
-    con=save.field(paste("node",f$name,sep="."), f, p, con)
+    con=save.field("val", f, p, con)
   }?>
 }
 <?R if (ADJOINT) { ?>
-template <class N> CudaDeviceFunction void LatticeContainer::push<?%s s$suffix ?>_adj(N & node) 
+template <class N> CudaDeviceFunction void LatticeContainer::push<?%s s$suffix ?>_adj(N & node)
 {
 <?R
   con = make.context("adjout",pocket=TRUE);
@@ -271,7 +314,7 @@ template <class N> CudaDeviceFunction void LatticeContainer::push<?%s s$suffix ?
   }?>
 }
 
-template <class N> CudaDeviceFunction void LatticeContainer::pop<?%s s$suffix ?>_adj(N & node) 
+template <class N> CudaDeviceFunction void LatticeContainer::pop<?%s s$suffix ?>_adj(N & node)
 {
 <?R
   con = make.context("adjin",pocket=TRUE);
@@ -293,7 +336,7 @@ template <class N> CudaDeviceFunction void LatticeContainer::pop<?%s s$suffix ?>
 
 
 <?R
- 
+
  job_tab = do.call(rbind,
   lapply(seq_len(nrow(Fields)), function(i) {
    f = rows(Fields)[[i]]
@@ -301,7 +344,7 @@ template <class N> CudaDeviceFunction void LatticeContainer::pop<?%s s$suffix ?>
   })
  )
 
- 
+
 # txtlapply(rows(job_tab), function(job) {
 #  f = rows(Fields)[[job$field]]
 #  dx = job$dx
@@ -319,12 +362,12 @@ if (Options$autosym) suffix = "0"
 template <> 
 CudaDeviceFunction real_t LatticeContainer::load<?%s suffix ?>_<?%s f$nicename ?> < <?%d dx ?>, <?%d dy ?>, <?%d dz ?> > (const index & idx, const flag_t & nt) 
 {
-  real_t ret; <?R
+  storage_t ret; <?R
   con = make.context("in");
   p = PV(c("idx.x","idx.y","idx.z"));
   dp = c(dx, dy, dz)
   con=load.field("ret", f, p, dp, con) ?>
-  return ret;
+  return <?%s storage_to_real("ret",f)?>;
 }
 <?R }}} ?>
 
@@ -360,17 +403,17 @@ CudaDeviceFunction real_t LatticeContainer::load_<?%s f$nicename ?>  (const inde
 <?R } else { ?>
 CudaDeviceFunction real_t LatticeContainer::load_<?%s f$nicename ?>  (const index & idx, const flag_t & nt, const int & dx, const int & dy, const int & dz) 
 {
-  real_t ret; <?R
+  storage_t ret; <?R
   con = make.context("in");
   p = PV(c("idx.x","idx.y","idx.z"));
   dp = PV(c("dx","dy","dz"));
   con=load.field("ret", f, p, dp, con) ?>
-  return ret;
+  return <?%s storage_to_real("ret",f)?>;
 }
 
 
 <?R
-    } 
+    }
     }
 ?>
 
