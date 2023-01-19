@@ -51,7 +51,6 @@ for (i in 1:27) { ?>
     void fillSides(MPIInfo, int, int, int);
 
 
-
 #define INFO_H 1
 #endif
 
