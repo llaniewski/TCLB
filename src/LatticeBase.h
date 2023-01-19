@@ -70,6 +70,8 @@ public:
   virtual void CutsOverwrite(cut_t * Q, lbRegion over) = 0;
   virtual void LoadLattice(size_t* connectivity_, vector_t* coords, big_flag_t* nodeTypes, int* directionOffsets, size_t latticeSize, int Q, int ndx, int ndy, int ndz, int mindx, int mindy, int mindz) = 0;
   virtual void Init() = 0;
+  real_t px, py, pz;
+  virtual void setPosition(double px_, double py_, double pz_) = 0;
   //virtual void saveSolution(const char * filename) = 0;
   //virtual void loadSolution(const char * filename) = 0;
   virtual size_t sizeOfTab() = 0;

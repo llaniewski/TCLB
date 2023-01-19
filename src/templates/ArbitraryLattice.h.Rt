@@ -35,6 +35,7 @@ public:
   real_t settings_val[SETTINGS];  ///< Table of Settings (Now)
   typedef BallTree< rfi_t > balltree_t;
   balltree_t BT;
+  void setPosition(double px_, double py_, double pz_);
   size_t particle_data_size_max;
   size_t balltree_data_size_max;
   ArbitraryLattice (lbRegion region, MPIInfo, int, size_t);

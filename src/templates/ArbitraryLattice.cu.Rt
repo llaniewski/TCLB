@@ -36,6 +36,14 @@
 */
 CudaExternConstantMemory(ArbitraryLatticeContainer constArbitraryContainer);
 
+/// Set position
+void ArbitraryLattice::setPosition(double px_, double py_, double pz_)
+{
+	px = px_;
+	py = py_;
+	pz = pz_;
+}
+
 /// Calculation of the offset from X, Y and Z
 int ArbitraryLattice::Offset(int x, int y, int z)
 {
