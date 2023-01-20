@@ -892,10 +892,10 @@ void Lattice::FlagOverwrite(big_flag_t * mask_, lbRegion over)
 	lbRegion inter = region.intersect(over);
 	flag_t * mask;
 	mask = new flag_t[inter.sizeL()];
-        for (int y = inter.dy; y<inter.dy+inter.ny; y++)
-         for (int z = inter.dz; z<inter.dz+inter.nz; z++)
-          for (int x = inter.dx; x<inter.dx+inter.nx; x++)
-	   mask[x-inter.dx] = mask_[over.offsetL(x,y,z)];
+    for (int y = inter.dy; y<inter.dy+inter.ny; y++)
+     for (int z = inter.dz; z<inter.dz+inter.nz; z++)
+      for (int x = inter.dx; x<inter.dx+inter.nx; x++)
+	   mask[inter.offsetL(x,y,z)] = mask_[over.offsetL(x,y,z)];
 	if (region.isEqual(over)) {
 		output("overwriting all flags\n");
 		CudaMemcpy(container->NodeType, mask, sizeof(flag_t)*region.sizeL(), CudaMemcpyHostToDevice);
@@ -932,7 +932,7 @@ void Lattice::GetFlags(lbRegion over, big_flag_t * mask_)
 {
 	lbRegion inter = region.intersect(over);
 	flag_t * mask;
-	mask = new flag_t[inter.nx];
+	mask = new flag_t[inter.sizeL()];
 	if (region.isEqual(over)) {
                 CudaMemcpy(mask, container->NodeType, sizeof(flag_t)*region.sizeL(), CudaMemcpyDeviceToHost);
         } else {
@@ -947,7 +947,7 @@ void Lattice::GetFlags(lbRegion over, big_flag_t * mask_)
         for (int y = inter.dy; y<inter.dy+inter.ny; y++)
          for (int z = inter.dz; z<inter.dz+inter.nz; z++)
           for (int x = inter.dx; x<inter.dx+inter.nx; x++)
-	   mask_[over.offsetL(x,y,z)] = mask[x-inter.dx];
+	   mask_[over.offsetL(x,y,z)] = mask[inter.offsetL(x,y,z)];
 	delete[] mask;
 }
 
