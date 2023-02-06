@@ -1,0 +1,72 @@
+<?R
+	xd = 16
+	yd = 4
+	zd = 4
+	de = xd-1
+	v  = 1
+	t  = de/v
+
+	case = 1
+
+	drag = FALSE
+	sym = TRUE
+	sm_sd = 0.1
+	if (drag) test_nm = "drag" else test_nm = "lub"
+	test_nm = paste(test_nm,case,sep="_")
+	test_nm = paste(test_nm,sm_sd,sep="_")
+	if (sym) test_nm = paste(test_nm,"s",sep="_")
+	for (L in c(4,8,16,32)) {
+		#T = 6*L^2
+		#for (T in c(6*L^2, 6*4*L)) {
+		#T = 6*4*L ; {
+		T = 6*L*L ; {
+		nm = paste(test_nm,L,T,sm_sd,sep="_")
+		sink(paste0(nm,"_lbm.xml"))
+?>
+<CLBConfig version="2.0" permissive="true" output="output/">
+	<Units>
+		<Param name="L" value="1m" gauge="<?%d L ?>"/>
+		<Param name="T" value="1s" gauge="<?%d T ?>"/>
+		<Param name="R" value="1kg/m3" gauge="1"/>
+	</Units>
+<?R	if(sym) { ?>
+	<Geometry nx="<?%d xd ?>m" ny="<?%d yd ?>m" nz="<?%d zd ?>m" px="-0.5" py="-0.5" pz="-0.5">
+<?R	} else { ?>
+	<Geometry nx="<?%d xd*2 ?>m" ny="<?%d yd*2 ?>m" nz="<?%d zd*2 ?>m" px="<?%d -xd ?>m-0.5" py="<?%d -yd ?>m-0.5" pz="<?%d -zd ?>m-0.5">
+<?R	} ?>
+		<BGK><Box/></BGK>
+<?R	if(sym) { ?>
+		<SymmetryX_minus><Box nx="1"/></SymmetryX_minus>
+		<SymmetryY_minus><Box ny="1"/></SymmetryY_minus>
+		<SymmetryZ_minus><Box nz="1"/></SymmetryZ_minus>
+		<SymmetryX_plus><Box dx="-1"/></SymmetryX_plus>
+		<SymmetryY_plus><Box dy="-1"/></SymmetryY_plus>
+		<SymmetryZ_plus><Box dz="-1"/></SymmetryZ_plus>
+<?R	} ?>
+	</Geometry>
+	<Model>
+		<Param name="nu" value="1m2/s"/>
+		<Param name="BlurSpan"  value="<?%f sm_sd ?>m"/>
+		<Param name="BlurShift" value="-<?%f sm_sd^2 ?>m"/>
+		<RemoteForceInterface integrator="SIMPLEPART"/>		
+	</Model>
+	<VTK Iterations="1s"/>
+	<Solve Iterations="<?%f t ?>s"/>
+</CLBConfig>
+<?R
+		sink()
+		sink(paste0(nm,"_sp.xml"))
+?>
+<SimplePart dt="<?%f 1/T ?>">
+	<Particle x="<?%f  (de+1)/2 ?>" y="0" z="0" r="0.5" log="true" vx="<?%f -v/2 ?>"/>
+<?R if (!sym) { ?>
+	<Particle x="<?%f -(de+1)/2 ?>" y="0" z="0" r="0.5" log="true" vx="<?%f  v/2 ?>"/>
+<?R } ?>
+	<Log name="output/<?%s paste0(nm,"_sp") ?>.csv"	Iterations="3"/>
+</SimplePart>
+<?R
+		sink()
+		writeLines(nm)
+	}
+	}
+?>

@@ -449,11 +449,32 @@ CudaDeviceFunction void CalcF() {
 	C( u, f %*% U * d^{-1} + a*0.5 )
 	C( uP, 0)
 	C( sol, 0)
+
 ?>
-	for (SyncParticleIterator p(X,Y,Z); p; ++p) {
+	for (SyncFullParticleIterator p(X,Y,Z); p; ++p) {
 
         real_t dist = sqrt(p.diff.x*p.diff.x + p.diff.y*p.diff.y + p.diff.z*p.diff.z);
                     
+<?R	if (Options$Smooth) { ?>
+		dist = (p.rad + BlurShift - dist)/BlurSpan;
+		if (dist > -2) {
+            real_t localCoverage = 0.0;
+			localCoverage = 0.0;
+			if (dist > 2) {
+				localCoverage = 1.0;
+			} else {
+				localCoverage = (1-dist*(dist-4)*(dist+4)/24)/2;
+			}
+//			real_t vf = localCoverage;
+//			real_t nu = (1.0/(3.0*omegaF)-(1.0/6.0));
+//			real_t b = 180;
+//			real_t tmp = 1-vf; tmp = tmp*tmp*tmp;
+//			real_t coef = tmp/(tmp+ b*nu/2 * vf*vf);
+//			localCoverage = 1.0-coef;
+
+                localCoverage = localCoverage*(1.0/omegaF - 0.5) / ((1 - localCoverage) + 1.0/omegaF - 0.5); 
+
+<?R	} else { ?>
         if ((dist - p.rad)<SQRT_3) {
 
             real_t localCoverage = 0.0;
@@ -477,13 +498,18 @@ CudaDeviceFunction void CalcF() {
                 localCoverage = localCoverage*(1.0/omegaF - 0.5) / ((1 - localCoverage) + 1.0/omegaF - 0.5); 
 
             <?R } ?>
-
+<?R	} ?>
             vector_t force;
+	    real_t sf = 1;
+	if (NodeType & NODE_SYMX) sf = sf * 0.5;
+	if (NodeType & NODE_SYMY) sf = sf * 0.5;
+	if (NodeType & NODE_SYMZ) sf = sf * 0.5;
 <?R
             uparticle = PV("p.cvel.",c("x","y","z"))
             force = PV("force.",c("x","y","z"))
             localCoverage = PV("localCoverage")
-            C( force, d*localCoverage*(u - uparticle) )
+            sf = PV("sf")
+            C( force, sf*d*localCoverage*(u - uparticle) )
 ?>
             p.applyForce(force);
 <?R
@@ -656,7 +682,7 @@ CudaDeviceFunction float2 Color() {
         float2 ret;
         vector_t u = getU();
         ret.x = sqrt(u.x*u.x + u.y*u.y);
-	if (NodeType == NODE_Wall) ret.y = 0; else ret.y= 1;
+	ret.y = 1-getSolid();
         return ret;
 }
 

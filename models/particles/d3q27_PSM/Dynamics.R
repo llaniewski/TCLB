@@ -45,6 +45,11 @@ if (Options$particles) {
     AddGlobal(name="TotalSVF", comment='Total of solids throughout domain')
 }
 
+if (Options$Smooth) {
+    AddSetting(name="BlurSpan", unit="1m")
+    AddSetting(name="BlurShift", unit="1m")
+}
+
 if (Options$KL) {
     AddDensity(name="gamma_dot", group="Viscosity")
     AddDensity(name="nu_app", group="Viscosity")
