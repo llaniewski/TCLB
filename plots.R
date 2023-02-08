@@ -181,10 +181,43 @@ tab=read.csv("output/lub_1_0.1_s_16_384_0.1_sp.csv")
 lines(tab$p0_x-0.5,4*tab$p0_fx,col=4)
 tab=read.csv("output/lub_1_0.1_s_32_768_0.1_sp.csv")
 lines(tab$p0_x-0.5,4*tab$p0_fx,col=5)
+x = exp(seq(-5,3,len=100))
+nu=1; udiff=1; v=udiff/2; r=0.5
+drag = rep(6*pi*nu*r*v,length(x))
+lub = 6*pi*nu*udiff/x*(r*r/(r+r))^2
+lines(x,drag*1.12+lub*0.7,lwd=2)
+abline(v=1/4, lty=2,col=2)
+abline(v=1/8, lty=2,col=3)
+abline(v=1/16,lty=2,col=4)
+
+lub = 6*pi*nu*udiff/(x+0.03)*(r*r/(r+r))^2
+lines(x,drag*1.12+lub*0.7,lwd=2)
+
 
 
 tab=read.csv("output/lub_1_0.1_s_4_96_0.1_sp.csv")
 plot( tab$p0_x-0.5,4*tab$p0_fx,type="l",lty=1,log="xy",col=2,xlim=c(0.005,10),ylim=c(5,50))
+tab=read.csv("output/lub_1_0.1_s_8_384_0.1_sp.csv")
+lines(tab$p0_x-0.5,4*tab$p0_fx,col=3)
+tab=read.csv("output/lub_1_0.1_s_16_1536_0.1_sp.csv")
+lines(tab$p0_x-0.5,4*tab$p0_fx,col=4)
+tab=read.csv("output/lub_1_0.1_s_32_6144_0.1_sp.csv")
+lines(tab$p0_x-0.5,4*tab$p0_fx,col=5)
+x = exp(seq(-5,3,len=100))
+nu=1; udiff=1; v=udiff/2; r=0.5
+drag = rep(6*pi*nu*r*v,length(x))
+lub = 6*pi*nu*udiff/x*(r*r/(r+r))^2
+lines(x,drag+lub,lwd=2)
+abline(v=1/4, lty=2,col=2)
+abline(v=1/8, lty=2,col=3)
+abline(v=1/16,lty=2,col=4)
+
+
+
+
+tab=read.csv("output/lub_1_0.1_s_4_96_0.1_sp.csv")
+plot( tab$p0_x-0.5,4*tab$p0_fx,type="l",lty=1,log="xy",col=2,xlim=c(0.005,10),ylim=c(5,50))
+#                     lub_1_0.1_s_8_384_0.1
 tab=read.csv("output/lub_1_0.1_s_8_384_0.1_sp.csv")
 lines(tab$p0_x-0.5,4*tab$p0_fx,col=3)
 tab=read.csv("output/lub_1_0.1_s_16_1536_0.1_sp.csv")
@@ -200,6 +233,7 @@ tab=read.csv("output/drag_8_192_sp.csv")
 lines(tab$p0_x,-tab$p0_fx,col=3)
 tab=read.csv("output/drag_16_384_sp.csv")
 lines(tab$p0_x,-tab$p0_fx,col=3)
+
 x = exp(seq(-5,3,len=100))
 nu=1; udiff=1; v=udiff/2; r=0.5
 drag = rep(6*pi*nu*r*v,length(x))
@@ -217,3 +251,46 @@ tab=read.csv("output/lub_8_192_sp.csv")
 write.csv(tab,"output/drag_8_192_sp.csv",row.names=FALSE)
 tab=read.csv("output/lub_16_384_sp.csv")
 write.csv(tab,"output/drag_16_384_sp.csv",row.names=FALSE)
+
+
+
+
+d = seq(0.8,1.2,len=200)
+r = 10
+d = d*r
+plot(d, pmax(0,pmin(1,ifelse((d - r) < -1,1,(r -  0.084/r + 0.5 - d)))))
+abline(v=r+c(-0.5,0.5),lty=2)
+
+
+
+
+
+tab=read.csv("output/lub_1_0.1_s_4_96_0.1_sp.csv")
+plot( tab$p0_x-0.5,4*tab$p0_fx,type="l",lty=1,log="xy",col=2,xlim=c(0.005,10),ylim=c(5,50))
+tab=read.csv("output/lub_1_0.1_s_8_384_0.1_sp.csv")
+lines(tab$p0_x-0.5,4*tab$p0_fx,col=3)
+tab=read.csv("output/lub_1_0.1_s_16_1536_0.1_sp.csv")
+lines(tab$p0_x-0.5,4*tab$p0_fx,col=4)
+tab=read.csv("output/lub_1_0.1_s_32_6144_0.1_sp.csv")
+lines(tab$p0_x-0.5,4*tab$p0_fx,col=5)
+
+
+tab=read.csv("output/lub_2_0.1_s_4_96_0.1_sp.csv")
+plot( tab$p0_x-0.5,4*tab$p0_fx,type="l",lty=1,log="xy",col=2,xlim=c(0.005,10),ylim=c(5,50))
+tab=read.csv("output/lub_2_0.1_s_8_192_0.1_sp.csv")
+lines(tab$p0_x-0.5,4*tab$p0_fx,col=3)
+tab=read.csv("output/lub_2_0.1_s_16_384_0.1_sp.csv")
+lines(tab$p0_x-0.5,4*tab$p0_fx,col=4)
+tab=read.csv("output/lub_2_0.1_s_32_768_0.1_sp.csv")
+lines(tab$p0_x-0.5,4*tab$p0_fx,col=5)
+
+
+tab=read.csv("output/lub_3_0.1_s_4_96_0.1_sp.csv")
+plot( tab$p0_x-0.5,4*tab$p0_fx,type="l",lty=1,log="xy",col=2,xlim=c(0.005,10),ylim=c(5,50))
+tab=read.csv("output/lub_3_0.1_s_8_192_0.1_sp.csv")
+lines(tab$p0_x-0.5,4*tab$p0_fx,col=3)
+tab=read.csv("output/lub_3_0.1_s_16_384_0.1_sp.csv")
+lines(tab$p0_x-0.5,4*tab$p0_fx,col=4)
+tab=read.csv("output/lub_3_0.1_s_32_768_0.1_sp.csv")
+lines(tab$p0_x-0.5,4*tab$p0_fx,col=5)
+

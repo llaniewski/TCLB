@@ -6,7 +6,7 @@
 	v  = 1
 	t  = de/v
 
-	case = 1
+	case = 3
 
 	drag = FALSE
 	sym = TRUE
@@ -18,8 +18,8 @@
 	for (L in c(4,8,16,32)) {
 		#T = 6*L^2
 		#for (T in c(6*L^2, 6*4*L)) {
-		#T = 6*4*L ; {
-		T = 6*L*L ; {
+		T = 6*4*L ; {
+		#T = 6*L*L ; {
 		nm = paste(test_nm,L,T,sm_sd,sep="_")
 		sink(paste0(nm,"_lbm.xml"))
 ?>

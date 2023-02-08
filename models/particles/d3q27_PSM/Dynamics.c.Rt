@@ -472,7 +472,7 @@ CudaDeviceFunction void CalcF() {
 //			real_t coef = tmp/(tmp+ b*nu/2 * vf*vf);
 //			localCoverage = 1.0-coef;
 
-                localCoverage = localCoverage*(1.0/omegaF - 0.5) / ((1 - localCoverage) + 1.0/omegaF - 0.5); 
+//                localCoverage = localCoverage*(1.0/omegaF - 0.5) / ((1 - localCoverage) + 1.0/omegaF - 0.5); 
 
 <?R	} else { ?>
         if ((dist - p.rad)<SQRT_3) {
@@ -487,6 +487,7 @@ CudaDeviceFunction void CalcF() {
 
             if (localCoverage > 1.0){ localCoverage =  1.0;}
             if (localCoverage < 0.0){ localCoverage =  0.0;}
+<?R	} ?>
 
             <?R if (Options$KL) { ?>
             
@@ -495,10 +496,15 @@ CudaDeviceFunction void CalcF() {
             
             <?R } else { ?>
 
-                localCoverage = localCoverage*(1.0/omegaF - 0.5) / ((1 - localCoverage) + 1.0/omegaF - 0.5); 
+                // localCoverage = localCoverage*(1.0/omegaF - 0.5) / ((1 - localCoverage) + 1.0/omegaF - 0.5); 
+		real_t vf = localCoverage;
+		real_t nu = (1.0/omegaF - 0.5);
+		real_t khat = nu*vf*(3-2*vf)/(2.0*(1-vf)*(1-vf) + nu*vf*(3-2*vf));
+		localCoverage = khat;
+                // localCoverage = localCoverage*(1.0/omegaF - 0.5) / ((1 - localCoverage) + 1.0/omegaF - 0.5); 
 
             <?R } ?>
-<?R	} ?>
+
             vector_t force;
 	    real_t sf = 1;
 	if (NodeType & NODE_SYMX) sf = sf * 0.5;
@@ -509,7 +515,7 @@ CudaDeviceFunction void CalcF() {
             force = PV("force.",c("x","y","z"))
             localCoverage = PV("localCoverage")
             sf = PV("sf")
-            C( force, sf*d*localCoverage*(u - uparticle) )
+            C( force, 2*sf*d*localCoverage*(u - uparticle) )
 ?>
             p.applyForce(force);
 <?R
@@ -653,10 +659,12 @@ CudaDeviceFunction void Collision_PSM() {
         }
 
     if (Options$NEBB) {
-        RomegaS =  R %*% B - R + EQ_P$Req - EQ$Req %*% B #Non-eq bounceback operator
+        RomegaS =  R %*% B - R + EQ_P$Req - EQ_P$Req %*% B #Non-eq bounceback operator
+	# uomegas = - u - u + up + u = up - u
         sol = PV("sol")
     } else if (Options$SUP){
         RomegaS =  EQ_P$Req - R + (1.0 - omegaF_tmp)*(R - EQ$Req) #Superposition operator
+	# uomega = up - u + (1-w)*(u-u)
         sol = PV("sol")
     } else {
         RomegaS = 0
@@ -664,6 +672,8 @@ CudaDeviceFunction void Collision_PSM() {
     }
 
 	C( RL, R + (1.0-sol)*(omega*(EQ$Req - R) + (1.0 - omega*0.5)*(F %*% EQ$mat)) + sol*RomegaS)
+	# ustar = u + (1-s)*w*(u - u) + s*uomegas
+	# ustar = u + s*(up - u)
 	C( f, RL %*% solve(EQ$mat))
 ?>
     switch (NodeType & NODE_ADDITIONALS) {
