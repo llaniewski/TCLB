@@ -185,7 +185,8 @@ x = exp(seq(-5,3,len=100))
 nu=1; udiff=1; v=udiff/2; r=0.5
 drag = rep(6*pi*nu*r*v,length(x))
 lub = 6*pi*nu*udiff/x*(r*r/(r+r))^2
-lines(x,drag*1.12+lub*0.7,lwd=2)
+#lines(x,drag*1.12+lub*0.7,lwd=2)
+lines(x,drag+lub,lwd=2)
 abline(v=1/4, lty=2,col=2)
 abline(v=1/8, lty=2,col=3)
 abline(v=1/16,lty=2,col=4)
