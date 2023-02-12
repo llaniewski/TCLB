@@ -475,15 +475,22 @@ CudaDeviceFunction void CalcF() {
 //                localCoverage = localCoverage*(1.0/omegaF - 0.5) / ((1 - localCoverage) + 1.0/omegaF - 0.5); 
 
 <?R	} else if (Options$Quad) { ?>
+        if (true) {
+            real_t localCoverage = 0.0;
 		int n = floor(QuadN);
 		for (int ix=0; ix<n; ix++)
 		for (int iy=0; iy<n; iy++)
 		for (int iz=0; iz<n; iz++) {
-			real_t dx = p.diff.x + ((real_t) ix)/((real_t) n)-0.5;
-			real_t dy = p.diff.y + ((real_t) iy)/((real_t) n)-0.5;
-			real_t dz = p.diff.z + ((real_t) iz)/((real_t) n)-0.5;
+			real_t dx = p.diff.x + (0.5 + ix)/((real_t) n)-0.5;
+			real_t dy = p.diff.y + (0.5 + iy)/((real_t) n)-0.5;
+			real_t dz = p.diff.z + (0.5 + iz)/((real_t) n)-0.5;
+            real_t d = sqrt(dx*dx + dy*dy + dz*dz);
+            real_t l1 = fabs(dx) + fabs(dy) + fabs(dz);
+            const real_t k = RoughGroves * M_PI / l1;
+            real_t w = cos(dx*k)*cos(dy*k)*cos(dz*k)-1.0;
+            if (d < (1+0.5*w*RoughScale)*p.rad) localCoverage += 1;
 		}
-			
+        localCoverage /= n*n*n;
 <?R	} else { ?>
         if ((dist - p.rad)<SQRT_3) {
 

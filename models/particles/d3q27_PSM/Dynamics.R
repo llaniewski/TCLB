@@ -48,6 +48,10 @@ if (Options$particles) {
 if (Options$Smooth) {
     AddSetting(name="BlurSpan", unit="1m")
     AddSetting(name="BlurShift", unit="1m")
+} else if (Options$Quad) {
+    AddSetting(name="QuadN", unit="1")
+    AddSetting(name="RoughScale", unit="1")
+    AddSetting(name="RoughGroves", unit="1")
 }
 
 if (Options$KL) {
