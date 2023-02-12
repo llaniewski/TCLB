@@ -15,12 +15,14 @@
 	test_nm = paste(test_nm,case,sep="_")
 	test_nm = paste(test_nm,sm_sd,sep="_")
 	if (sym) test_nm = paste(test_nm,"s",sep="_")
-	for (L in c(4,8,16,32)) {
+	#for (L in c(4,8,16,32,64)) {
+		L = 16; {
 		#T = 6*L^2
 		#for (T in c(6*L^2, 6*4*L)) {
-		T = 6*4*L ; {
+		#T = 6*4*L ; {
 		#T = 6*L*L ; {
-		nm = paste(test_nm,L,T,sm_sd,sep="_")
+		for (T in 6*L*c(4,8,12,16)) {
+		nm = paste(test_nm,L,T,sep="_")
 		sink(paste0(nm,"_lbm.xml"))
 ?>
 <CLBConfig version="2.0" permissive="true" output="output/">
@@ -50,7 +52,7 @@
 		<Param name="BlurShift" value="-<?%f sm_sd^2 ?>m"/>
 		<RemoteForceInterface integrator="SIMPLEPART"/>		
 	</Model>
-	<VTK Iterations="1s"/>
+<!--	<VTK Iterations="1s"/> -->
 	<Solve Iterations="<?%f t ?>s"/>
 </CLBConfig>
 <?R
