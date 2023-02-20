@@ -484,11 +484,11 @@ CudaDeviceFunction void CalcF() {
 			real_t dx = p.diff.x + (0.5 + ix)/((real_t) n)-0.5;
 			real_t dy = p.diff.y + (0.5 + iy)/((real_t) n)-0.5;
 			real_t dz = p.diff.z + (0.5 + iz)/((real_t) n)-0.5;
-            real_t d = sqrt(dx*dx + dy*dy + dz*dz);
-            real_t l1 = fabs(dx) + fabs(dy) + fabs(dz);
-            const real_t k = RoughGroves * M_PI / l1;
-            real_t w = cos(dx*k)*cos(dy*k)*cos(dz*k)-1.0;
-            if (d < (1+0.5*w*RoughScale)*p.rad) localCoverage += 1;
+			real_t d = sqrt(dx*dx + dy*dy + dz*dz);
+			real_t l1 = fabs(dx) + fabs(dy) + fabs(dz);
+			real_t k = RoughGroves * M_PI / l1;
+			real_t w = cos(dx*k)*cos(dy*k)*cos(dz*k)-1.0;
+			if (d < (1+0.5*w*RoughScale)*p.rad) localCoverage += 1;
 		}
         localCoverage /= n*n*n;
 <?R	} else { ?>
@@ -513,12 +513,14 @@ CudaDeviceFunction void CalcF() {
             
             <?R } else { ?>
 
-                // localCoverage = localCoverage*(1.0/omegaF - 0.5) / ((1 - localCoverage) + 1.0/omegaF - 0.5); 
+		<?R if (Options$LLW) { ?>
 		real_t vf = localCoverage;
 		real_t nu = (1.0/omegaF - 0.5)/3.0;
 		real_t khat = nu*vf*(3-2*vf)/(2.0*(1-vf)*(1-vf) + nu*vf*(3-2*vf));
 		localCoverage = khat;
-                // localCoverage = localCoverage*(1.0/omegaF - 0.5) / ((1 - localCoverage) + 1.0/omegaF - 0.5); 
+		<?R } else { ?>
+                localCoverage = localCoverage*(1.0/omegaF - 0.5) / ((1 - localCoverage) + 1.0/omegaF - 0.5); 
+		<?R } ?>
 
             <?R } ?>
 

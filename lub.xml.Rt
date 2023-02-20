@@ -1,12 +1,14 @@
 <?R
+	xd = 32; yd = 8; zd = 8
 #	xd = 16; yd = 4; zd = 4
-	xd = 8; yd = 2; zd = 2
+#	xd = 8; yd = 2; zd = 2
 	de = xd-1
 	v  = 1
 	t  = de/v
-
-	case = 3
-
+	case_a = "vis"
+for (case_b in c("base","good","rough")) {
+	case = paste(case_a,case_b,sep="_")
+	sink(paste("_list",case_b,sep="_"))
 	drag = FALSE
 	sym = TRUE
 	sm_sd = 0.1
@@ -14,11 +16,12 @@
 	test_nm = paste(test_nm,case,sep="_")
 	test_nm = paste(test_nm,sm_sd,sep="_")
 	if (sym) test_nm = paste(test_nm,"s",sep="_")
-	for (L in c(4,8,16,32,64)) {
+	for (L in c(4,8,10,16,32)) {
 		#L = 16; {
 		#T = 6*L^2
 		#for (T in c(6*L^2, 6*4*L)) {
-		T = 6*4*L ; {
+		#T = 6*4*L ; {
+		T = 6*32*L ; {
 		#T = 6*L*L ; {
 		#for (T in 6*L*c(4,8,12,16)) {
 		nm = paste(test_nm,L,T,sep="_")
@@ -50,12 +53,14 @@
 		<Param name="BlurSpan"  value="<?%f sm_sd ?>m"/>
 		<Param name="BlurShift" value="-<?%f sm_sd^2 ?>m"/>
 		<Param name="QuadN" value="6.01"/>
-		<Param name="RoughScale" value="0.5"/>
+		<Param name="RoughScale" value="0.1"/>
 		<Param name="RoughGroves" value="4.0"/>
 		<RemoteForceInterface integrator="SIMPLEPART"/>		
 	</Model>
-	<VTK Iterations="1s"/>
-	<Solve Iterations="<?%f t ?>s"/>
+<!--	<VTK Iterations="1s"/>-->
+<!--	<Solve Iterations="<?%f t ?>s"/> -->
+	<Solve Iterations="<?%f T/(32*6) ?>"/>
+	<VTK/>
 </CLBConfig>
 <?R
 		sink()
@@ -66,11 +71,13 @@
 <?R if (!sym) { ?>
 	<Particle x="<?%f -(de+1)/2 ?>" y="0" z="0" r="0.5" log="true" vx="<?%f  v/2 ?>"/>
 <?R } ?>
-	<Log name="output/<?%s paste0(nm,"_sp") ?>.csv"	Iterations="3"/>
+	<Log name="output/<?%s paste0(nm,"_sp") ?>.csv"	Iterations="6" average="y"/>
 </SimplePart>
 <?R
 		sink()
 		writeLines(nm)
 	}
 	}
+	sink()
+}
 ?>
