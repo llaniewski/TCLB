@@ -483,6 +483,12 @@ if (Options$axisym) { ## Automatic axisymmetry
 	AXISYM[idx,idx] = nW %*% solve(W)
   }
 
+  ASZ = gapply(AXISYM, is.zero,simplify=TRUE)
+  sel = apply(ASZ,2,all)
+  for (idx in which(sel)) {
+  	AXISYM[idx,idx] = 1
+  }
+
   Fields$minz = 0; Fields$maxz = 0
 }
 
