@@ -28,6 +28,7 @@ if (! SYMALGEBRA) {
 }
 
 if (is.null(Options$autosym)) Options$autosym = FALSE
+if (is.null(Options$axisym)) Options$axisym = FALSE
 
 #source("linemark.R")
 
@@ -449,6 +450,43 @@ if (Options$autosym) { ## Automatic symmetries
 	AddNodeType("SymmetryZ_minus", group="SYMZ")
   }
 }
+
+if (Options$axisym) { ## Automatic axisymmetry
+	n = nrow(Fields)
+	AXISYM = V(rep(0, n*n)); dim(AXISYM) = c(n,n)
+	trig = PV(c("cosA","sinA"))
+	M = V(1,0,0, 0,trig[1],trig[2],0,trig[2]*(-1),trig[1])  # Y-Z rotation
+	dim(M) = c(3,3)
+
+	fieldindex = seq_len(nrow(Fields))
+	names(fieldindex) = Fields$name
+  for (g in unique(DensityAll$group)) {
+    U = as.matrix(DensityAll[DensityAll$group == g, c("dx","dy","dz"), drop=FALSE])
+	idx = fieldindex[DensityAll$field[DensityAll$group == g]]
+
+	nU = U %*% M
+	
+	p = ifelse(U<0,2,U)
+
+	X = nU[1:nrow(nU),1]; dim(X) = length(X)
+	Y = nU[1:nrow(nU),2]; dim(Y) = length(Y)
+	Z = nU[1:nrow(nU),3]; dim(Z) = length(Z)
+	nW = do.call(V, lapply(seq_len(nrow(p)), function(i) X^p[i,1]*Y^p[i,2]*Z^p[i,3]))
+	dim(nW) = c(nrow(nU),nrow(p))
+
+	X = U[1:nrow(U),1]; dim(X) = length(X)
+	Y = U[1:nrow(U),2]; dim(Y) = length(Y)
+	Z = U[1:nrow(U),3]; dim(Z) = length(Z)
+	W = do.call(c, lapply(seq_len(nrow(p)), function(i) X^p[i,1]*Y^p[i,2]*Z^p[i,3]))
+	dim(W) = c(nrow(U),nrow(p))
+
+	AXISYM[idx,idx] = nW %*% solve(W)
+  }
+
+  Fields$minz = 0; Fields$maxz = 0
+}
+
+
 
 if (!"Iteration" %in% names(Actions)) {
 	AddAction(name="Iteration", stages=c("BaseIteration"))
