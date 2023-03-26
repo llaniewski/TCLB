@@ -488,7 +488,7 @@ if (Options$axisym) { ## Automatic axisymmetry
   for (idx in which(sel)) {
   	AXISYM[idx,idx] = 1
   }
-
+  Fields$miny = -1; Fields$maxy = 2
   Fields$minz = 0; Fields$maxz = 0
 }
 

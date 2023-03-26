@@ -254,6 +254,7 @@ resolve.symmetries = function(D) {
 ?>
 template <class N> CudaDeviceFunction void LatticeContainer::pop<?%s s$suffix ?>(N & node)
 {
+  <?R if (! Options$axisym) { ?>
 	storage_t val;
 <?R
   con = make.context("in",pocket=TRUE);
@@ -267,6 +268,14 @@ template <class N> CudaDeviceFunction void LatticeContainer::pop<?%s s$suffix ?>
   }
   if (Options$autosym) resolve.symmetries(Density[s$load.densities,,drop=FALSE])
 ?>
+<?R } else {
+  for (d in rows(Density)[s$load.densities]) {
+    f = rows(Fields)[Fields$name == d$field][[1]]
+    dp = c(-d$dx, -d$dy, -d$dz)
+?>
+  <?%s paste("node",d$name,sep=".") ?> = load_<?%s f$nicename ?> < <?%d dp[1] ?>, <?%d dp[2] ?>, <?%d dp[3] ?> > (node.x_,node.y_,node.z_,node.NodeType);
+<?R }
+    } ?>
 }
 
 template <class N> CudaDeviceFunction void LatticeContainer::push<?%s s$suffix ?>(N & node)
@@ -338,12 +347,23 @@ template <class N> CudaDeviceFunction void LatticeContainer::pop<?%s s$suffix ?>
 
 suffix = ""
 if (Options$autosym) suffix = "0"
+if (Options$axisym) suffix = "0"
 
     for (f in rows(Fields)) {
-    if (! f$big) {
+    if (! f$big) { ?>
+template <int DX, int DY, int DZ>
+CudaDeviceFunction real_t LatticeContainer::load<?%s suffix ?>_<?%s f$nicename ?>  (const int & x, const int & y, const int & z, const flag_t & nt) {
+  typename Cannot_stream_the_field_in_the_direction_<DX,DY,DZ>::Field_name_<?%s f$nicename ?> Hej;
+  return 0.0;
+};
+
+<?R
     for (dz in f$minz:f$maxz) {
     for (dy in f$miny:f$maxy) {
     for (dx in f$minx:f$maxx) { ?>
+
+
+
 template <>
 CudaDeviceFunction real_t LatticeContainer::load<?%s suffix ?>_<?%s f$nicename ?> < <?%d dx ?>, <?%d dy ?>, <?%d dz ?> > (const int & x, const int & y, const int & z, const flag_t & nt)
 {
@@ -446,4 +466,56 @@ CudaDeviceFunction real_t LatticeContainer::load_<?%s f$nicename ?> < <?%d dx ?>
 <?R
 }}}}
 }
+
+if (Options$axisym) {
+    for (f in rows(Fields)) { ?>
+template < int DX, int DY, int DZ >
+CudaDeviceFunction real_t LatticeContainer::load_<?%s f$nicename ?>(const int & x, const int & y, const int & z, const flag_t & nt) {
+  real_t by = py + y;
+  real_t ny = by + DY;
+  real_t nz = DZ;
+  real_t r;
+  if (DZ != 0) {
+    r = sqrt(ny*ny + nz*nz);
+  } else {
+    r = abs(ny);
+  }
+  real_t dy = r - by;
+  real_t cosA, sinA;
+  if (r != 0) {
+    cosA = ny/r;
+    sinA = -nz/r;
+  } else {
+    cosA = 1;
+    sinA = 0;
+  }
+  <?R
+    idx = fieldindex[f$name]
+    a = AXISYM[seq_len(nrow(AXISYM)),idx]; dim(a) = length(a)
+    sel = !is.zero(a)
+    tmpvar = paste0("_",Fields$nicename)
+    tmp = PV(tmpvar)
+    dy = PV("dy")
+  ?>
+  real_t <?%s paste0(tmpvar[sel],collapse=", ") ?>;
+  <?R for (k in -1:1) { ?>
+  if (dy == <?%d k ?>) {
+      <?R for (g in rows(Fields)[sel]) { ?>
+        _<?%s g$nicename ?> = load0_<?%s g$nicename ?> < DX, <?%d k ?>, 0 >(x, y, z, nt);
+      <?R } ?>
+  } else if (dy < <?%d k+1 ?>) {
+      <?R for (g in rows(Fields)[sel]) { ?>
+        _<?%s g$nicename ?> = (<?R C( k + 1 - dy ) ?>)*load0_<?%s g$nicename ?> < DX, <?%d k   ?>, 0 >(x, y, z, nt)
+                            + (<?R C(   dy - k   ) ?>)*load0_<?%s g$nicename ?> < DX, <?%d k+1 ?>, 0 >(x, y, z, nt);
+      <?R } ?>
+  } else <?R } ?> {
+    return NAN;
+  }
+  return <?R C(sum(tmp * a)) ?>;
+}
+
+<?R
+}
+}
+
  ?>
