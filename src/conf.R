@@ -464,15 +464,7 @@ if (Options$axisym) { ## Automatic axisymmetry
     U = as.matrix(DensityAll[DensityAll$group == g, c("dx","dy","dz"), drop=FALSE])
 	idx = fieldindex[DensityAll$field[DensityAll$group == g]]
 
-	nU = U %*% M
-	
 	p = ifelse(U<0,2,U)
-
-	X = nU[1:nrow(nU),1]; dim(X) = length(X)
-	Y = nU[1:nrow(nU),2]; dim(Y) = length(Y)
-	Z = nU[1:nrow(nU),3]; dim(Z) = length(Z)
-	nW = do.call(V, lapply(seq_len(nrow(p)), function(i) X^p[i,1]*Y^p[i,2]*Z^p[i,3]))
-	dim(nW) = c(nrow(nU),nrow(p))
 
 	X = U[1:nrow(U),1]; dim(X) = length(X)
 	Y = U[1:nrow(U),2]; dim(Y) = length(Y)
@@ -480,7 +472,18 @@ if (Options$axisym) { ## Automatic axisymmetry
 	W = do.call(c, lapply(seq_len(nrow(p)), function(i) X^p[i,1]*Y^p[i,2]*Z^p[i,3]))
 	dim(W) = c(nrow(U),nrow(p))
 
-	AXISYM[idx,idx] = nW %*% solve(W)
+	if (det(W) != 0) {
+
+		nU = U %*% M
+
+		X = nU[1:nrow(nU),1]; dim(X) = length(X)
+		Y = nU[1:nrow(nU),2]; dim(Y) = length(Y)
+		Z = nU[1:nrow(nU),3]; dim(Z) = length(Z)
+		nW = do.call(V, lapply(seq_len(nrow(p)), function(i) X^p[i,1]*Y^p[i,2]*Z^p[i,3]))
+		dim(nW) = c(nrow(nU),nrow(p))
+
+		AXISYM[idx,idx] = nW %*% solve(W)
+	}
   }
 
   ASZ = gapply(AXISYM, is.zero,simplify=TRUE)
@@ -490,6 +493,7 @@ if (Options$axisym) { ## Automatic axisymmetry
   }
   Fields$miny = -1; Fields$maxy = 2
   Fields$minz = 0; Fields$maxz = 0
+  Fields$minx = -1; Fields$maxx = 1
 }
 
 
