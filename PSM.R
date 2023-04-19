@@ -150,6 +150,25 @@ k = nu*vf*(3-2*vf)/((1-vf)*(1-vf));
 khat = 1/(2.0/k+1);
 # 2.0/k+1 = 2.0*((1-vf)*(1-vf))/(nu*vf*(3-2*vf)) + 1
 # 2.0/k+1 = (2.0*((1-vf)*(1-vf)) + (nu*vf*(3-2*vf)))/(nu*vf*(3-2*vf))
-khat = nu*vf*(3-2*vf)/(2.0*(1-vf)*(1-vf) + nu*vf*(3-2*vf))
+khat = 2nu*vf*(3-2*vf)/(2.0*(1-vf)*(1-vf) + nu*vf*(3-2*vf))
 matplot(vf, khat)
 
+pdf("khat.pdf")
+vf = seq(0,1,len=200)
+nu = rev(2^{-5:0}*0.15)
+khat = outer(vf,nu,function(vf,nu) 2*nu*vf*(3-2*vf)/(2.0*(1-vf)*(1-vf) + nu*vf*(3-2*vf)))
+matplot(vf, khat,type="l",lty=1,xlab=expression(phi),ylab=expression(tilde(k)))
+legend("topleft",legend=nu, lty=1,col=seq_along(nu))
+dev.off()
+
+
+pdf("uphi.pdf")
+x = seq(0,1,len=100)
+s = 3
+p = 1-tanh(s)/s
+u = (exp(s*x)-exp(-s*x))/(exp(s)-exp(-s))
+plot(x,u,type="l",lty=1)
+lines(x,pmax(0,(x-p)/(1-p)),col=2)
+abline(v=p,lty=2)
+text(0.4,0.5,"SOLID")
+dev.off()
