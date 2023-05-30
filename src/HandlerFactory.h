@@ -5,7 +5,11 @@
 #include "pugixml.hpp"
 #include "Handlers/vHandler.h"
 
-typedef Factory< vHandler, pugi::xml_node > HandlerFactory;
+//typedef Factory< vHandler, pugi::xml_node > HandlerFactory;
+
+class HandlerFactory : public Factory< vHandler, pugi::xml_node > {
+
+};
 
 template <class T>
 vHandler * GenericAsk(const pugi::xml_node& node) {
