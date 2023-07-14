@@ -76,13 +76,27 @@ template < class T > int GetThreads() {
 	return attr->maxThreadsPerBlock;
 }
 
-template < class T > class ThreadNumber {
+class ThreadNumberCalculatorBase {
+  protected:
+  dim3 thr;
+  unsigned int maxthr;
+  std::string name;
   public:
-  static dim3 thr;
-  static unsigned int maxthr;
-  static std::string name;
-  static void Init(std::string name_) {
-      name = name_;
+  virtual void Init() = 0;
+  inline dim3 threads() { return thr; }
+  void print() {
+    if (thr.x * thr.y < maxthr) {
+	notice( "  %3dx%-3dx%-3d  | %s --- Reduced from maximum %d\n", thr.x, thr.y, thr.z, name.c_str(), maxthr);
+    } else {
+	output( "  %3dx%-3dx%-3d  | %s\n", thr.x, thr.y, thr.z, name.c_str());
+    }
+  }
+};
+
+template < class T > class ThreadNumberCalculator : public ThreadNumberCalculatorBase {
+  public:
+  virtual void Init() {
+      name = "test";
 	    maxthr = GetThreads< T >();
       thr.z = 1;
       int val = maxthr;
@@ -97,29 +111,46 @@ template < class T > class ThreadNumber {
         thr.y = val/X_BLOCK;
       }
       print();
+  };
+};
+
+
+
+class TNCRegister {
+  typedef ThreadNumberCalculatorBase TNC;
+  typedef std::vector< TNC* > list_t;
+  public:
+  static list_t& List() {
+    static list_t list;
+    return list;
   }
-  static inline dim3 threads() { return thr; }
-  static inline void print() {
-    if (thr.x * thr.y < maxthr) {
-	notice( "  %3dx%-3dx%-3d  | %s --- Reduced from maximum %d\n", thr.x, thr.y, thr.z, name.c_str(), maxthr);
-    } else {
-	output( "  %3dx%-3dx%-3d  | %s\n", thr.x, thr.y, thr.z, name.c_str());
-    }
+  inline TNCRegister(ThreadNumberCalculatorBase* ptr) {
+    printf("registering a TNC\n");
+    List().push_back(ptr);
   }
 };
 
-template < class N > dim3 ThreadNumber< N >::thr;
-template < class N > unsigned int ThreadNumber< N >::maxthr = 1;
-template < class N > std::string ThreadNumber< N >::name = "unknown";
-  
+template < class T > class ThreadNumber {
+  typedef ThreadNumberCalculator< T > calc_t;
+  static calc_t calc;
+  static TNCRegister reg;
+  public:
+  static inline dim3 threads() { return calc.threads(); }
+};
+
+template < class T > ThreadNumberCalculator<T> ThreadNumber<T>::calc;
+template < class T > TNCRegister ThreadNumber<T>::reg(&ThreadNumber<T>::calc);
+
 /// Initialize Thread/Block number variables
 int InitDim(int ny) {
 	MPI_Barrier(MPMD.local);
         output( "  Threads  |      Action\n"); <?R
         for (tp in rows(AllKernels)[order(AllKernels$adjoint)]) { ifdef(tp$adjoint)
         for (ex in c("InteriorExecutor","BorderExecutor")) { ?>
-        ThreadNumber< <?%s ex?>< Node_Run< <?%s tp$TemplateArgs ?> > > >::Init("<?%s ex?>, <?%s tp$TemplateArgs ?>"); <?R
+        //ThreadNumber< <?%s ex?>< Node_Run< <?%s tp$TemplateArgs ?> > > >::Init("<?%s ex?>, <?%s tp$TemplateArgs ?>"); <?R
 	}}; ifdef(); ?>
+  for (ThreadNumberCalculatorBase* ptr : TNCRegister::List()) ptr->Init();
+
 	MPI_Barrier(MPMD.local);
         return 0;
 }
