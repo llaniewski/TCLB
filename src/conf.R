@@ -169,7 +169,7 @@ convert_to_shift_list = function(n, x) {
   x = lapply(x,function(x) if (is.null(x)) no_shift() else x)
   tp = sapply(x,function(x) identical(class(x),"tclbshift"))
   if (any(!tp)) stop("All elements of shift have to be of tclbshift class")
-  x    
+  x
 }
 
 AddField = function(name, stencil2d=NA, stencil3d=NA, dx=0, dy=0, dz=0, comment="", adjoint=F, group="", parameter=F,average=F, sym=c("","",""), shift=NULL,
@@ -231,7 +231,7 @@ AddSetting = function(name,  comment, default=0, unit="1", adjoint=F, derived, e
 			equation = as.character(der[[1]]);
 		} else {
 			stop("Only one derived setting allowed in AddSetting!");
-		} 
+		}
 	} else {
 		if (missing(equation)) stop("'derived' provided, but no 'equation' in AddSetting")
 	}
@@ -292,7 +292,7 @@ AddQuantity = function(name, unit="1", vector=F, comment="", adjoint=F) {
 		comment=comment
 	)
 	Quantities <<- rbind(Quantities,q)
-}	
+}
 
 AddNodeType = function(name, group) {
 	NodeTypes <<- rbind(NodeTypes, data.frame(
@@ -330,7 +330,7 @@ AddDescription = function(short, long) {
 }
 
 
-AddStage = function(name, main=name, load.densities=FALSE, save.fields=FALSE, read.fields=FALSE, no.overwrite=FALSE, fixedPoint=FALSE, particle=FALSE) {
+AddStage = function(name, main=name, load.densities=FALSE, save.fields=FALSE, read.fields=NA, no.overwrite=FALSE, fixedPoint=FALSE, particle=FALSE) {
 	s = data.frame(
 		name = name,
 		main = main,
@@ -353,7 +353,7 @@ AddStage = function(name, main=name, load.densities=FALSE, save.fields=FALSE, re
         s$savetag = paste0("SaveIn",s$name)
         s$readtag = paste0("ReadIn",s$name)
         Stages <<- rbind(Stages,s)
-	
+
 	selection = function(tab,sel) {
 		if (is.character(sel)) {
 			if (any(!(sel %in% tab$name))) stop("load/save/read name not found in AddStage")
@@ -370,9 +370,12 @@ AddStage = function(name, main=name, load.densities=FALSE, save.fields=FALSE, re
 
 	sel = selection(DensityAll, load.densities)
 	DensityAll[, s$loadtag] <<- sel
+	loaded.fields = Fields$name %in% DensityAll$field[sel]
 	sel = selection(Fields, save.fields)
 	Fields[, s$savetag] <<- sel
 	sel = selection(Fields, read.fields)
+	sel[loaded.fields & is.na(sel)] = TRUE
+	if (! all(sel[loaded.fields])) stop("Not all fields loaded through densities are accessible in stage", s$name)
 	Fields[, s$readtag] <<- sel
 }
 
@@ -473,7 +476,11 @@ Fields$AnyRead = apply(Fields[,Stages$readtag,drop=FALSE],1,any)
 for (n in names(Actions)) { a = Actions[[n]]
 	if (length(a) > 0) {
 		if (any(! a %in% row.names(Stages))) stop(paste("Some stages in action",n,"were not defined"))
-		bufin = rep(TRUE, nrow(Fields))
+		if (n == "Init") {
+			bufin = rep(FALSE, nrow(Fields))
+		} else {
+			bufin = rep(TRUE, nrow(Fields))
+		}
 		bufout = rep(FALSE, nrow(Fields))
 		first = TRUE
 		for (sn in a) {
@@ -482,22 +489,23 @@ for (n in names(Actions)) { a = Actions[[n]]
 			sr = Fields[,s$readtag]
 			sl = DensityAll[,s$loadtag]
 			sl = Fields$name %in% unique(DensityAll$field[sl])
-			if ((!first) && any(ss & (sr | sl))) stop("Writing fields which is read in stage:", sn)
-			if (any((!bufin) & (sr | sl))) stop("Reading a field which wasn't written in stage", sn)
+			sr[(!bufin) & is.na(sr)] = FALSE
+			sel = (!bufin) & (sr | sl)
+			if (any(sel)) stop("Reading fields", paste(Fields$name[sel],collapse=" "),"in stage", sn,"werent yet written in action",n)
+			sel = bufout & ss
+			if (any(sel)) stop("Overwriting fields", paste(Fields$name[sel],collapse=" "),"in stage", sn,"that were written earlier in action",n)
 			bufout = bufout | ss
 			bufin = bufout
 			first=FALSE
 		}
 		if (any( ! bufin )) stop("Not all fields written")
-		sel = Stages[a,"tag"]
-		f = Fields[,sel,drop=F]
-		s = apply(f,1,sum)
-		if (any(s) > 1) {
-			stop(paste("Field", Fields$name[s>1],"is saved more then once in Action",n))
-		}
 	} else {
 		stop(paste("There is a empty Action:",n))
 	}
+}
+
+for (tag in Stages$readtag) {
+	Fields[is.na(Fields[,tag]),tag] = TRUE
 }
 
 NodeShift = 1
@@ -772,7 +780,7 @@ offsets = function(d2=FALSE, cpu=FALSE) {
       }
       offset
     }
-    list(get_offsets = 
+    list(get_offsets =
       function(w,dw,cpu=def.cpu) {
 	if (is.numeric(dw)) {
           tab1 = c(ifelse(dw<0,1,0),ifelse(dw<0,-1,0),0,0,0)
@@ -791,7 +799,7 @@ offsets = function(d2=FALSE, cpu=FALSE) {
         cond = c(w+dw,mw-w-dw-one)
         list(Offset=offset,Conditions=cond,Table=get_tab,Selection=get_sel)
       },
-      put_offsets = 
+      put_offsets =
       function(w,cpu=def.cpu) {
         offset = offset.p(c(w - mw - PV(as.integer(mins)),w,w),cpu=cpu)
         cond = c(w+PV(as.integer(-maxs)),mw-w+PV(as.integer(mins))-one)

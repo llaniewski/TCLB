@@ -192,9 +192,11 @@ for (tp in rows(Dispatch)) {
         T1 = switch(tp$Action, No="Primal", Adj="Adjoint", Opt="Optimize", SAdj="SteadyAdjoint")
         T2 = switch(tp$Globals, No="NoGlobals", Globs="IntegrateGlobals", Obj="OnlyObjective")
         T3 = tp$stage_name
-	for (f in rows(Fields)[Fields$AnyRead]) {
+	for (f in rows(Fields)) {
 		load = TRUE
-		if (any(Stages$name == tp$stage_name)) load = f[[s$readtag]]
+		if (nrow(s) > 0) {
+			if (s$readtag %in% names(f)) load = f[[s$readtag]]
+		}
 		if (load) { ?>
 #define tryload_<?%s f$nicename ?>_static(x__,y__,z__)  load_<?%s f$nicename ?>_static(x__,y__,z__)
 #define tryload_<?%s f$nicename ?>_dynamic(x__,y__,z__) load_<?%s f$nicename ?>_dynamic(x__,y__,z__) <?R
