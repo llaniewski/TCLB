@@ -14,6 +14,13 @@
           ADTools.c (adjoint)
 */
 
+<?R
+
+if (exists('Extra_Dynamics_C_Header')) {
+	cat(Extra_Dynamics_C_Header)
+}
+?>
+
 #include "Consts.h"
 #include "cross.h"
 #include "cross.hpp"
@@ -62,9 +69,9 @@ CudaDeviceFunction CudaConstantMemory real_t <?%s v$name ?> = 0.0f; <?R
         }
 ?>
 
-#define X ((real_t) x_ + constContainer.px + 0.5)
-#define Y ((real_t) y_ + constContainer.py + 0.5)
-#define Z ((real_t) z_ + constContainer.pz + 0.5)
+#define X (constContainer.px + x_)
+#define Y (constContainer.py + y_)
+#define Z (constContainer.pz + z_)
 #define Time (constContainer.iter)
 #define SyntheticTurbulence(x__,y__,z__) constContainer.getST(x__,y__,z__)
 #define average_iter (constContainer.iter - constContainer.reset_iter)  //Look nicer in Dynamics
@@ -94,7 +101,12 @@ CudaDeviceFunction CudaConstantMemory real_t <?%s v$name ?> = 0.0f; <?R
 #define Iam<?%s n ?> (NodeType & NODE_<?%s n ?>)
 <?R	}	?>
 
+
+
+
+
 #define NODE_H
+
 
 template < eOperationType I, eCalculateGlobals G, eStage S> struct Node_Run {
         int x_,y_,z_;
@@ -214,7 +226,7 @@ template <> struct Node_Run < <?%s T1 ?>, <?%s T2 ?>, <?%s T3 ?> > {
                 if (g$op == "SUM") { ?>
                 atomicSum(<?%s where_to_put_it ?>, <?%s g$var ?>); <?R
                 } else if (g$op == "MAX") { ?>
-                atomicMax(<?%s where_to_put_it ?>, <?%s g$var ?>); <?R
+                atomicMaxReduce(<?%s where_to_put_it ?>, <?%s g$var ?>); <?R
                 }
         } ?>
 	}

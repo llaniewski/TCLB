@@ -1,9 +1,26 @@
 ADJOINT=0
 TEST=FALSE
-OPT="(OutFlow+BGK+thermo*planarBenchmark)*autosym"
-# SC: Solid Contact
-# 	This option currently fixes the bottom layer of nodes to be 
-# 	solid with the contact angle defined in input.
-# thermo: thermocapillary flows
-# 	Options resolves the temperature field with an RK4 integration
-# 	and updates the surface tension as a result
+OPT="(q27 + OutFlow  + BGK + thermo*planarBenchmark)*autosym*geometric*staircaseimp*isograd*tprec"
+# q27 - Q27 lattice structure for phasefield
+#
+# OutFlow - include extra velocity stencil for outflowing boundaries
+#
+# BGK - single relaxation time operator, not really supported- educational purposes only
+#
+# thermo - include energy equation solver for temperature field, influences through
+#        - the surface tension
+#
+# planarBenchmark - thermocapillary benchmark case, must be built with thermo
+#
+# autosym - symmetry boundary conditions
+#
+# geometric - use geometric boundary conditions instead of surface energy, sometimes gives more accurate results
+#
+# staircaseimp - use staircase improvement (applicable to both surface energy and geometric boundary conditions)
+#
+# isograd - use isotopic gradient also near boundaries when calculating phase field gradient, this
+# 	        essentially uses the value of the phase field gradient at the boundary from the previous iteration
+# 	        to calculate the phase field gradient at the boundary in the current iteration
+#
+# tprec - use more precise triangle for interpolation of phase field gradient (only applicable to geometric
+# 	   	  boundary conditions with staircase improvement)

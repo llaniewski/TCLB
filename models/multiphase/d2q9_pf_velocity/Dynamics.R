@@ -20,6 +20,7 @@ AddDensity( name="h[5]", dx= 1, dy= 1, group="h")
 AddDensity( name="h[6]", dx=-1, dy= 1, group="h")
 AddDensity( name="h[7]", dx=-1, dy=-1, group="h")
 AddDensity( name="h[8]", dx= 1, dy=-1, group="h")
+
 if (Options$Outflow) {
 	AddDensity( name=paste("gold",0:8,sep=""), dx=0, dy=0, group="gold")
 	AddDensity( name=paste("hold",0:8,sep=""), dx=0, dy=0, group="hold")
@@ -99,6 +100,8 @@ AddSetting(name="Period", default="0", comment='Number of cells per cos wave')
 AddSetting(name="Perturbation", default="0", comment='Size of wave perturbation, Perturbation Period')
 AddSetting(name="MidPoint", default="0", comment='height of RTI centerline')
 
+AddSetting(name="Wave", default="0", comment='Used for gravity and capillary wave benchmarks')
+
 AddSetting(name="Radius" , default="0", comment='Radius of diffuse interface circle')
 AddSetting(name="CenterX", default="0", comment='Circle center x-coord')
 AddSetting(name="CenterY", default="0", comment='Circle Center y-coord')
@@ -114,9 +117,7 @@ AddSetting(name="W", default=4,    comment='Anti-diffusivity coeff (phase interf
 AddSetting(name="omega_phi", comment='one over relaxation time (phase field)')
 AddSetting(name="M", omega_phi='1.0/(3*M+0.5)', default=0.02, comment='Mobility')
 AddSetting(name="sigma", 		   comment='surface tension')
-AddSetting(name="ContactAngle", radAngle='ContactAngle*3.1415926535897/180', default='90',
-		 comment='Contact angle in degrees - in reference to the high density fluid')
-AddSetting(name="radAngle", comment='Conversion to rads for calcs')
+AddSetting(name="radAngle",default='1.570796', comment='Contact angle in radians, can use units -> 90d where d=2pi/360', zonal=T)
 
 # 	Inputs: Fluid Properties
 AddSetting(name="tau_l", comment='relaxation time (low density fluid)')
@@ -143,10 +144,18 @@ AddGlobal(name="InletFlux", comment='pressure loss', unit="1m2/s")
 AddGlobal(name="TotalDensity", comment='Mass conservation check', unit="1kg/m3")
 AddNodeType(name="SpikeTrack", group="ADDITIONALS")
 AddNodeType(name="BubbleTrack", group="ADDITIONALS")
+AddNodeType(name="WaveTrack", group="ADDITIONALS")
 AddGlobal(name="RTIBubble", comment='Bubble Tracker', op="MAX")
 AddGlobal(name="RTISpike",  comment='Spike Tracker', op="MAX")
+AddGlobal(name="WaveLocation", comment='Wave', op="MAX")
 AddGlobal(name="NMovingWallForce", comment='force exerted on the N Moving Wall')
 AddGlobal(name="NMovingWallPower", comment='implented: Vx* incoming momentum (precollision)')
+
+AddGlobal(name="BubbleVelocityX", comment='Bubble velocity in the x direction')
+AddGlobal(name="BubbleVelocityY", comment='Bubble velocity in the y direction')
+AddGlobal(name="BubbleVelocityZ", comment='Bubble velocity in the z direction')
+AddGlobal(name="BubbleLocationY", comment='Bubble Location in the y direction')
+AddGlobal(name="SumPhiGas", comment='Summation of (1-phi) in all gas cells')
 
 if (Options$debug){
 	AddGlobal(name="MomentumX", comment='Total momentum in the domain', unit="")

@@ -63,19 +63,12 @@ for (m in Margin) { ?>
 */
     struct FTabs { <?R
     for (m in NonEmptyMargin) { ?>
-        real_t* <?%s m$name ?>; ///< Data on [<?%2d m$dx ?>,<?%2d m$dy?>,<?%2d m$dz?>] margin<?R
+        storage_t* <?%s m$name ?>; ///< Data on [<?%2d m$dx ?>,<?%2d m$dy?>,<?%2d m$dz?>] margin<?R
     } ?>
         void Alloc(int,int,int);
         void Clear(int,int,int);
         void PreAlloc(int,int,int);
         void Free();
-/// Assign operator (no alloc)
-        inline FTabs & operator=(const FTabs & in) { <?R
-    for (m in NonEmptyMargin) { ?>
-            <?%s m$name ?> = in. <?%s m$name ?>; <?R
-    } ?>
-	    return *this;
-        }
     };
 
 #define INFO_H 1
@@ -92,12 +85,28 @@ for (m in Margin) { ?>
 #endif
 */
 #ifndef DEBUG_H   
-    #include <ctime>
-    extern std::clock_t global_start;
+  #ifdef USE_STEADY_CLOCK
+	#include <chrono>
+	typedef std::chrono::time_point<std::chrono::steady_clock> time_point_t;
+  #else
+	#include <ctime>
+	typedef std::clock_t time_point_t;
+  #endif
+
+    extern time_point_t global_start;
 
     inline double get_walltime() {
-       return (std::clock() - global_start) / (double)CLOCKS_PER_SEC;
+	#ifdef USE_STEADY_CLOCK
+		time_point_t now = std::chrono::steady_clock::now();
+		std::chrono::duration<double, std::milli> ms = now - global_start;
+		return ms.count() / 1000.0;
+	#else
+		time_point_t now = std::clock();
+		return (now - global_start) / (double)CLOCKS_PER_SEC;
+	#endif
     }
+
+    void start_walltime();
 
     extern int D_MPI_RANK;
     extern int D_TERMINAL;
@@ -202,5 +211,6 @@ CudaConstantMemory real_t const wh[15] = {2./9.,
 CudaConstantMemory real_t const d3q27_ex[27] = {0, 1,-1, 0, 0, 0, 0, 1,-1, 1,-1, 1,-1, 1,-1, 1,-1, 1,-1, 1,-1, 1,-1, 0, 0, 0, 0};
 CudaConstantMemory real_t const d3q27_ey[27] = {0, 0, 0, 1,-1, 0, 0, 1, 1,-1,-1, 1, 1,-1,-1, 1, 1,-1,-1, 0, 0, 0, 0, 1,-1, 1,-1};
 CudaConstantMemory real_t const d3q27_ez[27] = {0, 0, 0, 0, 0, 1,-1, 1, 1, 1, 1,-1,-1,-1,-1, 0, 0, 0, 0, 1, 1,-1,-1, 1, 1,-1,-1};
+
 #endif
 #define D3Q27_w_and_e

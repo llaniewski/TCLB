@@ -281,6 +281,10 @@ public:
 	std::string print() { return "Globals"; }
 	SEXP Dollar(std::string name) {
 		Rcpp::NumericVector ret(1);
+		if (name == "Iteration") {
+			ret[0] = solver->lattice->Iter;
+			return ret;
+		}
 	<?R 
 		for (q in rows(Globals)) { ifdef(q$adjoint);
 	?>
@@ -299,6 +303,7 @@ public:
 	}
 	Rcpp::CharacterVector Names() {
 		Rcpp::CharacterVector ret;
+		ret.push_back("Iteration");
 		<?R for (q in rows(Globals)) { ifdef(q$adjoint); ?>
 		ret.push_back("<?%s q$name ?>");
 		ret.push_back("<?%s q$name ?>.si");
@@ -471,6 +476,26 @@ SEXP Dollar(std::string name) {
 };
 
 
+class rInfo: public rWrapper {
+	public:
+	std::string print() { return "Info"; }
+	SEXP Dollar(std::string name) {
+		Rcpp::CharacterVector ret;
+		if (name == "OutputPath") {
+			ret.push_back(this->solver->info.outpath);
+			return ret;
+		}
+		ERROR("R: Not implemented!");
+	}
+
+	Rcpp::CharacterVector Names() {
+		Rcpp::CharacterVector ret;
+		ret.push_back("OutputPath");
+		return ret;
+	}
+};
+
+
 class rSolver : public rWrapper {
 public:
 	std::string print() { return "Solver"; }
@@ -490,6 +515,8 @@ public:
 	    return rWrap(new rActions());
 	  } else if (name == "Geometry") {  
 	    return rWrap(new rGeometry());
+	  } else if (name == "Info") {
+		return rWrap(new rInfo());
 	  }
 	  return rNull;
 	}
@@ -622,6 +649,7 @@ int RunR::Init() {
 
 	R["CLBFunctionCall"] = Rcpp::InternalFunction( &CLBFunctionCall );
 	R["$.CLB"]           = Rcpp::InternalFunction( &CLBDollar );
+	R["[[.CLB"]          = Rcpp::InternalFunction( &CLBDollar );
 	R["$<-.CLB"]         = Rcpp::InternalFunction( &CLBDollarAssign );
 	R["print.CLB"]       = Rcpp::InternalFunction( &CLBPrint );
 	R["names.CLB"]       = Rcpp::InternalFunction( &CLBNames );

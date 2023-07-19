@@ -6,7 +6,6 @@
 	source("lib/lattice.R")
 ?>
 
-
 // 04/02/2017 - Model Developed: A. Fakhari, T. Mitchell
 //	      - Implementation:	 T. Mitchell
 
@@ -286,11 +285,17 @@ CudaDeviceFunction real_t calcRho(real_t myPhaseF)
 CudaDeviceFunction void Init_phase() {
 	PhaseF = PhaseField_init;// read initial PhaseField distribution from config.xml file
 
-	// RAYLEIGH TAYLOR INSTABILITY
 	if ( Period > 0 ) {
-	    real_t InterfacePoint = MidPoint + Perturbation*Period*cos(2.0*PI*X/Period);
-	    PhaseF = 0.5 * (PhaseField_h + PhaseField_l)
-		   + 0.5 * (PhaseField_h - PhaseField_l) * tanh(2.0 * (Y - InterfacePoint)/W);
+		if ( Wave > 0) {
+	    		real_t InterfacePoint = MidPoint + Perturbation*cos(2.0*PI*X/Period + PI);
+	    		PhaseF = 0.5 * (PhaseField_h + PhaseField_l)
+			       - 0.5 * (PhaseField_h - PhaseField_l) * tanh(2.0 * (Y - InterfacePoint)/W);
+		} else {
+			// RAYLEIGH TAYLOR INSTABILITY
+	    		real_t InterfacePoint = MidPoint + Perturbation*Period*cos(2.0*PI*X/Period);
+	    		PhaseF = 0.5 * (PhaseField_h + PhaseField_l)
+			       + 0.5 * (PhaseField_h - PhaseField_l) * tanh(2.0 * (Y - InterfacePoint)/W);
+		}
 	}
 	// DIFFUSE INTERFACE CIRCLE
 	if ( Radius > 0 ) {
@@ -420,11 +425,13 @@ CudaDeviceFunction void BC_Switcher ()
 }
 
 CudaDeviceFunction void calcHydroIter() {
+	real_t tmpPhase = 0.0;
 	if ((NodeType & NODE_ADDITIONALS) == NODE_Smoothing){
 		Init_distributions();
 	}
 	else{
 		PhaseF = PhaseF(0,0);
+		tmpPhase = PhaseF;
 		real_t myPhaseF = PhaseF;
 		real_t rho = calcRho(myPhaseF);
 		log_data_from_special_nodes();
@@ -433,8 +440,14 @@ CudaDeviceFunction void calcHydroIter() {
 			AddToMomentumY(V*rho);
 		#endif
 
-		BC_Switcher();
+		BC_Switcher();		
 
+                if (PhaseF <= 0.5) {
+//			AddToBubbleVelocityX( (1 - PhaseF)*U );
+//			AddToBubbleVelocityY( (1 - PhaseF)*V );
+			AddToBubbleLocationY( (1 - PhaseF)*Y );
+			AddToSumPhiGas( (1 - PhaseF) );
+		}
 		#ifdef OPTIONS_BGK
 			if (NodeType & NODE_BGK) { CollisionBGK();}
 		#elif OPTIONS_CM
@@ -442,6 +455,10 @@ CudaDeviceFunction void calcHydroIter() {
 		#else
 			if (NodeType & NODE_MRT) { CollisionMRT();}
 		#endif
+                if (tmpPhase <= 0.5) {
+			AddToBubbleVelocityX( (1 - tmpPhase)*U );
+			AddToBubbleVelocityY( (1 - tmpPhase)*V );
+		}
 
 		myPhaseF = PhaseF(0,0);
 		rho = calcRho(myPhaseF);
@@ -466,6 +483,11 @@ CudaDeviceFunction void log_data_from_special_nodes ()
 			if (PhaseF < 0.5 && PhaseF(0,1) > 0.5) {
 				location = Y + (PhaseF-0.5)/(PhaseF-PhaseF(0,1) );
 				AddToRTIBubble(location);
+			}
+		case NODE_WaveTrack:
+			if (PhaseF > 0.5 && PhaseF(0,1) < 0.5) {
+				location = Y + (PhaseF-0.5)/(PhaseF-PhaseF(0,1) );
+				AddToWaveLocation(location);
 			}
 	}
 }
@@ -496,9 +518,9 @@ CudaDeviceFunction void calcWallPhaseIter(){
 		myPhase = PhaseF_dyn(nw_x, nw_y);
 		myH = sqrt(nw_x*nw_x + nw_y*nw_y );
 
-		if (ContactAngle == 90) { PhaseF = myPhase; } 
+		if (fabs(radAngle - PI/2) < 1e-4) { PhaseF = myPhase; } 
 		else {   
-			myA = 1.0 - 0.5*myH * (4.0/W)  * cos(radAngle);
+			myA = 1.0 - 0.5*myH * (4.0/W)  * cos( radAngle );
 			PhaseF = (myA - sqrt( myA*myA - 4.0 * (myA-1.0)*myPhase))/(myA-1.0) - myPhase;
 		}
 	} 	 
@@ -1081,7 +1103,7 @@ CudaDeviceFunction void CollisionMRT(){
 	real_t nx = gradPhi.x/gradPhi.z;  // GradPhi normalized in x, y direction
 	real_t ny = gradPhi.y/gradPhi.z;
 
-	real_t p = getNormalizedPressure(); // normlized pressure
+	real_t p = getNormalizedPressure(); // normalized pressure
 	vector_t Fhydro = calcTotalHydrodynamicForceMRT(gradPhi, myPhaseF, rho, tau,  calcMu(myPhaseF), p);
 
 	// PHASE FIELD POPULATION UPDATE:
