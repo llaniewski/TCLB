@@ -292,7 +292,7 @@ AddDescription = function(short, long) {
 }
 
 
-AddStage = function(name, main=name, load.densities=FALSE, save.fields=FALSE, no.overwrite=FALSE, fixedPoint=FALSE, particle=FALSE) {
+AddStage = function(name, main=name, load.densities=FALSE, save.fields=FALSE, read.fields=FALSE, no.overwrite=FALSE, fixedPoint=FALSE, particle=FALSE) {
 	s = data.frame(
 		name = name,
 		main = main,
@@ -303,45 +303,39 @@ AddStage = function(name, main=name, load.densities=FALSE, save.fields=FALSE, no
 	sel = Stages$name == name
 	if (any(sel)) {
 		if (no.overwrite) return();
-		s$index = Stages$index[sel]
-		s$tag = Stages$tag[sel]
-		Stages[sel,] <<- s
-	} else {
-		if (is.null(Stages)) {
-			s$index = 1
-		} else {
-			s$index = nrow(Stages) + 1
-		}
-		s$tag = paste("S",s$index,sep="__")
-		Stages <<- rbind(Stages,s)
+		stop("Two stages defined with the same name")
 	}
-	if (is.character(load.densities)) {
-		sel = load.densities %in% DensityAll$name
-		if (any(!sel)) stop(paste("Unknown densities in AddStage:", load.densities[!sel]))
-		load.densities = DensityAll$name %in% load.densities
-	}
-	if (is.logical(load.densities)) {
-		if ((length(load.densities) != 1) && (length(load.densities) != nrow(DensityAll))) stop("Wrong length of load.densities in AddStage")
-		if (nrow(DensityAll) > 0) {
-			DensityAll[,s$tag] <<- load.densities
-		} else {
-			DensityAll[,s$tag] <<- logical(0);
-		}
-	} else stop("load.densities should be logical or character")
 
-	if (is.character(save.fields)) {
-		sel = save.fields %in% Fields$name
-		if (any(!sel)) stop(paste("Unknown fields in AddStage:", save.fields[!sel]))
-		save.fields = Fields$name %in% save.fields
+        if (is.null(Stages)) {
+                s$index = 1
+        } else {
+                s$index = nrow(Stages) + 1
+        }
+        s$loadtag = paste0("LoadIn",s$name)
+        s$savetag = paste0("SaveIn",s$name)
+        s$readtag = paste0("ReadIn",s$name)
+        Stages <<- rbind(Stages,s)
+	
+	selection = function(tab,sel) {
+		if (is.character(sel)) {
+			if (any(!(sel %in% tab$name))) stop("load/save/read name not found in AddStage")
+			sel = tab$name %in% sel
+		}
+		if (is.logical(sel)) {
+			if (length(sel) == 1) sel = rep(sel, nrow(tab))
+			if (length(sel) != nrow(tab)) stop("load/save/read invalid length in AddStage")
+			return(sel)
+		} else {
+			stop("load/save/read invalid type in AddStage")
+		}
 	}
-	if (is.logical(save.fields)) {
-		if ((length(save.fields) != 1) && (length(save.fields) != nrow(Fields))) stop("Wrong length of save.fields in AddStage")
-		if (nrow(Fields) > 0) {
-  		  Fields[,s$tag] <<- save.fields
-                } else {
-  		  Fields[,s$tag] <<- logical(0)
-                }
-	} else stop("save.fields should be logical or character in AddStage")
+
+	sel = selection(DensityAll, load.densities)
+	DensityAll[, s$loadtag] <<- sel
+	sel = selection(Fields, save.fields)
+	Fields[, s$savetag] <<- sel
+	sel = selection(Fields, read.fields)
+	Fields[, s$readtag] <<- sel
 }
 
 Actions = list()
@@ -433,20 +427,30 @@ if (("BaseInit" %in% AllStages) && (!"BaseInit" %in% Stages$name)) {
 }
 
 if (any(duplicated(Stages$name))) stop ("Duplicated Stages' names\n")
-ntag = paste("Stage",Stages$name,sep="_")
-i = match(Stages$tag,names(DensityAll))
-if (any(is.na(i))) stop("Some stage didn't load properly")
-names(DensityAll)[i] = ntag
-i = match(Stages$tag,names(Fields))
-if (any(is.na(i))) stop("Some stage didn't load properly")
-names(Fields)[i] = ntag
-Stages$tag = ntag
-#Stages = Stages[order(Stages$level),]
+
 row.names(Stages)=Stages$name
 
+Fields$AnyRead = apply(Fields[,Stages$readtag,drop=FALSE],1,any)
+
 for (n in names(Actions)) { a = Actions[[n]]
-	if (length(a) != 0) {
+	if (length(a) > 0) {
 		if (any(! a %in% row.names(Stages))) stop(paste("Some stages in action",n,"were not defined"))
+		bufin = rep(TRUE, nrow(Fields))
+		bufout = rep(FALSE, nrow(Fields))
+		first = TRUE
+		for (sn in a) {
+			s = Stages[Stages$name == sn,]
+			ss = Fields[,s$savetag]
+			sr = Fields[,s$readtag]
+			sl = DensityAll[,s$loadtag]
+			sl = Fields$name %in% unique(DensityAll$field[sl])
+			if ((!first) && any(ss & (sr | sl))) stop("Writing fields which is read in stage:", sn)
+			if (any((!bufin) & (sr | sl))) stop("Reading a field which wasn't written in stage", sn)
+			bufout = bufout | ss
+			bufin = bufout
+			first=FALSE
+		}
+		if (any( ! bufin )) stop("Not all fields written")
 		sel = Stages[a,"tag"]
 		f = Fields[,sel,drop=F]
 		s = apply(f,1,sum)

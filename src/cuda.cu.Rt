@@ -18,6 +18,13 @@
 #include "cross.h"
 #include "cross.hpp"
 #include "Global.h"
+#include "assert.h"
+
+CudaDeviceFunction real_t rise_nan() {
+	assert(false);
+	return NAN;
+}
+#define RISENAN rise_nan()
 
 
 class Node;
@@ -43,11 +50,14 @@ CudaDeviceFunction CudaConstantMemory real_t <?%s v$name ?> = 0.0f; <?R
 
 #define GET_MACRO(_1,_2,_3,NAME,...) NAME <?R
         for (f in rows(Fields)) { ?>
-#define <?%s f$nicename ?>_3(x__,y__,z__) (constContainer.load_<?%s f$nicename ?> < x__, y__, z__ > (x_,y_,z_,NodeType))
-#define <?%s f$nicename ?>_2(x__,y__) (constContainer.load_<?%s f$nicename ?> < x__, y__, 0 > (x_,y_,z_,NodeType))
+#define load_<?%s f$nicename ?>_static(x__,y__,z__) (constContainer.load_<?%s f$nicename ?> < x__, y__, z__ > (x_,y_,z_,NodeType))
+#define load_<?%s f$nicename ?>_dynamic(x__,y__,z__) (constContainer.load_<?%s f$nicename ?> (x_,y_,z_,NodeType,x__, y__, z__))
+
+#define <?%s f$nicename ?>_3(x__,y__,z__) (tryload_<?%s f$nicename ?>_static(x__,y__,z__))
+#define <?%s f$nicename ?>_2(x__,y__) (tryload_<?%s f$nicename ?>_static(x__,y__,0))
 #define <?%s f$nicename ?>(...) GET_MACRO(__VA_ARGS__, <?%s f$nicename ?>_3, <?%s f$nicename ?>_2)(__VA_ARGS__)
-#define <?%s f$nicename ?>_dyn_3(x__,y__,z__) (constContainer.load_<?%s f$nicename ?> (x_,y_,z_,NodeType,x__, y__, z__))
-#define <?%s f$nicename ?>_dyn_2(x__,y__) (constContainer.load_<?%s f$nicename ?> < 0 > (x_,y_,z_,NodeType,x__, y__))
+#define <?%s f$nicename ?>_dyn_3(x__,y__,z__) (tryload_<?%s f$nicename ?>_dynamic(x__,y__,z__))
+#define <?%s f$nicename ?>_dyn_2(x__,y__) (tryload_<?%s f$nicename ?>_dynamic(x__,y__,0))
 #define <?%s f$nicename ?>_dyn(...) GET_MACRO(__VA_ARGS__, <?%s f$nicename ?>_dyn_3, <?%s f$nicename ?>_dyn_2)(__VA_ARGS__) <?R
         }
 ?>
@@ -170,7 +180,19 @@ for (tp in rows(Dispatch)) {
         T1 = switch(tp$Action, No="Primal", Adj="Adjoint", Opt="Optimize", SAdj="SteadyAdjoint")
         T2 = switch(tp$Globals, No="NoGlobals", Globs="IntegrateGlobals", Obj="OnlyObjective")
         T3 = tp$stage_name
+	for (f in rows(Fields)[Fields$AnyRead]) {
+		load = TRUE
+		if (any(Stages$name == tp$stage_name)) load = f[[s$readtag]]
+		if (load) { ?>
+#define tryload_<?%s f$nicename ?>_static(x__,y__,z__)  load_<?%s f$nicename ?>_static(x__,y__,z__)
+#define tryload_<?%s f$nicename ?>_dynamic(x__,y__,z__) load_<?%s f$nicename ?>_dynamic(x__,y__,z__) <?R
+		} else { ?>
+#define tryload_<?%s f$nicename ?>_static(x__,y__,z__)  RISENAN
+#define tryload_<?%s f$nicename ?>_dynamic(x__,y__,z__) RISENAN <?R
+		}
+	}
 ?>
+
 template <> struct Node_Run < <?%s T1 ?>, <?%s T2 ?>, <?%s T3 ?> > {
 	int x_,y_,z_; <?R
 	for (g in rows(Globs)) { ?>
@@ -264,6 +286,10 @@ template <> struct Node_Run < <?%s T1 ?>, <?%s T2 ?>, <?%s T3 ?> > {
 	} ?>
 
 	CudaDeviceFunction inline void LoadElement() {
+	<?R
+		for (n in unique(c(Density$name,Fields$name))) { ?>
+		<?%s n ?> = NAN; <?R
+	} ?>
 	   constContainer.getType(*this);
 	   PreDiff();
 		<?R
@@ -337,6 +363,10 @@ template <> struct Node_Run < <?%s T1 ?>, <?%s T2 ?>, <?%s T3 ?> > {
 }; <?R
 	for (g in rows(GlobalsD)) { ?>
 #undef AddTo<?%s g$name ?><?R
+	}
+	for (f in rows(Fields)[Fields$AnyRead]) { ?>
+#undef tryload_<?%s f$nicename ?>_static
+#undef tryload_<?%s f$nicename ?>_dynamic<?R
 	}
 } 
 cat("\n")

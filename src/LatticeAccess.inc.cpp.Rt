@@ -182,8 +182,8 @@ template <class N> CudaDeviceFunction void LatticeContainer::getType(N & node)
  txtlapply(all_stages, function(s) {
 # lapply(1:length(s_list), function(s_i) {
 # for (s in c(rows(Stages),list(NULL))) {
-  if (is.null(s$load.densities))  s$load.densities = DensityAll[,s$tag];
-  if (is.null(s$save.fields))  s$save.fields = Fields[,s$tag];
+  if (is.null(s$load.densities))  s$load.densities = DensityAll[,s$loadtag];
+  if (is.null(s$save.fields))  s$save.fields = Fields[,s$savetag];
   if (is.null(s$suffix))  s$suffix = paste("_",s$name,sep="")
 
 resolve.symmetries = function(D) {
@@ -320,7 +320,7 @@ CudaDeviceFunction real_t LatticeContainer::load_<?%s f$nicename ?> (const int &
 <?R  for (dx in f$minx:f$maxx) { ?>
     case <?%d dx ?>: return load_<?%s f$nicename ?> < <?%d dx ?>, DY, DZ > (x, y, z, nt);
 <?R } ?>
-    default: return NAN;
+    default: return RISENAN;
   }
 }
 template < int DZ > 
@@ -330,7 +330,7 @@ CudaDeviceFunction real_t LatticeContainer::load_<?%s f$nicename ?> (const int &
 <?R  for (dy in f$miny:f$maxy) { ?>
     case <?%d dy ?>: return load_<?%s f$nicename ?> < <?%d dy ?>, DZ > (x, y, z, nt, dx);
 <?R } ?>
-    default: return NAN;
+    default: return RISENAN;
   }
 }
 CudaDeviceFunction real_t LatticeContainer::load_<?%s f$nicename ?>  (const int & x, const int & y, const int & z, const flag_t & nt, const int & dx, const int & dy, const int & dz) 
@@ -339,7 +339,7 @@ CudaDeviceFunction real_t LatticeContainer::load_<?%s f$nicename ?>  (const int 
 <?R  for (dz in f$minz:f$maxz) { ?>
     case <?%d dz ?>: return load_<?%s f$nicename ?> < <?%d dz ?> > (x, y, z, nt, dx, dy);
 <?R } ?>
-    default: return NAN;
+    default: return RISENAN;
   }
 }
 <?R } else { ?>
