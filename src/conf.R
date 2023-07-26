@@ -102,8 +102,7 @@ NodeTypes = data.frame()
 Fields = data.frame()
 Stages=NULL
 
-AddDensity = function(name, dx=0, dy=0, dz=0, comment="", field=name, adjoint=F, group="", parameter=F,average=F, sym=c("","",""), shift=NULL,
-                      optimise_for_static_access=TRUE) {
+AddDensity = function(name, dx=0, dy=0, dz=0, comment="", field=name, adjoint=F, group="", parameter=F,average=F, sym=c("","",""), shift=NULL, ...) {
 	if (any((parameter) && (dx != 0) && (dy != 0) && (dz != 0))) stop("Parameters cannot be streamed (AddDensity)");
 	if (missing(name)) stop("Have to supply name in AddDensity!")
 	if (missing(group)) group = name
@@ -122,8 +121,7 @@ AddDensity = function(name, dx=0, dy=0, dz=0, comment="", field=name, adjoint=F,
 		average=average,
 		symX=sym[1],
 		symY=sym[2],
-		symZ=sym[3],
-        optimise_for_static_access=optimise_for_static_access
+		symZ=sym[3]
 	)
 	DensityAll <<- rbind(DensityAll,dd)
 	for (d in rows(dd)) {
@@ -136,7 +134,7 @@ AddDensity = function(name, dx=0, dy=0, dz=0, comment="", field=name, adjoint=F,
 			average=d$average,
 			sym=sym,
 			shift=shift,
-            optimise_for_static_access=optimise_for_static_access
+            ...
 		)
 	}
 }
@@ -173,7 +171,7 @@ convert_to_shift_list = function(n, x) {
 }
 
 AddField = function(name, stencil2d=NA, stencil3d=NA, dx=0, dy=0, dz=0, comment="", adjoint=F, group="", parameter=F,average=F, sym=c("","",""), shift=NULL,
-                    optimise_for_static_access=TRUE) {
+                    optimise_for_static_access=TRUE, non.mandatory=FALSE) {
         shift = convert_to_shift_list(length(name), shift)
 	if (missing(name)) stop("Have to supply name in AddField!")
 	if (missing(group)) group = name
@@ -195,7 +193,8 @@ AddField = function(name, stencil2d=NA, stencil3d=NA, dx=0, dy=0, dz=0, comment=
 			symY=sym[2],
 			symZ=sym[3],
 			shift=I(shift),
-            optimise_for_static_access=optimise_for_static_access
+            optimise_for_static_access=optimise_for_static_access,
+			non.mandatory=non.mandatory
 		)
 
 		if (any(Fields$name == d$name)) {
@@ -330,17 +329,18 @@ AddDescription = function(short, long) {
 }
 
 
-AddStage = function(name, main=name, load.densities=FALSE, save.fields=FALSE, read.fields=NA, no.overwrite=FALSE, fixedPoint=FALSE, particle=FALSE) {
+AddStage = function(name, main=name, load.densities=FALSE, save.fields=FALSE, read.fields=NA, can.overwrite=FALSE, default=FALSE, fixedPoint=FALSE, particle=FALSE) {
 	s = data.frame(
 		name = name,
 		main = main,
 		adjoint = FALSE,
 		fixedPoint=fixedPoint,
-		particle=particle
+		particle=particle,
+		can.overwrite=can.overwrite
 	)
 	sel = Stages$name == name
 	if (any(sel)) {
-		if (no.overwrite) return();
+		if (default) return();
 		stop("Two stages defined with the same name")
 	}
 
@@ -461,10 +461,10 @@ if (!"Init" %in% names(Actions)) {
 AllStages = do.call(c,Actions)
 
 if (("BaseIteration" %in% AllStages) && (!"BaseIteration" %in% Stages$name)) {
-	AddStage(main="Run", name="BaseIteration", load.densities=TRUE, save.fields=TRUE, no.overwrite=TRUE)
+	AddStage(main="Run", name="BaseIteration", load.densities=TRUE, save.fields=TRUE, default=TRUE)
 }
 if (("BaseInit" %in% AllStages) && (!"BaseInit" %in% Stages$name)) {
-	AddStage(main="Init", name="BaseInit", load.densities=FALSE, save.fields=TRUE, no.overwrite=TRUE)
+	AddStage(main="Init", name="BaseInit", load.densities=FALSE, save.fields=TRUE, default=TRUE)
 }
 
 if (any(duplicated(Stages$name))) stop ("Duplicated Stages' names\n")
@@ -491,14 +491,15 @@ for (n in names(Actions)) { a = Actions[[n]]
 			sl = Fields$name %in% unique(DensityAll$field[sl])
 			sr[(!bufin) & is.na(sr)] = FALSE
 			sel = (!bufin) & (sr | sl)
-			if (any(sel)) stop("Reading fields", paste(Fields$name[sel],collapse=" "),"in stage", sn,"werent yet written in action",n)
+			if (any(sel)) stop("Reading fields [", paste(Fields$name[sel],collapse=", "),"] in stage '", sn,"' werent yet written in action '",n,"'")
 			sel = bufout & ss
-			if (any(sel)) stop("Overwriting fields", paste(Fields$name[sel],collapse=" "),"in stage", sn,"that were written earlier in action",n)
+			if (any(sel) && (! s$can.overwrite)) stop("Overwriting fields [", paste(Fields$name[sel],collapse=", "),"] in stage '", sn,"' that were written earlier in action '",n,"'")
 			bufout = bufout | ss
 			bufin = bufout
 			first=FALSE
 		}
-		if (any( ! bufin )) stop("Not all fields written")
+		sel = (! bufout) & (! Fields$non.mandatory)
+		if (any( sel )) stop("Fields [", paste(Fields$name[sel],collapse=", "),"] were not written in action '",n,"' (all fields need to be written*)\n*) in special cases you can mark a field as non.mandatory=TRUE")
 	} else {
 		stop(paste("There is a empty Action:",n))
 	}
