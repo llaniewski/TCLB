@@ -1,6 +1,6 @@
 #include "SyntheticTurbulence.h"
 #include "cross.h"
-#include <mpi.h>
+#include "my_mpi.h"
 #include <assert.h>
 #include <stdlib.h>
 

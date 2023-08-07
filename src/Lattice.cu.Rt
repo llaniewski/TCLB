@@ -14,7 +14,7 @@
 #include "Global.h"
 #include "LatticeContainer.h"
 #include "Lattice.h"
-#include <mpi.h>
+#include "my_mpi.h"
 #include <assert.h>
 #include "SolidTree.hpp"
 #include "SolidGrid.hpp"

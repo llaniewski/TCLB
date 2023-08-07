@@ -1,7 +1,7 @@
 #ifndef REMOTEFORCEINTERFACE_H
 #define REMOTEFORCEINTERFACE_H
 
-#include <mpi.h> 
+#include "my_mpi.h" 
 #include <stdlib.h>
 #include <stdio.h>
 #include <vector>

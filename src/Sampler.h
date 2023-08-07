@@ -1,4 +1,4 @@
-#include <mpi.h>
+#include "my_mpi.h"
 #include "utils.h"
 #include "Consts.h"
 #include "Global.h"

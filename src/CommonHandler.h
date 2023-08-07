@@ -5,7 +5,7 @@
 
 #include "pugixml.hpp"
 #include "Global.h"
-#include <mpi.h>
+#include "my_mpi.h"
 #include "cross.h"
 #include "Region.h"
 #include "LatticeContainer.h"

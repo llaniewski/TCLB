@@ -1,8 +1,7 @@
 #ifndef MPITOOLS_H
 #define MPITOOLS_H
 
-
-#include <mpi.h>
+#include "my_mpi.h"
 #include <string>
 
 namespace mpitools {

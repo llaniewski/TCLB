@@ -9,7 +9,7 @@
 #endif
 
 #include "Global.h"
-#include <mpi.h>
+#include "my_mpi.h"
 #include "Region.h"
 #include "utils.h"
 #include "unit.h"

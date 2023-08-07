@@ -4,7 +4,7 @@
 ?>
 #include <stdio.h>
 #include <assert.h>
-#include <mpi.h>
+#include "my_mpi.h"
 #include "cross.h"
 #include "hdf5Lattice.h"
 #include "Global.h"

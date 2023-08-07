@@ -6,7 +6,7 @@
 #include <vector>
 #include <string>
 #include <map>
-#include <mpi.h>
+#include "my_mpi.h"
 #include <assert.h>
 #include <cstring>
 
