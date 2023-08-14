@@ -206,13 +206,13 @@ void MainFree( Solver *d);
 	\param nm Appendix added to the name of the vti file written
 	\param s Set of fields/quantities/geometry features to write
 */
-	int Solver::writeVTK(const char * nm, name_set * s) {
+	int Solver::writeVTK(const char * nm, name_set * s, lbRegion region) {
 		print("writing vtk");
 		char filename[2*STRING_LEN];
 		int ret = -1;
 		if(latticeType == 0) { // cartesian lattice output function
-			outIterFile(nm, ".vti", filename);
-			ret = vtkWriteLattice(filename, lattice, units, s);
+		outIterFile(nm, ".vti", filename);
+			ret = vtkWriteLattice(filename, lattice, units, s, region);
 		} else if(latticeType == 1 && !connectivity->cellDataOutput) {
 			outIterFile(nm, ".vtp", filename);
 			ret = vtkWriteLatticeArbitrary(filename, latticeSize, lattice, units, s);

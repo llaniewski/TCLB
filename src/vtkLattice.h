@@ -9,7 +9,7 @@
 	#include "unit.h"
 	#include "utils.h"
 
-	int vtkWriteLattice(char * filename, LatticeBase * lattice, UnitEnv, name_set * s);
+	int vtkWriteLattice(char * filename, LatticeBase * lattice, UnitEnv, name_set * s, lbRegion region);
 	int vtkWriteLatticeArbitrary(char * filename, size_t latticeSize, LatticeBase * lattice, UnitEnv, name_set * s);
 	int vtkWriteLatticeArbitraryUG(char * filename, size_t latticeSize, LatticeBase * lattice, Connectivity * connectivity, UnitEnv, name_set * s);
 	int binWriteLattice(char * filename, LatticeBase * lattice, UnitEnv units);

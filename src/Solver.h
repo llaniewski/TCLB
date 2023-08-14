@@ -127,7 +127,7 @@ class Solver {
 	void Gauge();
 	int initLog(const char * filename);
 	int writeLog(const char * filename);
-	int writeVTK(const char * nm, name_set * s);
+	int writeVTK(const char * nm, name_set * s, lbRegion region);
 	int writeTXT(const char * nm, name_set * s, int type);
 	int writeBIN(const char * nm);
 	int setSize(int,int,int,int,size_t,int);

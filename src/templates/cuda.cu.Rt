@@ -52,35 +52,7 @@ CudaDeviceFunction CudaConstantMemory real_t <?%s v$name ?> = 0.0f; <?R
 #include "ArbitraryLatticeAccess.inc.cpp"
 
 
-<?R for (f in rows(Fields)) { ?>
-#define <?%s f$nicename ?>(...) (Accessor::container().template load_<?%s f$nicename ?><__VA_ARGS__>(idx_,NodeType))
-#define <?%s f$nicename ?>_dyn(...) (Accessor::container().load_<?%s f$nicename ?> (idx_,NodeType, __VA_ARGS__))
-<?R } ?>
-
-#define X Accessor::container().getX(idx_)
-#define Y Accessor::container().getY(idx_)
-#define Z Accessor::container().getZ(idx_)
-#define Time (Accessor::container().iter)
-#define SyntheticTurbulence(x__,y__,z__) Accessor::container().getST(x__,y__,z__)
-#define average_iter (Accessor::container().iter - Accessor::container().reset_iter)  //Look nicer in Dynamics
-<?R
-	for(s in rows(ZoneSettings)) { ?>
-//#define <?%s s$name ?> constContainer.ZoneSettings[<?%s s$Index ?> + ZONESETTINGS * (NodeType >> ZONE_SHIFT)][constContainer.ZoneIndex]
-#define <?%s s$name ?> Accessor::container().ZoneSetting(<?%s s$Index ?>, NodeType >> ZONE_SHIFT)
-#define <?%s s$name ?>_DT Accessor::container().ZoneSetting_DT(<?%s s$Index ?>, NodeType >> ZONE_SHIFT)
-<?R
-        }
-?>
-
-#include "../Particle.hpp"
-
-<?R
-	P = expand.grid(x=0:2,y=0:2,z=0:2)
-	Q = paste("Q",P$x,P$y,P$z,sep="")
-	for (i in 2:length(Q)) { ?>
-#define <?%s Q[i] ?> Accessor::container().getQ(idx_,<?%d i-2 ?>)
-<?R     } ?>
-
+#include "Particle.hpp"
 
 <?R	for (n in rows(NodeTypes)) {	?>
 #define Iam<?%s n$name ?> ((NodeType & NODE_<?%s n$group?>) == NODE_<?%s n$name ?>)
@@ -89,24 +61,141 @@ CudaDeviceFunction CudaConstantMemory real_t <?%s v$name ?> = 0.0f; <?R
 #define Iam<?%s n ?> (NodeType & NODE_<?%s n ?>)
 <?R	}	?>
 
+template <eCalculateGlobals G>
+struct CalculateGlobals {};
 
+template <>
+struct CalculateGlobals<NoGlobals> {
+	template <int I>
+	CudaDeviceFunction inline void AddToGlobal(const real_t& x, const flag_t& NodeType) {}
+	template <int I>
+	CudaDeviceFunction inline void MaxToGlobal(const real_t& x, const flag_t& NodeType) {}
+	CudaDeviceFunction void inline Glob() {}
+};
 
+template <>
+struct CalculateGlobals<IntegrateGlobals> {
+	real_t globals[GLOBALS];
+	CudaDeviceFunction CalculateGlobals() {
+		for (int i=0; i<GLOBALS; i++) {
+            globals[i] = 0.0;
+		}
+	}
+	template <int I>
+	CudaDeviceFunction inline void AddToGlobal(const real_t& x, const flag_t& NodeType) {
+		globals[I] = globals[I] + x;
+		if (I < SUM_GLOBALS) {
+			globals[GLOBALS_Objective] = globals[GLOBALS_Objective] + constContainer.ZoneSetting(I + IN_OBJ_OFFSET, NodeType >> ZONE_SHIFT);
+		}
+	}
+	template <int I>
+	CudaDeviceFunction inline void MaxToGlobal(const real_t& x, const flag_t& NodeType) {
+		globals[I] = max(globals[I], x);
+	}
+	CudaDeviceFunction void inline Glob() {
+		for (int i=0; i<GLOBALS; i++) {
+			if (i < SUM_GLOBALS) {
+            	CudaAtomicAddReduceWarp(&constContainer.Globals[i], globals[i]);
+			} else {
+				CudaAtomicMaxReduceWarp(&constContainer.Globals[i], globals[i]);
+			}
+		}
+	}
+};
+
+template <>
+struct CalculateGlobals<OnlyObjective> {
+	real_t obj;
+	CudaDeviceFunction CalculateGlobals() {
+		obj = 0.0;
+	}
+	template <int I>
+	CudaDeviceFunction inline void AddToGlobal(const real_t& x, const flag_t& NodeType) {
+		if (I < SUM_GLOBALS) {
+			obj = obj + constContainer.ZoneSetting(I + IN_OBJ_OFFSET, NodeType >> ZONE_SHIFT);
+		}
+	}
+	template <int I>
+	CudaDeviceFunction inline void MaxToGlobal(const real_t& x, const flag_t& NodeType) {}
+	CudaDeviceFunction void inline Glob() {
+        CudaAtomicAddReduceWarp(&constContainer.Globals[GLOBALS_Objective], obj);		
+	}
+};
+
+struct CalculateGlobalsAdjoint {
+	real_t duals[ZONESETTINGS];
+	real_t duals_dt[ZONESETTINGS];
+	CudaDeviceFunction CalculateGlobalsAdjoint() {
+		for (int i=0; i<ZONESETTINGS; i++) {
+            duals[i] = 0.0;
+			duals_dt[i] = 0.0;
+		}
+	}
+	template <int I>
+	CudaDeviceFunction inline real_t& BRef() { return duals[I]; }
+	template <int I>
+	CudaDeviceFunction inline real_t& DTBRef() { return duals_dt[I]; }
+	CudaDeviceFunction void inline Glob(const flag_t& NodeType) {
+        int z = NodeType >> ZONE_SHIFT;
+		for (int nz = 0; nz < constContainer.MaxZones; nz++) if (CudaSyncWarpOr(nz == z)) { 
+			for (int i=0; i<ZONESETTINGS; i++) {
+				real_t val;
+				val = (nz == z) ? duals[i] : 0.0f;
+    	        CudaAtomicAddReduceWarp(constContainer.ZoneSettingGrad( i , nz), val); 
+				val = (nz == z) ? duals_dt[i] : 0.0f;
+	            CudaAtomicAddReduceWarp(constContainer.ZoneSettingGrad( i + DT_OFFSET, nz), val); 
+			}
+		}
+	}
+};
 
 
 #define NODE_H
 
-template <class Accessor, eOperationType I, eCalculateGlobals G, eStage S> struct Node_Run {
-		int x_,y_,z_;        
-		typename Accessor::index idx_;
-		CudaDeviceFunction inline void Pre(){};
-        CudaDeviceFunction inline void ExecElement(){};
-        CudaDeviceFunction inline void LoadElement(){};
-        CudaDeviceFunction inline void SaveElement(){};
+
+#define GET_MACRO(_1,_2,_3,NAME,...) NAME <?R
+        for (f in rows(Fields)) { ?>
+#define <?%s f$nicename ?>(...) acc.template load_<?%s f$nicename ?>< __VA_ARGS__ >()
+#define <?%s f$nicename ?>_dyn(...) acc.load_<?%s f$nicename ?>(__VA_ARGS__) <?R
+        }
+?>
+
+#define X (acc.X())
+#define Y (acc.Y())
+#define Z (acc.Z())
+#define NodeType (acc.NodeType())
+#define Time (constContainer.iter)
+#define SyntheticTurbulence(x__,y__,z__) constContainer.getST(x__,y__,z__)
+#define average_iter (constContainer.iter - constContainer.reset_iter)  //Look nicer in Dynamics
+<?R
+	P = expand.grid(x=0:2,y=0:2,z=0:2)
+	Q = paste("Q",P$x,P$y,P$z,sep="")
+	for (i in 2:length(Q)) { ?>
+#define <?%s Q[i] ?> (acc.getQ(<?%d i-2 ?>)) <?R
+	}
+	for(s in rows(ZoneSettings)) { ?>
+//#define <?%s s$name ?> constContainer.ZoneSettings[<?%s s$Index ?> + ZONESETTINGS * (NodeType >> ZONE_SHIFT)][constContainer.ZoneIndex]
+<?R 	if (! s$preload) { ?>
+#define <?%s s$name ?> constContainer.ZoneSetting(<?%s s$Index ?>, NodeType >> ZONE_SHIFT)
+<?R     } ?>
+#define <?%s s$name ?>_DT constContainer.ZoneSetting_DT(<?%s s$Index ?>, NodeType >> ZONE_SHIFT)
+<?R
+    }
+
+	for (g in rows(Globals)) {
+		if (g$op == "SUM") { ?>
+#define AddTo<?%s g$name ?>(x__) glob.AddToGlobal< <?%s g$Index ?> >(x__, NodeType) <?R
+		} else { ?>
+#define AddTo<?%s g$name ?>(x__) glob.MaxToGlobal< <?%s g$Index ?> >(x__, NodeType) <?R
+		}
+	}
+?>
+
+
+
+template < class LA, eOperationType I, eCalculateGlobals G, eStage S> struct Node_Run {
         CudaDeviceFunction inline void RunElement(){};
-        CudaDeviceFunction inline void Glob(){};
-	CudaDeviceFunction inline void OutOfDomain() {};
-        CudaDeviceFunction inline void GlobDiff(){};
-        CudaDeviceFunction inline void GlobDiffOutOfDomain(){};
+		CudaDeviceFunction inline Node_Run(const LA& acc_) {};
 };
 
 <?R
@@ -150,25 +239,6 @@ for (tp in rows(Dispatch)) {
 	        stop(paste("Unknown Action:",tp$Stream,"in Dispatch (conf.R)"));
 	} ?>
 //-------------------[ <?%20s paste("Node",tp$suffix,sep="") ?> --- Action:<?%5s tp$Stream ?>, Globals:<?%5s tp$Globals ?> ]-------------------- <?R
-	for (g in rows(GlobalsD)) if (g$sel) {
-		if (tp$Globals == "Globs") {
-		        if (g$op == "SUM") {
-				if (g$adjoint) { ?>
-#define AddTo<?%s g$name ?>(x) <?%s g$var ?> = <?%s g$var ?> + (x) <?R
-				} else { ?>
-#define AddTo<?%s g$name ?>(x) <?%s g$var ?> = <?%s g$var ?> + (x); Objective = Objective + (x) * <?%s g$name ?>InObj <?R
-				}
-	                } else if (g$op == "MAX") { ?>
-#define AddTo<?%s g$name ?>(x) <?%s g$var ?> = max(<?%s g$var ?>,x) <?R
-                        }
-		} else if (tp$Globals == "Obj") { ?>
-#define AddTo<?%s g$name ?>(x) Objective = Objective + (x) * <?%s g$name ?>InObj <?R
-		} else { ?>
-#define AddTo<?%s g$name ?>(x) <?R
-		}
-	} else { ?>
-#define AddTo<?%s g$name ?>(x) <?R
-	}
         if (tp$Globals == "Globs") {
                 Globs = GlobalsD[GlobalsD$sel,]
         } else if (tp$Globals == "Obj") {
@@ -181,57 +251,25 @@ for (tp in rows(Dispatch)) {
         T2 = switch(tp$Globals, No="NoGlobals", Globs="IntegrateGlobals", Obj="OnlyObjective")
         T3 = tp$stage_name
 ?>
-// add in T1 as the accessor type
-template <class Accessor> struct Node_Run <Accessor, <?%s T1 ?>, <?%s T2 ?>, <?%s T3 ?> > {
-	// have to modify these to use Accessor::idx
-	int x_,y_,z_; 
-	typename Accessor::index idx_;<?R
-	for (g in rows(Globs)) { ?>
-	real_t <?%s g$var ?>; ///< <?%s g$comment ?><?R
+template < class LA > struct Node_Run < LA, <?%s T1 ?>, <?%s T2 ?>, <?%s T3 ?> > {
+	const LA& acc;
+	CalculateGlobals< <?%s T2 ?> > glob;
+<?R
+		for(setting in rows(ZoneSettings)) if (setting$preload) { ?>
+	real_t <?%s setting$name ?>; <?R
+		}
+?>
+	//CudaDeviceFunction inline Node_Run(int x__,int y__,int z__):x_(x__),y_(y__),z_(z__),NodeType(constContainer.getType(x_,y_,z_)),acc(x_,y_,z_,NodeType) {
+	CudaDeviceFunction inline Node_Run(const LA& acc_):acc(acc_) {
+		int z = NodeType >> ZONE_SHIFT; <?R
+		for(setting in rows(ZoneSettings)) if (setting$preload) { ?>
+		<?%s setting$name ?> =  constContainer.ZoneSetting(<?%s setting$Index ?>, z); <?R
 		} ?>
-	CudaDeviceFunction void inline Pre() { <?R
-	for (g in rows(Globs)) if (!g$zonal){ ?>
-		<?%s g$var ?> = 0.0f; <?R
-        } ?>
+	};
+	CudaDeviceFunction void inline Glob() {
+		glob.Glob();
 	}
-	CudaDeviceFunction void inline PreDiff() { <?R
-	for (g in rows(Globs)) if (g$zonal) { ?>
-		<?%s g$var ?> = 0.0f; <?R
-        } ?>
-	}
-	CudaDeviceFunction void inline Glob() { <?R
-        for (g in rows(Globs)) if (!g$zonal) {
-		where_to_put_it = paste0("&Accessor::container().Globals[", g$Index, "]")
-                if (g$op == "SUM") { ?>
-                atomicSum(<?%s where_to_put_it ?>, <?%s g$var ?>); <?R
-                } else if (g$op == "MAX") { ?>
-                atomicMax(<?%s where_to_put_it ?>, <?%s g$var ?>); <?R
-                }
-        } ?>
-	}
-	CudaDeviceFunction void inline GlobDiff() {
-	<?R if (any(Globs$zonal)) { ?>
-		int z = NodeType >> ZONE_SHIFT;
-		//for (int nz = 0; nz < constContainer.MaxZones; nz++) if (CudaSyncThreadsOr(nz == z)){ MOD
-		for (int nz = 0; nz < Accessor::container().MaxZones; nz++) if (CudaSyncThreadsOr(nz == z)){<?R
-        for (g in rows(Globs)) if (g$zonal) {
-		where_to_put_it = paste0("Accessor::container().ZoneSettingGrad(", g$Index,", nz)") ?>
-                atomicSumDiff(<?%s where_to_put_it ?>, <?%s g$var ?>, nz == z); <?R
-        } ?>
-		}
-	<?R } ?>
-	}
-	CudaDeviceFunction void inline GlobDiffOutOfDomain() { 
-	<?R if (any(Globs$zonal)) { ?>
-		// for (int nz = 0; nz < constContainer.MaxZones; nz++) if (CudaSyncThreadsOr(false)){
-		for (int nz = 0; nz < Accessor::container().MaxZones; nz++) if (CudaSyncThreadsOr(false)){<?R
-        for (g in rows(Globs)) if (g$zonal) {
-		where_to_put_it = paste0("Accessor::container().ZoneSettingGrad(", g$Index,", nz)") ?>
-                atomicSumDiff(<?%s where_to_put_it ?>, 0.0f, false); <?R
-        } ?>
-		}
-	<?R } ?> 
-	} <?R
+	<?R
 		if (! tp$adjoint) { ?>
 	#include "Dynamics.h" <?R
 		} else { ?>
@@ -279,12 +317,10 @@ template <class Accessor> struct Node_Run <Accessor, <?%s T1 ?>, <?%s T2 ?>, <?%
 	} ?>
 
 	CudaDeviceFunction inline void LoadElement() {
-	   Accessor::container().getType(*this);
-	   PreDiff();
 		<?R
 		if (tp$Stream == "Adj") { ?>
-		Accessor::container().pop_<?%s s$name ?>(*this);
-		Accessor::container().pop_<?%s s$name ?>_adj(*this);<?R
+		acc.pop_<?%s s$name ?>(*this);
+		acc.pop_<?%s s$name ?>_adj(*this);<?R
 		        for (d in rows(Density)) if (d$parameter) {
         		        if (tp$Globals == "Globs") { ?>
                 old_<?%s d$adjoint_name ?> = <?%s d$adjoint_name ?>; <?R
@@ -294,11 +330,11 @@ template <class Accessor> struct Node_Run <Accessor, <?%s T1 ?>, <?%s T2 ?>, <?%
                                 }
                         }
 		} else if (tp$Stream == "Opt") { ?>
-		Accessor::container().pop_param(*this);
-		Accessor::container().pop_param_adj(*this); <?R
+		acc.pop_param(*this);
+		acc.pop_param_adj(*this); <?R
 		} else if (tp$Stream == "Init") {
 		} else if (tp$Stream == "No") { ?>
-	        Accessor::container().pop_<?%s s$name ?>(*this); <?R
+	        acc.pop_<?%s s$name ?>(*this); <?R
 		} else {
 		        stop(paste("Unknown Action:",tp$Stream,"in Dispatch (cuda.cu / conf.R)"));
 		} ?>
@@ -310,23 +346,18 @@ template <class Accessor> struct Node_Run <Accessor, <?%s T1 ?>, <?%s T2 ?>, <?%
                 old_<?%s d$adjoint_name ?> -= <?%s d$adjoint_name ?>;
                 AddToAdjointRes(old_<?%s d$adjoint_name ?>*old_<?%s d$adjoint_name ?>); <?R
                         } ?>
-		Accessor::container().push_<?%s s$name ?>_adj(*this); <?R
+		acc.push_<?%s s$name ?>_adj(*this); <?R
 		} else if (tp$Stream == "Opt") { ?>
-		Accessor::container().push_param(*this); <?R
+		acc.push_param(*this); <?R
 		} else if (tp$Stream == "Init") { ?>
-		Accessor::container().push_<?%s s$name ?>(*this); <?R
+		acc.push_<?%s s$name ?>(*this); <?R
 		} else if (tp$Stream == "No") { ?>
-		Accessor::container().push_<?%s s$name ?>(*this); <?R
+		acc.push_<?%s s$name ?>(*this); <?R
 		} else {
 		        stop(paste("Unknown Action:",tp$Stream,"in Dispatch (cuda.cu / conf.R)"));
 		} ?>
-	   GlobDiff();
 	}
-	<?R
-		ExecArgType = ""
-		ExecArg  = ""
-	?>
-	CudaDeviceFunction inline void ExecElement(<?%s ExecArgType ?>) {
+	CudaDeviceFunction inline void ExecElement() {
 		<?R
 		if (tp$Stream == "Adj") { ?>
 		Run_b(); <?R
@@ -335,30 +366,29 @@ template <class Accessor> struct Node_Run <Accessor, <?%s T1 ?>, <?%s T2 ?>, <?%
 		} else if (tp$Stream == "Init") { ?>
 		Init();<?R
 		} else if (tp$Stream == "No") { ?>
-		<?%s s$main ?>(<?%s ExecArg ?>); <?R
+		<?%s s$main ?>(); <?R
 		} else {
 		        stop(paste("Unknown Action:",tp$Stream,"in Dispatch (cuda.cu / conf.R)"));
 		} ?>
 	}
-	CudaDeviceFunction inline void RunElement(<?%s ExecArgType ?>) {
+	CudaDeviceFunction inline void RunElement() {
 		LoadElement();
-		ExecElement(<?%s ExecArg ?>);
+		ExecElement();
 		SaveElement();
-	}
-	CudaDeviceFunction inline void OutOfDomain() {
-	   GlobDiffOutOfDomain();
+		Glob();
 	} <?R
         } ########################################################################################### ?>
 }; <?R
-	for (g in rows(GlobalsD)) { ?>
-#undef AddTo<?%s g$name ?><?R
-	}
 } 
 cat("\n")
 ifdef()
 ?>
 
-#include "ContainerAccessors.cpp"
-#include "LatticeContainerBase.cpp"
+#undef X
+#undef Y
+#undef Z
+#undef NodeType
+#undef Time
+#undef average_iter
 #include "LatticeContainer.inc.cpp"
 #include "ArbitraryLatticeContainer.inc.cpp"

@@ -17,6 +17,10 @@ AC_ARG_ENABLE([cuda],
 	AS_HELP_STRING([--enable-cuda=cuda_home],
 		[specify the root of your cuda install, e.g. /usr/local/cuda]))
 
+AC_ARG_ENABLE([hip],
+	AS_HELP_STRING([--enable-hip=rocm_home],
+		[specify the root of your rocm install, e.g. /opt/rocm]))
+
 AC_ARG_WITH([mpi-include],
 	AS_HELP_STRING([--with-mpi-include=mpi_include],
 		[specify the full path to your mpi headers, e.g. /usr/include/mpi]),
@@ -48,6 +52,10 @@ AC_ARG_ENABLE([graphics],
 AC_ARG_ENABLE([double],
 	AS_HELP_STRING([--enable-double],
 		[make a double precision version]))
+
+AC_ARG_WITH([storage],
+	AS_HELP_STRING([--with-storage],
+		[type of storage used: half, half-shift, float, float-shift, double]))
 
 AC_ARG_ENABLE([cpp11],
 	AS_HELP_STRING([--enable-cpp11],
@@ -81,10 +89,21 @@ AC_ARG_WITH([lammps-lib],
 	AS_HELP_STRING([--with-lammps-lib=libfile],
 		[specify the name of the lammps/liggghts library (.so/.a)]))
 
+AC_ARG_WITH([solid_container],
+	AS_HELP_STRING([--with-solid-container=type],
+		[type of solid (particle) container to use: all/tree/grid]))
+
+AC_ARG_WITH([solid_cache],
+	AS_HELP_STRING([--with-solid-cache=N],
+		[if to use cache of size N for solid (particle) data]))
+
+AC_ARG_ENABLE([opp],
+	AS_HELP_STRING([--enable-opp=N],
+		[enable opportunistic operations]))
+
 AC_ARG_WITH([tapenade],
 	AS_HELP_STRING([--with-tapenade=path],
 		[use tapenade for code differentiation for adjoint]))
-		
 
 AC_ARG_WITH([verbosity_level],
 	AS_HELP_STRING([--with-verbosity-level=level],
@@ -126,6 +145,17 @@ AC_ARG_WITH([python_bin],
 	AS_HELP_STRING([--with-python-bin],
 		[Set python binary to call]))
 
+AC_ARG_WITH([x-block],
+	AS_HELP_STRING([--with-x-block],
+		[Set the block size in the x direction (X_BLOCK) (default=32)]))
+AC_ARG_WITH([x-mod],
+	AS_HELP_STRING([--with-x-mod],
+		[Set the value used for dividing the memory arrangement in the x direction (default=none)]))
+AC_ARG_WITH([warp-size],
+	AS_HELP_STRING([--with-warp-size],
+		[Set the value used for the warp size]))
+
+
 AC_ARG_ENABLE([paranoid],
 	AS_HELP_STRING([--enable-paranoid],
 		[Makes GCC paranoid.]))
@@ -140,12 +170,12 @@ AC_ARG_WITH([cpp-flags],
 	AS_HELP_STRING([--with-cpp-flags=FLAGS],
 		[privide additionals flags for the compiler]),
 	[CONF_CPPFLAGS="$withval"])		
+
 NVFLAGS=""
 
 if test "x${COMPILER_BINDIR}" != "x"
 then
 	NVFLAGS="-ccbin=${COMPILER_BINDIR} "
-
 fi
 
 if test -z "$CXX"
@@ -165,6 +195,11 @@ mpishow=$($CXX -showme 2>/dev/null)
 if ! test -z "$mpishow"
 then
 	CPPFLAGS="${CPPFLAGS} $(echo $(echo "$mpishow" | sed -e 's| |\n|g' | grep "^-I"))"
+	LDFLAGS="${LDFLAGS} $(echo $(echo "$mpishow" | sed -e 's| |\n|g' | grep "^-[[Ll]]"))"
+	CXX="$(echo $(echo "$mpishow" | sed -e 's| |\n|g' | sed -n -e '1p'))"
+	echo "from mpi showme: CPPFLAGS = $CPPFLAGS"
+	echo "from mpi showme: LDFLAGS  = $LDFLAGS"
+	echo "from mpi showme: CXX      = $CXX"
 fi
 
 # Checks for programs.
@@ -175,9 +210,34 @@ AC_PROG_CXX
 AC_CHECK_HEADERS([float.h stddef.h stdint.h stdlib.h string.h wchar.h],[],[AC_MSG_ERROR([Cannot find standart headers])])
 AC_CHECK_LIB([m], [sqrt],[],[AC_MSG_ERROR([Didn't find math Library])])
 
+AC_CHECK_HEADERS([cxxabi.h],[AC_DEFINE([HAS_CXXABI_H], [1], [Has demangle])],[AC_MSG_RESULT([Didn't find cxxabi.h])])
+
+
 if test "x${enable_double}" != "xno"
 then
 	AC_DEFINE([CALC_DOUBLE_PRECISION], [1], [Making a double precision version])
+fi
+
+if test "x${with_storage}" == "xhalf-shift"
+then
+	AC_DEFINE([STORAGE_BITS], [16], [Using half as storage])
+	AC_DEFINE([STORAGE_SHIFT], [1], [Using shift for storage])
+elif test "x${with_storage}" == "xhalf"
+then
+	AC_DEFINE([STORAGE_BITS], [16], [Using half as storage])
+elif test "x${with_storage}" == "xfloat-shift"
+then
+	AC_DEFINE([STORAGE_BITS], [32], [Using half as storage])
+	AC_DEFINE([STORAGE_SHIFT], [1], [Using shift for storage])
+elif test "x${with_storage}" == "xfloat"
+then
+	AC_DEFINE([STORAGE_BITS], [32], [Using half as storage])
+elif test "x${with_storage}" == "xdouble"
+then
+	AC_DEFINE([STORAGE_BITS], [64], [Using half as storage])
+elif test "x${with_storage}" != "x"
+then
+	AC_MSG_ERROR([Not suppported type of storage: x${with_storage}])
 fi
 
 OPENMP="${with_openmp}"
@@ -185,7 +245,28 @@ test "x${with_openmp}" == "xno" && OPENMP=""
 test "x${with_openmp}" == "x" && OPENMP=""
 test "x${with_openmp}" == "xyes" && OPENMP="-fopenmp"	
 
-if test "x${enable_cuda}" != "xno"
+if test "x${enable_hip}" == "xyes"
+then
+	AC_DEFINE([CROSS_HIP], [1], [Making a HIP version])
+	CROSS_HIP=1
+	if test "x${enable_graphics}" == "xyes"
+	then
+		AC_MSG_ERROR([Cannot make GLUT graphics with HIP version])
+	fi
+	AC_DEFINE([GRID3D], [1], [Using 3D block grid in HIP])
+	if test "x${with_x_block}" != "x"
+	then
+		AC_DEFINE_UNQUOTED([X_BLOCK], ${with_x_block}, [Using X block from --with-x-block])
+	else
+		AC_DEFINE([X_BLOCK], [32], [Using standard X block])
+	fi
+	if test "x${with_warp_size}" != "x"
+	then
+		AC_DEFINE_UNQUOTED([WARPSIZE], ${with_warp_size}, [Using warp size from --with-warp-size])
+	else
+		AC_DEFINE([WARPSIZE], [32], [Using 32 warpsize to have warp primitives work with x block])
+	fi
+elif test "x${enable_cuda}" != "xno"
 then
 
     if test "x{debug-kernel}" == "xyes"
@@ -233,7 +314,10 @@ then
 		CPPFLAGS="${CPPFLAGS} -I${CUDA_HOME}/include"
 	fi
 	AC_CHECK_HEADERS([cuda.h],[],[AC_MSG_ERROR([Didn't find cuda.h])])
+	AC_CHECK_HEADERS([cuda_runtime.h],[],[AC_MSG_ERROR([Didn't find cuda.h])])
 	#AC_CHECK_LIB([cudart], [cudaMalloc],[],[AC_MSG_ERROR([Didn't find CUDA Run-time Library])])
+	LDFLAGS="${LDFLAGS} -lcudart"
+
 	if test "x${enable_graphics}" == "xyes"
 	then
 		AC_CHECK_HEADERS([GL/glut.h],[],[AC_MSG_ERROR([Didn't find GLUT headers])])
@@ -245,84 +329,65 @@ then
 
 	GRID3D=""
 	if test -z "${with_cuda_arch}"; then
-		CUDA_ARCH="sm_20"
+		AC_CHECK_LIB([cudart], [cudaGetDeviceProperties])
+		AC_MSG_CHECKING([Trying to get compute capability from GPU])
+		AC_RUN_IFELSE([AC_LANG_PROGRAM([
+			#include <stdio.h>
+			#include <cuda_runtime.h>
+		],[
+			cudaDeviceProp prop;
+			cudaError_t status;
+			status = cudaGetDeviceProperties(&prop,	0);
+			if (status) {
+				printf("%s\n", cudaGetErrorString( status ));
+				return status;
+			}
+			printf("%d%d\n", prop.major, prop.minor);
+			return 0;
+		])],[CUDA_CC=$(./conftest$EXEEXT)],[CUDA_CC="default"; AC_MSG_RESULT([Failed to get CC from GPU])])
 	else
-		CUDA_ARCH="${with_cuda_arch}"
-	fi
-	AC_MSG_CHECKING([target CUDA architecture])
-	CUDA_SUFF=""
-	if test "$CUDA_ARCH" == "sm_11"
-	then
-		AC_MSG_RESULT([${CUDA_ARCH}])
-		if test "x${enable_double}" == "xyes"
-		then
-			AC_MSG_ERROR([Double precision not supported in sm_11])
-		fi
-		CUDA_SUFF="11"
-	elif test "$CUDA_ARCH" == "sm_13"
-	then
-		AC_MSG_RESULT([${CUDA_ARCH}])
-		if test "x${enable_double}" == "xyes"
-		then
-			AC_MSG_ERROR([Double precision not supported in sm_13])
-		fi
-		CUDA_SUFF="13"
-	elif test "$CUDA_ARCH" == "sm_20"
-	then
-		AC_MSG_RESULT([${CUDA_ARCH}])
-		AC_DEFINE([GRID3D], [1], [Using 3D block grid in CUDA])
-		CUDA_SUFF="20"
-	elif test "$CUDA_ARCH" == "sm_30"
-	then
-		AC_MSG_RESULT([${CUDA_ARCH}])
-		AC_DEFINE([GRID3D], [1], [Using 3D block grid in CUDA])
-
-		CUDA_SUFF="30"
-	elif test "$CUDA_ARCH" == "sm_35"
-	then
-		AC_MSG_RESULT([${CUDA_ARCH}])
-		AC_DEFINE([GRID3D], [1], [Using 3D block grid in CUDA])
-
-		CUDA_SUFF="35"
-	elif test "$CUDA_ARCH" == "sm_60"
-	then
-		AC_MSG_RESULT([${CUDA_ARCH}])
-		AC_DEFINE([GRID3D], [1], [Using 3D block grid in CUDA])
-
-    	CUDA_SUFF="60"
-    elif test "$CUDA_ARCH" == "sm_70"
-    then
-        AC_MSG_RESULT([${CUDA_ARCH}])
-        AC_DEFINE([GRID3D], [1], [Using 3D block grid in CUDA])
-
-        CUDA_SUFF="70"
-	elif test "$CUDA_ARCH" == "sm_75"
-	then
-		AC_MSG_RESULT([${CUDA_ARCH}])
-		AC_DEFINE([GRID3D], [1], [Using 3D block grid in CUDA])
-
-    	CUDA_SUFF="75"
-	elif test "$CUDA_ARCH" == "sm_80"
-	then
-		AC_MSG_RESULT([${CUDA_ARCH}])
-		AC_DEFINE([GRID3D], [1], [Using 3D block grid in CUDA])
-
-    	CUDA_SUFF="80"
-	else
-		AC_MSG_ERROR([unknown arch ${CUDA_ARCH}])
+		CUDA_CC=$(echo ${with_cuda_arch} | sed -E 's/^(sm_|compute_)//')
 	fi
 	
-	if test -z "${CUDA_ARCH}"
+	AC_DEFINE_UNQUOTED([CUDA_CC], "${CUDA_CC}", [target CUDA compute capability])
+	AC_MSG_CHECKING([target CUDA architecture])
+	if test "x${CUDA_CC}" != "xdefault"
 	then
-		AC_MSG_ERROR([CUDA_ARCH should be set by now])
+		AC_MSG_RESULT([sm_${CUDA_CC}])
+		AC_MSG_CHECKING([is CUDA_CC numeric])
+		AS_IF(test "x$(printf '%2d' ${CUDA_CC})" == "x$CUDA_CC", [AC_MSG_RESULT([yes])], [AC_MSG_ERROR([Wrong CUDA_CC: $CUDA_CC])]) 
+		if test "$CUDA_CC" -lt "20"
+		then
+			if test "x${enable_double}" == "xyes"
+			then
+				AC_MSG_ERROR([Double precision not supported in sm_11])
+			fi
+		else
+			AC_DEFINE([GRID3D], [1], [Using 3D block grid in CUDA])
+		fi
+
+		#NVFLAGS="${NVFLAGS} -gencode arch=compute_${CUDA_CC},code=sm_${CUDA_CC}"
+		NVFLAGS="${NVFLAGS} -arch=compute_${CUDA_CC}"
 	else
-		AC_DEFINE_UNQUOTED([CUDA_ARCH], "${CUDA_ARCH}", [target CUDA arch])
-		#NVFLAGS="${NVFLAGS} -gencode arch=compute_${CUDA_SUFF},code=sm_${CUDA_SUFF}"
-		NVFLAGS="${NVFLAGS} -arch=compute_${CUDA_SUFF}"
+		AC_MSG_RESULT([nvcc default])
+		AC_DEFINE([GRID3D], [1], [Using 3D block grid in CUDA])
 	fi
+			
 	if ! test -z "$OPENMP"
 	then
 		AC_MSG_ERROR([Cannot make OpenMP support with GPU version])
+	fi
+	if test "x${with_x_block}" != "x"
+	then
+		AC_DEFINE_UNQUOTED([X_BLOCK], ${with_x_block}, [Using X block from --with-x-block])
+	else
+		AC_DEFINE([X_BLOCK], [32], [Using standard X block])
+	fi
+	if test "x${with_warp_size}" != "x"
+	then
+		AC_DEFINE_UNQUOTED([WARPSIZE], ${with_warp_size}, [Using warp size from --with-warp-size])
+	else
+		AC_DEFINE([WARPSIZE], [32], [Using the CUDA standard 32 warp size])
 	fi
 	LDFLAGS="${LDFLAGS} -lcudart"
 else
@@ -338,6 +403,35 @@ else
 		LDFLAGS="${CPPFLAGS} $OPENMP"
 		AC_DEFINE([CROSS_OPENMP], [1], [Using OpenMP])
 	fi
+	if test "x${with_x_block}" != "x"
+	then
+		if test "x${with_x_block}" != "x1"
+		then
+			AC_MSG_ERROR([x-block size not supported for CPU])
+		fi
+	fi
+	AC_DEFINE([X_BLOCK], [1], [Using standard X block])
+	if test "x${with_warp_size}" != "x"
+	then
+		if test "x${with_warp_size}" != "x1"
+		then
+			AC_MSG_ERROR([warp size size not supported for CPU])
+		fi
+	fi
+	AC_DEFINE([WARPSIZE], [1], [Using the CUDA standard 32 warp size])
+	AC_DEFINE([GRID3D], [1], [Using 3D block grid in HIP])
+fi
+
+if test "x${with_x_mod}" != "x"
+then
+	X_MOD="${with_x_mod}"
+else
+	X_MOD="0"
+fi
+
+if test "x${enable_opp}" == "xyes"
+then
+	AC_DEFINE([USE_ADDOPP], [1], [Opportunistic warp level operations])
 fi
 
 AC_MSG_CHECKING([MPI include path])
@@ -614,6 +708,11 @@ then
 		rm ${LAMMPS}/install/include/lammps/${i} 2>/dev/null
 		AC_CHECK_FILE([${LAMMPS}/src/${i}], [ln -s ../../../src/${i} ${LAMMPS}/install/include/lammps/${i}],[AC_MSG_ERROR([Cannot find ${i}])])
 	done
+	for i in partitioner.h
+	do
+		rm ${LAMMPS}/install/include/lammps/${i} 2>/dev/null
+		AC_CHECK_FILE([${LAMMPS}/src/${i}], [ln -s ../../../src/${i} ${LAMMPS}/install/include/lammps/${i}],[])
+	done
 
 	for i in error.h comm.h vector_liggghts.h neighbor.h math_extra_liggghts.h domain_I.h
 	do
@@ -621,16 +720,20 @@ then
 	done
 	if test "x${with_lammps_lib}" == "x"
 	then
-		LAMMPS_LIB="liblammps.so"
-		if test -L ${LAMMPS}/src/libliggghts.so
-		then
-			echo "It's LIGGGHTS we're working with"
-			LAMMPS_LIB="libliggghts.so"
-		fi
+		for LAMMPS_LIB_DIR in build src
+		do
+			for LAMMPS_LIB in libliggghts.so liblammps.so
+			do
+				if test -f "${LAMMPS}/${LAMMPS_LIB_DIR}/${LAMMPS_LIB}"
+				then
+					break 2
+				fi
+			done
+		done
 	else
 		LAMMPS_LIB="${with_lammps_lib}"
 	fi
-	AC_CHECK_FILE([${LAMMPS}/src/$LAMMPS_LIB], [ln -s ../../src/$LAMMPS_LIB ${LAMMPS}/install/lib/$LAMMPS_LIB],[AC_MSG_ERROR([Cannot find $LAMMPS_LIB])])
+	AC_CHECK_FILE([${LAMMPS}/$LAMMPS_LIB_DIR/$LAMMPS_LIB], [ln -s ../../$LAMMPS_LIB_DIR/$LAMMPS_LIB ${LAMMPS}/install/lib/$LAMMPS_LIB],[AC_MSG_ERROR([Cannot find $LAMMPS_LIB])])
 	LDFLAGS="${LDFLAGS} -L${LAMMPS}/install/lib -Wl,-rpath=${LAMMPS}/install/lib"
 	CPPFLAGS="${CPPFLAGS} -I${LAMMPS}/install/include"
 	LAMMPS_LIB_NAME=${LAMMPS_LIB#lib}
@@ -639,6 +742,30 @@ then
 	AC_CHECK_LIB([$LAMMPS_LIB_NAME],[lammps_open], [], [AC_MSG_ERROR([Cannot link with $LAMMPS_LIB_NAME])])
 	WITH_LAMMPS=1
 fi
+
+if test "x${with_solid_container}" == "x"
+then
+	with_solid_container="grid"
+fi
+
+if test "x${with_solid_container}" == "xall"
+then
+	AC_DEFINE([SOLID_CONTAINER], [1], [Using all container])
+elif test "x${with_solid_container}" == "xtree"
+then
+	AC_DEFINE([SOLID_CONTAINER], [2], [Using tree container])
+elif test "x${with_solid_container}" == "xgrid"
+then
+	AC_DEFINE([SOLID_CONTAINER], [3], [Using grid container])
+else
+	AC_MSG_ERROR([Not suppported type of storage: x${with_storage}])
+fi
+
+if test "x${with_solid_cache}" != "x"
+then
+	AC_DEFINE_UNQUOTED([SOLID_CACHE], ${with_solid_cache}, [Using solid cache])
+fi
+
 
 if test "x${with_r}" == "x"
 then
@@ -662,8 +789,8 @@ fi
 
 AC_MSG_CHECKING([R package: optparse])
 AS_IF([$R_BIN --vanilla --slave -e 'if (!require("optparse")) stop("No");' >/dev/null 2>&1],AC_MSG_RESULT([yes]),AC_MSG_ERROR([no]))
-AC_MSG_CHECKING([R package: numbers])
-AS_IF([$R_BIN --vanilla --slave -e 'if (!require("numbers")) stop("No");' >/dev/null 2>&1],AC_MSG_RESULT([yes]),AC_MSG_ERROR([no]))
+#AC_MSG_CHECKING([R package: numbers])
+#AS_IF([$R_BIN --vanilla --slave -e 'if (!require("numbers")) stop("No");' >/dev/null 2>&1],AC_MSG_RESULT([yes]),AC_MSG_ERROR([no]))
 AC_MSG_CHECKING([R package: rtemplate])
 AS_IF([$R_BIN --vanilla --slave -e 'if (!require("rtemplate")) stop("No");' >/dev/null 2>&1],AC_MSG_RESULT([yes]),AC_MSG_ERROR([no]))
 AC_MSG_CHECKING([R package: gvector])
@@ -686,16 +813,18 @@ then
 			AC_MSG_RESULT([no])
 		fi
 	else
-		CPPFLAGS="${CPPFLAGS} $($R_BIN CMD config --cppflags)"
-		CPPFLAGS="${CPPFLAGS} $($R_BIN --vanilla --slave -e 'RInside:::CxxFlags()')"
-		CPPFLAGS="${CPPFLAGS} $($R_BIN --vanilla --slave -e 'Rcpp:::CxxFlags()')"
-		LDFLAGS="${LDFLAGS} $($R_BIN CMD config --ldflags)"
-		LDFLAGS="${LDFLAGS} $($R_BIN CMD config BLAS_LIBS)"
-		LDFLAGS="${LDFLAGS} $($R_BIN CMD config LAPACK_LIBS)"
-		LDFLAGS="${LDFLAGS} $($R_BIN --vanilla --slave -e 'Rcpp:::LdFlags()')"
-		LDFLAGS="${LDFLAGS} $($R_BIN --vanilla --slave -e 'RInside:::LdFlags()')"
-		CPP_OPT=${CPPFLAGS}
-		AC_CHECK_HEADERS([RInside.h],[],AC_MSG_ERROR([RInside.h not found. If you don't want RInside go --without-rinside]))
+		function clean_options {
+			sed 's/"//g'   # For some reason Rcpp prints the "-I" option with quotations
+		}
+		CPPFLAGS="${CPPFLAGS} $($R_BIN CMD config --cppflags | clean_options)"
+		CPPFLAGS="${CPPFLAGS} $($R_BIN --vanilla --slave -e 'RInside:::CxxFlags()' | clean_options)"
+		CPPFLAGS="${CPPFLAGS} $($R_BIN --vanilla --slave -e 'Rcpp:::CxxFlags()' | clean_options)"
+		LDFLAGS="${LDFLAGS} $($R_BIN CMD config --ldflags | clean_options)"
+		LDFLAGS="${LDFLAGS} $($R_BIN CMD config BLAS_LIBS | clean_options)"
+		LDFLAGS="${LDFLAGS} $($R_BIN CMD config LAPACK_LIBS | clean_options)"
+		LDFLAGS="${LDFLAGS} $($R_BIN --vanilla --slave -e 'Rcpp:::LdFlags()' | clean_options)"
+		LDFLAGS="${LDFLAGS} $($R_BIN --vanilla --slave -e 'RInside:::LdFlags()' | clean_options)"
+		AC_CHECK_HEADERS([RInside.h],[],AC_MSG_ERROR([RInside.h not found. If you don't want RInside go --disable-rinside]))
 		AC_DEFINE([WITH_R], [1], [Using R])
 	fi
 fi
@@ -751,11 +880,13 @@ then
 fi
 
 
-if test "x${enable_cpp11}" == "xyes"
+if test "x${enable_cpp11}" != "xno"
 then
-	CPP_OPT="${CPP_OPT} -std=c++11"
+	CPPFLAGS="${CPPFLAGS} -std=c++11"
 	NVFLAGS="${NVFLAGS} -std=c++11"
 fi
+
+AC_CHECK_HEADERS([chrono],[AC_DEFINE([USE_STEADY_CLOCK], [1], [Using chrono's steady_clock])],[])
 
 
 if test "x${CONF_CPPFLAGS}" == "x"
@@ -803,7 +934,7 @@ fi
 
 if test "x${enable_coverage}" == "xyes"
 then
-	CPP_OPT="${CPP_OPT} -fprofile-arcs -ftest-coverage"
+	CPPFLAGS="${CPPFLAGS} -fprofile-arcs -ftest-coverage"
 	LDFLAGS="${LDFLAGS} -fprofile-arcs -ftest-coverage"
 fi
 
@@ -816,7 +947,8 @@ fi
 
 if test "x${enable_paranoid}" == "xyes"
 then
-	CPP_OPT="${CPP_OPT} -Wall -Werror -Wno-unused-but-set-variable -Wno-unused-variable -Wno-format-overflow"
+	CPPFLAGS="${CPPFLAGS} -Wall -Werror -Wno-unknown-warning-option"
+	CPPFLAGS="${CPPFLAGS} -Wno-unused-but-set-variable -Wno-unused-variable -Wno-format-overflow -Wno-unused-private-field -Wno-self-assign"
 fi
 
 if test "x${enable_profiling}" == "xyes"
@@ -850,8 +982,6 @@ AC_MSG_RESULT([CPPFLAGS : $CPPFLAGS])
 AC_MSG_RESULT([LDFLAGS  : $LDFLAGS])
 AC_MSG_RESULT([NVFLAGS  : $NVFLAGS])
 
-
-
 AC_SUBST(CP)
 AC_SUBST(NVFLAGS)
 AC_SUBST(CROSS_CPU)
@@ -859,14 +989,30 @@ AC_SUBST(PV_BUILD)
 AC_SUBST(PV_BUILD_INC)
 AC_SUBST(PV_SOURCE)
 AC_SUBST(CROSS_CPU)
+AC_SUBST(CROSS_HIP)
 AC_SUBST(WITH_CATALYST)
 AC_SUBST(WITH_LAMMPS)
 AC_SUBST(WITH_R)
 AC_SUBST(TAPENADE)
 AC_SUBST(PV_VERSION)
 AC_SUBST(RTOPT)
-AC_SUBST(CPP_OPT)
 AC_SUBST(EMBEDED_PYTHON)
+AC_SUBST(X_BLOCK)
+AC_SUBST(WARPSIZE)
+AC_SUBST(X_MOD)
 
 AC_CONFIG_FILES([CLB/config.mk:src/config.mk.in])
+AC_CONFIG_FILES([CLB/config.R_:src/config.R.in])
 AC_OUTPUT
+
+if test -f "CLB/config.R"
+then
+	if diff "CLB/config.R" "CLB/config.R_" >/dev/null 2>&1
+	then
+		echo "CLB/config.R unchanged"
+	else
+		mv CLB/config.R_ CLB/config.R
+	fi
+else
+	mv CLB/config.R_ CLB/config.R
+fi

@@ -10,6 +10,7 @@
 #include "ModelConsts.h"
 #include "LatticeContainerBase.h"
 #include "../LatticeBase.h"
+#include "../SolidContainer.h"
 
 #ifndef SETTINGS_H
 <?R
@@ -69,15 +70,11 @@ class LatticeContainer : public LatticeContainerBase {
   cut_t* Q; 
   size_t particle_data_size;
   real_t* particle_data;
-  size_t balltree_data_size;
-  tr_elem* balltree_data;
+  solidcontainer_t::finder_t solidfinder;
   real_t * Globals; ///< Pointer to the GPU table to store the calculated values of Globals
-  int dx, dy, dz; ///< Offset of the region to calculate in the interior kernel run
   int nx, ny, nz; ///< Size of the Lattice region
-  int fx, fy, fz; ///< End of the region to calculate in the interior kernel run
-  int kx,ky; ///< X and Y thread division
   int iter; ///< Iteration number
-	int px,py,pz;
+  real_t px,py,pz;
   int reset_iter; //< number of last average reset,for dynamics 
   int ZoneIndex;
   int MaxZones;
@@ -88,15 +85,6 @@ class LatticeContainer : public LatticeContainerBase {
   void Free();
   void ActivateCuts();
   CudaDeviceFunction void fill();
-<?R for (s in c(paste("_",Stages$name,sep=""),"","_param","_noparam")) {
-  ?>
-  template<class N>  CudaDeviceFunction void push<?%s s ?>(N & f);
-  template<class N>  CudaDeviceFunction void pop<?%s s ?>(N & f);
-#ifdef ADJOINT
-  template<class N>  CudaDeviceFunction void push<?%s s ?>_adj(N & f);
-  template<class N>  CudaDeviceFunction void pop<?%s s ?>_adj(N & f);
-#endif
-<?R } ?>
 
   template<class N>  CudaDeviceFunction void getType(N & f);
   CudaDeviceFunction real_t getX(const index& idx);
@@ -156,8 +144,6 @@ class LatticeContainer : public LatticeContainerBase {
     size_t i = ((((size_t)d)*nz+idx_.z)*ny+idx_.y)*nx+idx_.x;
     return Q[i];
   }
-
-
   CudaDeviceFunction inline vector_t getST(real_t x, real_t y, real_t z) {
 	return calc(ST, x,y,z);
   }
@@ -165,13 +151,8 @@ class LatticeContainer : public LatticeContainerBase {
   void Color( uchar4 *optr );
   template<class N> inline void RunBorderT(CudaStream_t);
   template<class N> inline void RunInteriorT(CudaStream_t);
-  template<class N> inline void RunParticlesT(CudaStream_t);
-
-  //template<class N> CudaGlobalFunction void RunBorderKernel();
-
   template < eOperationType I, eCalculateGlobals G, eStage S > void RunBorder(CudaStream_t);
   template < eOperationType I, eCalculateGlobals G, eStage S > void RunInterior(CudaStream_t);
-  template < eOperationType I, eCalculateGlobals G, eStage S > void RunParticles(CudaStream_t);
   
   void CopyToConst();
   void WaitAll();
@@ -185,17 +166,19 @@ class LatticeContainer : public LatticeContainerBase {
 /// Get [<?%s v$comment ?>] from GPU memory
         inline real_t get<?%s v$name ?>(){
                 real_t ret;
-                CudaMemcpy(&ret, &Globals[<?%s v$Index ?>],sizeof(real_t),cudaMemcpyDeviceToHost);
+                CudaMemcpy(&ret, &Globals[<?%s v$Index ?>],sizeof(real_t),CudaMemcpyDeviceToHost);
                 return ret;
         }
   <?R } ?>
 /// Get all the globals from GPU memory
 	inline void getGlobals(real_t * tab) {
-                CudaMemcpy(tab, Globals, GLOBALS * sizeof(real_t), cudaMemcpyDeviceToHost);
+                CudaMemcpy(tab, Globals, GLOBALS * sizeof(real_t), CudaMemcpyDeviceToHost);
 	}
 };
 
-//template<class N> CudaGlobalFunction void RunKernel();
+template<class T> CudaGlobalFunction void Kernel();
+template < eOperationType I, eCalculateGlobals G, eStage S > class InteriorExecutor;
+template < eOperationType I, eCalculateGlobals G, eStage S > class BorderExecutor;
 CudaGlobalFunction void ColorKernel( uchar4 *optr);
 
 <?R

@@ -29,6 +29,8 @@
 #include "xpath_modification.h"
 #include "mpitools.hpp"
 
+#include "GetThreads.h"
+
 #define HANDLE_IOERR(x) if ((x) == EOF) { error("Error in fscanf.\n"); return -1; }
 
 
@@ -245,7 +247,7 @@ int main ( int argc, char * argv[] )
 	InitPrint(DEBUG_LEVEL, 6, 8);
 	MPI_Barrier(MPMD.local);
 
-	global_start = std::clock();
+	start_walltime();
 	if (solver->mpi_rank == 0) {
 		NOTICE("-------------------------------------------------------------------------\n");
 		NOTICE("-  CLB version: %25s                               -\n",VERSION);
@@ -458,7 +460,8 @@ int main ( int argc, char * argv[] )
 			CudaSetDevice( dev );
 			solver->mpi.gpu = dev;
 			debug2("Initializing device\n");
-			cudaFree(0);
+			CudaFree(0);
+			InitDim();
 		#else
 			output_all("Running on CPU\n");
 			CudaSetDevice(0);
@@ -510,12 +513,12 @@ int main ( int argc, char * argv[] )
     #endif
 
 	// Finish and clean up
-	debug2("cudaFree ...\n");
+	debug2("CudaFree ...\n");
 	CudaEventDestroy( start );
 	CudaEventDestroy( stop );
 
 	if (solver->mpi_rank == 0) {
-		double duration = (std::clock() - global_start) / (double)CLOCKS_PER_SEC;
+		double duration = get_walltime();
 		output("Total duration: %lf s = %lf min = %lf h\n", duration, duration / 60, duration /60/60);
 	}
 	delete solver;

@@ -461,6 +461,27 @@ SEXP Dollar(std::string name) {
 };
 
 
+class rInfo: public rWrapper {
+	public:
+	std::string print() { return "Info"; }
+	SEXP Dollar(std::string name) {
+		Rcpp::CharacterVector ret;
+		if (name == "OutputPath") {
+			ret.push_back(this->solver->info.outpath);
+			return ret;
+		}
+		ERROR("R: Not implemented!");
+		return ret;
+	}
+
+	Rcpp::CharacterVector Names() {
+		Rcpp::CharacterVector ret;
+		ret.push_back("OutputPath");
+		return ret;
+	}
+};
+
+
 class rSolver : public rWrapper {
 public:
 	std::string print() { return "Solver"; }
@@ -480,6 +501,8 @@ public:
 	    return rWrap(new rActions());
 	  } else if (name == "Geometry") {  
 	    return rWrap(new rGeometry());
+	  } else if (name == "Info") {
+		return rWrap(new rInfo());
 	  }
 	  return rNull;
 	}

@@ -1,4 +1,4 @@
-name: GPU
+name: CUDA
 
 on: [ push, pull_request ]
 
@@ -8,7 +8,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        model: [d2q9_npe_guo, d2q9_bc, d2q9, d2q9_SRT, d2q9_thin_film, d3q19, d3q19_les, d3q19_heat, d2q9_kuper, d2q9_pf, d2q9_pf_fd, d3q27, d3q27_cumulant, d3q27_cumulant_AVG_IB_SMAG]
+        model: 
+          - d2q9
+          - d2q9_bc
+          - d3q27_cumulant
+          - d3q27_cumulant_AVG_IB_SMAG
+          - d3q27_pf_velocity
+          - d3q27_PSM_NEBB
     steps:
     - name: Git checkout
       uses: actions/checkout@v3
@@ -26,7 +32,6 @@ jobs:
       uses: ./.github/actions/configure
       with:
         gpu: true
-        cuda_arch: sm_60
         paranoid: true
     - name: Compile
       uses: ./.github/actions/compile

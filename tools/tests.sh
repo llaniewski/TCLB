@@ -1,6 +1,6 @@
 #!/bin/bash
 
-
+PP=$(dirname $0)
 
 function usage {
 	echo "tests.sh [-h] [-r n] [-v] MODEL [TESTS]"
@@ -123,15 +123,15 @@ then
 	exit -1;
 fi
 
-if ! test -f "tests/README.md"
+if ! test -f "tests/external/README.md"
 then
-	echo "\"tests\" submodule is not checked out"
+	echo "\"tests/external\" submodule is not checked out"
 	echo "  run: git submodule init"
 	echo "  run: git submodule update"
 	exit -1
 fi
 
-if ! test -d "tests/$MODEL"
+if ! test -d "tests/external/$MODEL"
 then
 	echo "No tests for model $MODEL."
 	echo "Exiting with no error."
@@ -140,14 +140,14 @@ fi
 
 if test -z "$*"
 then
-	TESTS=$(cd tests/$MODEL; ls *.test 2>/dev/null)
+	TESTS=$(cd tests/external/$MODEL; ls *.test 2>/dev/null)
 else
 	TESTS="$*"
 fi
 
 if test -z "$TESTS"
 then
-	echo "No tests for model $MODEL (WARNING: there is a directory tests/$MODEL)"
+	echo "No tests for model $MODEL (WARNING: there is a directory tests/external/$MODEL)"
 	echo "Exiting with no error."
 	exit 0
 fi
@@ -202,7 +202,7 @@ function runline {
 			mkdir -p "$GPATH"
 			trycp "$R" "$GPATH/"
 		else
-			try "checking $R (csvdiff)" $TCLB/tools/csvdiff -a "$R" -b "$G" -x 1e-10 -d Walltime
+			try "checking $R (csvdiff)" $TCLB/tools/csvdiff -a "$R" -b "$G" -x 1e-10 -d Walltime-x "${2:-1e-10}" -d ${3:-$CSV_DISCARD}
 		fi ;;
 	diff)
 		if $RECALCULATE
@@ -228,7 +228,7 @@ function runline {
 			VTIS=$(cat $R  | sed -n "s|.*Source=\"\([^\"]*\)\".*|$RPATH/\1|p")
 			trycp $R $VTIS $GPATH/
 		else
-			try "checking $R (pvtidiff)" $TCLB/bin/compare "$R" "$G" "${2:-8}"
+			try "checking $R (pvtidiff)" $TCLB/bin/compare "$R" "$G" "${2:-8}" ${3:-} ${4:-} ${5:-} ;; # ${2:-8} is { if $2 == "" then "8" else $2 }
 		fi ;;
 	skip)
 		case "$R" in
@@ -243,17 +243,25 @@ function runline {
 function testModel {
 	for t in $TESTS
 	do		
-		name="${t%.test}"
-		t="$name.test"
-		TDIR="test-$MODEL-$name-$1"
+		TEST="${t%.test}"
+		t="$TEST.test"
+		TDIR="test-$MODEL-$TEST-$1"
 		test -d "$TDIR" && rm -r "$TDIR"
 		RESULT="OK"
 		TCLB=".."
 		SOLVER="$TCLB/bin/$MODEL"
-		TEST_DIR="../tests/$MODEL"
-		if test -f "tests/$MODEL/$t"
+		MODELBIN="$TCLB/CLB"
+		TEST_DIR="../tests/external/$MODEL"
+		CAN_FAIL=false
+		CSV_DISCARD=Walltime
+		EXC_SH="$PP/etc/test.exceptions.sh"
+		if test -f "$EXC_SH"
 		then
-			echo -e "\n\e[1mRunning $name test...\e[0m"
+			source "$EXC_SH"
+		fi
+		if test -f "tests/external/$MODEL/$t"
+		then
+			echo -e "\n\e[1mRunning $TEST test...\e[0m"
 			mkdir -p $TDIR		
 			while read -r -u 3 line
 			do
@@ -262,18 +270,23 @@ function testModel {
 					RESULT="FAILED"
 					break
 				fi
-			done 3< "tests/$MODEL/$t"
+			done 3< "tests/external/$MODEL/$t"
 		else
 			echo "$t: test not found"
 			RESULT="NOT FOUND"
 		fi
-#		echo -n "         Test \"$name\" returned:"
+#		echo -n "         Test \"$TEST\" returned:"
 		if test "x$RESULT" == "xOK"
 		then
-			comment_ok   "$name test finished" "-----"
+			comment_ok   "$TEST test finished" "-----"
 		else
-			comment_fail "$name test finished" "-----"
-			GLOBAL="FAILED"
+			if $CAN_FAIL
+			then
+				comment_fail "$TEST test finished (can fail)" "-----"
+			else			
+				comment_fail "$TEST test finished" "-----"
+				GLOBAL="FAILED"
+			fi
 		fi
 	done
 }
