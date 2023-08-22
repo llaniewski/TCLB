@@ -883,6 +883,9 @@ void Lattice::LoadLattice(size_t* connectivity_, vector_t* coords, big_flag_t* n
 /// Overwrite NodeType in a region
 void Lattice::FlagOverwrite(big_flag_t * mask_, lbRegion over)
 {
+	flag_t* mask;
+	CudaMalloc(&mask, over.sizeL()*sizeof(flag_t));
+	for (size_t i=0; i<over.sizeL(); i++) mask[i] = mask_[i];
 	if (region.isEqual(over)) {
 		output("overwriting all flags\n");
 		CudaMemcpy(container->NodeType, mask, sizeof(flag_t)*region.sizeL(), CudaMemcpyHostToDevice);
@@ -896,6 +899,7 @@ void Lattice::FlagOverwrite(big_flag_t * mask_, lbRegion over)
         }
 
 	}
+	CudaFree(mask);
 }
 
 void Lattice::CutsOverwrite(cut_t * Q, lbRegion over)
@@ -918,19 +922,23 @@ void Lattice::CutsOverwrite(cut_t * Q, lbRegion over)
 /// Get NodeType's from a region
 void Lattice::GetFlags(lbRegion over, big_flag_t * mask_)
 {
+	flag_t* mask;
+	CudaMalloc(&mask, over.sizeL()*sizeof(flag_t));
 	size_t offset;
 	lbRegion inter = region.intersect(over);
 	if (region.isEqual(over)) {
-                CudaMemcpy(NodeType, container->NodeType, sizeof(flag_t)*region.sizeL(), CudaMemcpyDeviceToHost);
-        } else {
-	        int x = inter.dx;
-        for (int y = inter.dy; y<inter.dy+inter.ny; y++)
-        for (int z = inter.dz; z<inter.dz+inter.nz; z++)
-        {
+		CudaMemcpy(mask, container->NodeType, sizeof(flag_t)*region.sizeL(), CudaMemcpyDeviceToHost);
+	} else {
+		int x = inter.dx;
+		for (int y = inter.dy; y<inter.dy+inter.ny; y++)
+		for (int z = inter.dz; z<inter.dz+inter.nz; z++)
+		{
 			offset = region.offsetL(x,y,z);
-			CudaMemcpy2D(&NodeType[over.offsetL(x,y,z)], sizeof(flag_t), &container->NodeType[offset], sizeof(flag_t), sizeof(flag_t), inter.nx, CudaMemcpyDeviceToHost);
+			CudaMemcpy2D(&mask[over.offsetL(x,y,z)], sizeof(flag_t), &container->NodeType[offset], sizeof(flag_t), sizeof(flag_t), inter.nx, CudaMemcpyDeviceToHost);
+		}
 	}
-	delete[] mask;
+	for (size_t i=0; i<over.sizeL(); i++) mask_[i] = mask[i];
+	CudaFree(mask);
 }
 
 void Lattice::GetCoords(real_t* tab) {
@@ -1175,7 +1183,7 @@ void Lattice::GetSample<?%s q$name ?>(lbRegion over, real_t scale,real_t* buf)
        	<?R if (q$adjoint) { ?> container->adjin = aSnaps[aSnap]; <?R } ?>
        	container->CopyToConst();
 	lbRegion small = region.intersect(over);
-	CudaKernelRun( get<?%s q$name ?> , dim3(small.nx,small.ny) , dim3(1) , (small, (<?%s q$type?>*) buf, scale, 0));
+	CudaKernelRun( get<?%s q$name ?> , dim3(small.nx,small.ny) , dim3(1) , (small, (<?%s q$type?>*) buf, scale));
 }
 <?R } ;ifdef() ?>
 void Lattice::updateAllSamples(){

@@ -42,7 +42,7 @@ for (q in rows(Quantities)) { ifdef(q$adjoint);
           node = "Node"
         }
 ?>
-CudaGlobalFunction void get<?%s q$name ?>(lbRegion r, <?%s q$type ?> * tab, real_t scale, int latticeType); <?R
+CudaGlobalFunction void get<?%s q$name ?>(lbRegion r, <?%s q$type ?> * tab, real_t scale); <?R
 	for (tp in c("float","double"))
         { ?>
 CudaGlobalFunction void get<?%s q$name ?>_<?%s tp ?>(lbRegion , <?%s tp ?> *, int, int);

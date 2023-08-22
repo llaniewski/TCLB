@@ -41,20 +41,6 @@ CudaDeviceFunction flag_t LatticeContainer::getType(int x, int y, int z) const
 }
 
 
-CudaDeviceFunction real_t LatticeContainer::getX(const index& idx_)
-{
-	return (real_t) idx_.x + px + 0.5;
-}
-CudaDeviceFunction real_t LatticeContainer::getY(const index& idx_)
-{
-	return (real_t) idx_.y + py + 0.5;
-}
-CudaDeviceFunction real_t LatticeContainer::getZ(const index& idx_)
-{
-	return (real_t) idx_.z + pz + 0.5;
-}
-
-
 /// Push all densities
 
 <?R

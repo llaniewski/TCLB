@@ -5,15 +5,19 @@
 #include "vtkLattice.h"
 #include "Global.h"
 
-int vtkWriteLattice(char * filename, LatticeBase * lattice, UnitEnv units, name_set * what)
+int vtkWriteLattice(char * filename, Lattice * lattice, UnitEnv units, name_set * what, lbRegion total_output_reg)
 {
 	size_t size;
-	lbRegion reg = lattice->region;
+	lbRegion local_reg = lattice->region;
+	lbRegion reg = local_reg.intersect(total_output_reg);
 	size = reg.size();
+	myprint(1,-1,"Writing region %dx%dx%d + %d,%d,%d (size %d) from %dx%dx%d + %d,%d,%d",
+		reg.nx,reg.ny,reg.nz,reg.dx,reg.dy,reg.dz, size,
+		local_reg.nx,local_reg.ny,local_reg.nz,local_reg.dx,local_reg.dy,local_reg.dz);
 	vtkFileOut vtkFile(MPMD.local);
 	if (vtkFile.Open(filename)) {return -1;}
 	double spacing = 1/units.alt("m");	
-	vtkFile.Init(lattice->mpi.totalregion, reg, "Scalars=\"rho\" Vectors=\"velocity\"", spacing);
+	vtkFile.Init(total_output_reg, reg, "Scalars=\"rho\" Vectors=\"velocity\"", spacing, lattice->px*spacing, lattice->py*spacing, lattice->pz*spacing);
 
 	{	big_flag_t * NodeType = new big_flag_t[size];
 		lattice->GetFlags(reg, NodeType);
