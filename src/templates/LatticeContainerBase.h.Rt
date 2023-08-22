@@ -12,7 +12,7 @@
 #ifndef LATTICECONTAINERBASE_H
 #define LATTICECONTAINERBASE_H 1
 
-#include "../BallTree.h"
+#include "../SolidContainer.h"
 #include "../SyntheticTurbulence.h"
 #include "ModelConsts.h"
 

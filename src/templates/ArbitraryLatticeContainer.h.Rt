@@ -6,7 +6,7 @@
   File defining ArbitraryLatticeContainer and some additional CUDA functions
 */
 #include "../SyntheticTurbulence.h"
-#include "../BallTree.h"
+#include "../SolidContainer.h"
 #include "ModelConsts.h"
 #include "LatticeContainerBase.h"
 #include "../LatticeBase.h"

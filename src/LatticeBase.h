@@ -8,7 +8,7 @@
 #include "SyntheticTurbulence.h"
 #include "Sampler.h"
 #include "RemoteForceInterface.h"
-#include "BallTree.h"
+#include "SolidContainer.h"
 #include "pinned_allocator.hpp"
 #include "Lists.h"
 
@@ -41,6 +41,13 @@ public:
   int latticeType; // 0 = Cartesian lattice, 1 = ArbitraryLattice
   size_t latticeSize;
 };
+
+
+struct ExtentBox {
+  double lower[3];
+  double upper[3];
+};
+
 
 /// Class for computations
 /**
@@ -77,6 +84,7 @@ public:
   inline void saveToTab(real_t * tab) { saveToTab(tab,Snap); };
   virtual void loadFromTab(real_t * tab, int snap) = 0;
   inline void loadFromTab(real_t * tab) { loadFromTab(tab,Snap); };
+  virtual void setPosition(double px_, double py_, double pz_) = 0;
   //virtual void startRecord() = 0;
   //virtual void rewindRecord() = 0;
   //virtual void stopRecord() = 0;
@@ -88,6 +96,8 @@ public:
   int segment_iterations;
   int total_iterations; ///< Total iteration number counter
   int callback_iter;
+
+  virtual ExtentBox GetParticleExtentBox() = 0;
 
   // common variables moved from Lattice/ArbitraryLattice
   int Record_Iter; ///< Recorded iteration number (Now)

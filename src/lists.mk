@@ -129,3 +129,6 @@ SRC_MAIN__INC_PRM += ADpre__b.h
 SRC_MAIN__CPP_CAT += Catalyst.cpp
 SRC_MAIN__CPP_CAT += Catalyst.h
 
+SRC_MAIN__INC_PRM += range_int.hpp
+SRC_MAIN__INC_PRM += GetThreads.h
+SRC_MAIN__SRC_PRM += GetThreads.cpp

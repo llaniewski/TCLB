@@ -183,7 +183,7 @@ $(DEST)/<?%s m ?>/tapenade.run : tools/makeAD $(DEST)/<?%s m ?>/Dynamics.c $(DES
 	@echo "  TAPENADE   $<"
 	@(cd <?%s d ?>/<?%s m ?>; ../../tools/makeAD "$(TAPENADE)")
 
-$(DEST)/<?%s m ?>/%:   $(SRC)/templates/%.Rt <?%s model_path ?>/Dynamics.R $(SRC)/conf.R
+$(DEST)/<?%s m ?>/%:   $(SRC)/templates/%.Rt <?%s model_path ?>/Dynamics.R $(SRC)/conf.R $(DEST)/<?%s m ?>/options.R
 	@$(MKPATH) $@
 	@echo "  RT         $@ (model)"
 	@$(RT) -q -f $< -I $(TOOLS),$(SRC),<?%s model_path ?> -w $(DEST)/<?%s m ?>/ -o $@ -i options.R || mv $@ $@~
@@ -200,7 +200,7 @@ $(DEST)/<?%s m ?>/%:   $(SRC)/templates/%.Rt <?%s model_path ?>/Dynamics.R $(SRC
 $(DEST)/<?%s m ?>/%: <?%s model_path ?>/%.Rt <?%s model_path ?>/Dynamics.R $(SRC)/conf.R
 	@$(MKPATH) $@
 	@echo "  RT         $@ (model)"
-	@$(RT) -q -f $< -I $(TOOLS),$(SRC),<?%s model_path ?> -w $(DEST)/<?%s m ?>/ -o $@ $(RTOPT) <?%s rtopt ?> || mv $@ $@~
+	@$(RT) -q -f $< -I $(TOOLS),$(SRC),<?%s model_path ?> -w $(DEST)/<?%s m ?>/ -o $@ $(RTOPT) -i options.R || mv $@ $@~
 
 $(DEST)/<?%s m ?>/%:<?%s model_path ?>/%
 	$(copy)

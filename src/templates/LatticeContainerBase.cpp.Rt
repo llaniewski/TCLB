@@ -13,7 +13,6 @@
 #include "ArbitraryLattice.h"
 #include "../Global.h"
 #include "../SyntheticTurbulence.h"
-#include "../BallTree.h"
 #include "ModelConsts.h"
 #include <mpi.h>
 #define ALLOCPRINT1 debug2("Allocating: %ld b\n", size)

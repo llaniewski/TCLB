@@ -9,7 +9,7 @@
 #include "../Global.h"
 #include "Lattice.h"
 #include <mpi.h>
-#include "range_int.hpp"
+#include "../range_int.hpp"
 
 #ifndef STORAGE_BITS
   #define storage_to_real(x__) x__

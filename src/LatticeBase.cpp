@@ -11,7 +11,6 @@
 #include "LatticeBase.h"
 #include <mpi.h>
 #include <assert.h>
-#include "BallTree.hpp"
 
 #ifdef ENABLE_NVPROF
 	#include <nvToolsExt.h>
