@@ -6,12 +6,19 @@
 	},
 	"customizations": {
 		"codespaces": {
-		  "openFiles": [
-			"README.md"
-		  ]
+			"openFiles": [
+				".devcontainer/small.md"
+			]
+		},
+		"vscode": {
+			"extensions": [
+				"CFD-GO.tclb-helper"
+			],
+			"settings": {
+				"workbench.editorAssociations": {
+					"*.md": "vscode.markdown.preview.editor"
+				}				
+			}
 		}
-	},
-	"extensions": [
-		"CFD-GO.tclb-helper"
-	]
+	}
 }

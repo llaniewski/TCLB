@@ -7,13 +7,20 @@
 	"postCreateCommand": "make configure && ./configure --disable-cuda --enable-cpu-layout --with-openmp",
 	"customizations": {
 		"codespaces": {
-		  "openFiles": [
-			"README.md"
-		  ]
+			"openFiles": [
+				".devcontainer/big.md"
+			]
+		},
+		"vscode": {
+			"extensions": [
+				"REditorSupport.r",
+				"CFD-GO.tclb-helper"
+			],
+			"settings": {
+				"workbench.editorAssociations": {
+					"*.md": "vscode.markdown.preview.editor"
+				}				
+			}
 		}
-	},
-	"extensions": [
-		"REditorSupport.r",
-		"CFD-GO.tclb-helper"
-	]
+	}
 }
