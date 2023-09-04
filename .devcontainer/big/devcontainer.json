@@ -1,9 +1,10 @@
 {
-	"name": "Minimal",
+	"name": "Big (R+VTK)",
 	"build": {
 		"dockerfile": "Dockerfile",
 		"context": ".."
 	},
+	"postCreateCommand": "make configure && ./configure --disable-cuda --enable-cpu-layout --with-openmp",
 	"customizations": {
 		"codespaces": {
 		  "openFiles": [
@@ -12,6 +13,7 @@
 		}
 	},
 	"extensions": [
+		"REditorSupport.r",
 		"CFD-GO.tclb-helper"
 	]
 }
