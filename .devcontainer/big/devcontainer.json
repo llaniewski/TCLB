@@ -1,7 +1,7 @@
 {
 	"name": "Big (R+VTK)",
 	"build": {
-		"dockerfile": "Dockerfile",
+		"dockerfile": "../big.dockerfile",
 		"context": ".."
 	},
 	"postCreateCommand": "make configure && ./configure --disable-cuda --enable-cpu-layout --with-openmp",

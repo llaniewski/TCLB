@@ -1,7 +1,7 @@
 {
-	"name": "Minimal",
+	"name": "Small",
 	"build": {
-		"dockerfile": "Dockerfile",
+		"dockerfile": "small.dockerfile",
 		"context": ".."
 	},
 	"customizations": {
