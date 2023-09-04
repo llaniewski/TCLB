@@ -15,6 +15,6 @@ RUN chmod +x /tmp/install.sh
 USER vscode
 WORKDIR /home/vscode
 
-RUN /tmp/install.sh rdep rinside reticulate --rpackage languageserver
+RUN /tmp/install.sh rdep rinside reticulate --rpackage languageserver --rpackage png
 RUN pip3 install vtk
 ENV RETICULATE_PYTHON=/usr/bin/python3
