@@ -5,7 +5,7 @@ on: [ push, pull_request ]
 jobs:
   test:
     runs-on: ubuntu-latest
-    container: mcr.microsoft.com/devcontainers/cpp:1-debian-11
+    container: mcr.microsoft.com/devcontainers/cpp:dev-ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
