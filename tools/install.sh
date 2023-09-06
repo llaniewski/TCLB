@@ -404,6 +404,7 @@ do
 			AMDGPU_DEB="$(printf amdgpu-install_%d.%d.%d%02d%02d-1_all.deb "$V1" "$V2" "$V1" "$V2" "$V3")"
 			AMDGPU_VER="$HIP"
 			try "Updating APT" $SUDO apt-get update
+			try "Installing C++ standard library" $SUDO apt-get install -y libc++-dev
 			try "Download AMDGPU install deb" wget https://repo.radeon.com/amdgpu-install/$AMDGPU_VER/ubuntu/$OS/$AMDGPU_DEB
 			try "Installing deb" $SUDO apt-get install ./$AMDGPU_DEB
 			try "Installing ROCm (amdgpu-install)" $SUDO amdgpu-install -y --usecase=rocm
@@ -435,6 +436,7 @@ do
 	lcov)
 		case "$PMS" in
 		apt-get)
+			try "Updating APT" $SUDO apt-get update -qq
 			try "Installing lcov and time" $SUDO apt-get install -y time lcov
 			;;
 		*)
