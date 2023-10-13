@@ -85,14 +85,18 @@ int MainCallback(int seg, int tot, Solver* solver) {
 	static int steps = 1;
 	if ((iter < steps) & (!end)) return -1;
 	if (iter == 0) return -2;
-	float   elapsedTime=0; // Elapsed times
+	double   elapsedTime=0; // Elapsed times
 	CudaEventRecord( stop, 0 );
 	CudaEventSynchronize( stop );
-	CudaEventElapsedTime( &elapsedTime, start, stop );
+	{
+		float elapsedTime_ = 0; // Elapsed times
+		CudaEventElapsedTime( &elapsedTime_, start, stop );
+		elapsedTime = elapsedTime_;
+	}
 	
 	if (D_MPI_RANK == 0) {
 		int desired_steps;
-		float eTime;
+		double eTime;
 		int all_iter;
 		cum_time += elapsedTime;
 		if (end) {
@@ -102,8 +106,8 @@ int MainCallback(int seg, int tot, Solver* solver) {
 			eTime = elapsedTime;
 			all_iter = iter;
 		}
-       		int ups = (float) (1000. * all_iter)/eTime; // Steps made per second
-  		double lbups=1.0;
+       		int ups = ifloor((1000. * all_iter)/eTime); // Steps made per second
+  			double lbups=1.0;
        		lbups *= solver->info.region.nx;
 		lbups *= solver->info.region.ny;
        		lbups *= solver->info.region.nz;
@@ -114,7 +118,7 @@ int MainCallback(int seg, int tot, Solver* solver) {
 		char buf[1000];
 		char left[1000];
 		//int left_s = (cum_time * (seg - tot)) / ((tot+1) * 1000);
-		int left_s = cum_time/1000;
+		int left_s = ifloor(cum_time/1000);
 		if (left_s < 60) {
 				sprintf(left,      "%2ds",         left_s);
 		} else {
@@ -128,7 +132,7 @@ int MainCallback(int seg, int tot, Solver* solver) {
 				sprintf(left,  "%dh %2dm", left_h, left_m);
 			}
 		}
-		sprintf(buf, "%8.1f MLBUps   %7.2f GB/s", ((double)lbups)/1000, ( (double) lbups * ((double) 2 * solver->lattice->model->fields.size() * sizeof(real_t) + sizeof(flag_t))) / 1e6);
+		sprintf(buf, "%8.1lf MLBUps   %7.2lf GB/s", lbups/1000, lbups * static_cast<double>(2 * solver->lattice->model->fields.size() * sizeof(real_t) + sizeof(flag_t)) / 1e6);
 		int per_len = 20;
 		{
 			int i=0;

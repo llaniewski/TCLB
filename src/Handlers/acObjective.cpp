@@ -13,7 +13,7 @@ int acObjective::Init () {
 		glob[i] = solver->lattice->globals[i];
 		inObj[i] = 0;
 	}
-	MPI_Bcast(glob, model->globals.size(), MPI_DOUBLE, 0, solver->mpi_comm);
+	MPI_Bcast(glob, (int) n, MPI_DOUBLE, 0, solver->mpi_comm);
 	pugi::xml_attribute attr;
 	for (const Model::Objective& it : model->objectives) {
 		attr = node.attribute(it.name.c_str());

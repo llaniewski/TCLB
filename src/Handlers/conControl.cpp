@@ -172,7 +172,7 @@ int conControl::Internal (pugi::xml_node n) {
                                 const char * time_str;
                                 double time_scale;
                                 if (! attr) {
-                                        time_scale = (double)iter/csv_data["_index"].size();
+                                        time_scale = static_cast<double>(iter)/ static_cast<double>(csv_data["_index"].size());
                                         time_str = "_index";
                                 } else {
                                         time_str = attr.value();
@@ -183,13 +183,13 @@ int conControl::Internal (pugi::xml_node n) {
                                         return -1;
                                 }
                         }
-                        int k = 0;
-                        int max_k = csv_data[ "_time" ].size() - 2;
-                        if (max_k < 0) {
+                        size_t k = 0;
+                        size_t max_k = csv_data[ "_time" ].size();
+                        if (max_k < 2) {
                                 error("Not enaugh records in CSV file or something went terribly wrong\n");
                                 return -1;
                         }
-                                
+                        max_k = max_k - 2;
                         for (int i=0;i<iter; i++) {
                                 double alpha;
                                 while ((i > csv_data[ "_time" ][k+1]) && (k < max_k)) k++;

@@ -6,6 +6,8 @@
 //#include <unistd.h>
 #include "Global.h"
 
+typedef unsigned char small_t; //type for NodeType components
+
 int vtkWriteLattice(char * filename, Lattice * lattice, UnitEnv units, name_set * what, lbRegion total_output_reg)
 {
 	size_t size;
@@ -26,11 +28,11 @@ int vtkWriteLattice(char * filename, Lattice * lattice, UnitEnv units, name_set 
 		if (what->explicitlyIn("flag")) {
 			vtkFile.WriteField("flag",NodeType);
 		}
-		unsigned char * small = new unsigned char[size];
+		small_t * small = new small_t[size];
 		for (const Model::NodeTypeGroupFlag& it : lattice->model->nodetypegroupflags) {
 			if ((what->all && it.isSave) || what->explicitlyIn(it.name)) {
 				for (size_t i=0;i<size;i++) {
-					small[i] = (NodeType[i] & it.flag) >> it.shift;
+					small[i] = static_cast<small_t> (NodeType[i] & it.flag) >> it.shift;
 				}
 				vtkFile.WriteField(it.name.c_str(),small);
 			}

@@ -10,6 +10,8 @@
 #include <assert.h>
 #include <cstring>
 
+#define MPI_SIZE_T MPI_UNSIGNED_LONG
+
 struct MPMDIntercomm {
    MPI_Comm local;
    MPI_Comm work;
@@ -140,7 +142,7 @@ public:
 
    
    inline void Init(const MPI_Comm& world_, const std::string& name_, std::vector<int> excl = std::vector<int>()) {
-      int mylen,maxlen;
+      size_t mylen,maxlen;
       
       world = world_;
       
@@ -168,7 +170,7 @@ public:
       }
 
       mylen = name.size() + 1;
-      MPI_Allreduce( &mylen, &maxlen, 1, MPI_INT, MPI_MAX, world);
+      MPI_Allreduce( &mylen, &maxlen, 1, MPI_SIZE_T, MPI_MAX, world);
       MPI_Barrier(world);
       char* my_name = char_vec_from_string(name, maxlen);
       char* other_name = char_vec_from_string("", maxlen);
@@ -183,9 +185,9 @@ public:
          MPI_Allreduce( &rank, &who, 1, MPI_INT, MPI_MIN, world);
          if (who == end_value) break;
          if (world_rank == who) {
-            for (int i=0; i<maxlen; i++) other_name[i] = my_name[i];
+            for (size_t i=0; i<maxlen; i++) other_name[i] = my_name[i];
          }
-         MPI_Bcast(other_name, maxlen, MPI_CHAR, who, world);
+         MPI_Bcast(other_name, (int) maxlen, MPI_CHAR, who, world);
          names.push_back(other_name);
          leaders.push_back(who);
          if (strcmp(my_name, other_name) == 0) {
@@ -204,7 +206,7 @@ public:
 
       MPI_Comm_group(local,&local_group);
       if (excl.size() > 0) {
-         MPI_Group_excl(local_group,excl.size(),&excl[0],&work_group);
+         MPI_Group_excl(local_group,(int) excl.size(),&excl[0],&work_group);
          MPI_Group_rank(work_group, &work_rank);
          MPI_Group_size(work_group, &work_size);
          MPI_Comm_create(local,work_group,&work);

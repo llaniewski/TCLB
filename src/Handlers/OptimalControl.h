@@ -8,7 +8,7 @@
 #include "Design.h"
 
 class  OptimalControl  : public  Design  {
-	int Pars;
+	size_t Pars;
 	int zone_number, par_index;
 	int old_iter_type;
 	FILE * f;
@@ -17,7 +17,7 @@ class  OptimalControl  : public  Design  {
 public:
 	static std::string xmlname;
 int Init ();
-int NumberOfParameters ();
+size_t NumberOfParameters ();
 int Parameters (int type, double * tab);
 };
 

@@ -3,6 +3,7 @@
 
 #include "../Consts.h"
 #include "../pugixml.hpp"
+#include "../utils.h"
 #include <math.h>
 #define HANDLER_CALLBACK  0x01
 #define HANDLER_ACTION    0x02
@@ -42,8 +43,8 @@ class vHandler {
 	virtual int DoIt(); ///< Do what have to be done
 	virtual int Finish(); ///< Finalize the Handler
 	virtual int Type(); ///< Return the type of the Handler
-	int parSize;
-	virtual int NumberOfParameters(); ///< Return the type of the Handler
+	size_t parSize;
+	virtual size_t NumberOfParameters(); ///< Return the type of the Handler
 	virtual int Parameters(int type, double* data);
 	inline  int GetParameters(double * data) { return this->Parameters(PAR_GET, data); };
 	inline  int SetParameters(const double *data) {return this->Parameters(PAR_SET, const_cast<double *>(data));}; ///< Return the type of the Handler
@@ -81,8 +82,8 @@ class vHandler {
 	inline const int Next(double iter) {
 		if (everyIter) {
 			iter -= startIter;
-			int k = floor((iter)/everyIter);
-			return - floor(-(k+1) * everyIter) - iter;
+			double k = floor((iter)/everyIter);
+			return - ifloor(-(k+1) * everyIter) - ifloor(iter);
 		} else return -1;
 	}
 	
@@ -95,8 +96,8 @@ class vHandler {
 	inline const int Prev(double iter) {
 		if (everyIter) {
 			iter -= startIter;
-			int k = floor((iter-1)/everyIter);
-			return iter + floor(-k * everyIter);
+			double k = floor((iter-1)/everyIter);
+			return ifloor(iter) + ifloor(-k * everyIter);
 		} else return -1;
 	}
 };

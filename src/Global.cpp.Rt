@@ -187,7 +187,7 @@ int special_print(FILE* f, char * rank, int level, int color, int lines, char * 
       line[i] = '\0';
       return fprintf(f,format,rank,line);
     } else {
-      int i=strlen(buf);
+      size_t i=strlen(buf);
       if (i > 0) {
         if (buf[i-1] == '\n') i--;
       }

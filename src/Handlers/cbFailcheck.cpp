@@ -13,29 +13,29 @@ int cbFailcheck::Init () {
 
         pugi::xml_attribute attr = node.attribute("dx");
         if (attr) {
-            reg.dx = solver->units.alt(attr.value());
+            reg.dx = ifloor(solver->units.alt(attr.value()));
         }
         attr = node.attribute("dy");
         if (attr) {
-            reg.dy = solver->units.alt(attr.value());
+            reg.dy = ifloor(solver->units.alt(attr.value()));
         }
         attr = node.attribute("dz");
         if (attr) {
-            reg.dz = solver->units.alt(attr.value());
+            reg.dz = ifloor(solver->units.alt(attr.value()));
         }
 
 
         attr = node.attribute("nx");
         if (attr) {
-            reg.nx = solver->units.alt(attr.value());
+            reg.nx = iceil(solver->units.alt(attr.value()));
         }
         attr = node.attribute("ny");
         if (attr) {
-            reg.ny = solver->units.alt(attr.value());
+            reg.ny = iceil(solver->units.alt(attr.value()));
         }
         attr = node.attribute("nz");
         if (attr) {
-            reg.nz = solver->units.alt(attr.value());
+            reg.nz = iceil(solver->units.alt(attr.value()));
         }
 
 		return 0;

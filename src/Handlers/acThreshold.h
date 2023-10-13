@@ -8,7 +8,7 @@
 #include "GenericAction.h"
 
 class  acThreshold  : public  GenericAction  {
-	int par;
+	size_t par;
 	int levels;
 	public:
 	static std::string xmlname;

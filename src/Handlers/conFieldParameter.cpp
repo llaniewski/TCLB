@@ -64,7 +64,7 @@ bool conFieldParameter::InDesignSpace(size_t i) {
 }
 
 
-int conFieldParameter::CalculateNumberOfParameters () {
+size_t conFieldParameter::CalculateNumberOfParameters () {
 	size_t n = solver->region.sizeL();
 	int j=0;
 	for (size_t i=0; i<n; i++) if (InDesignSpace(i)) j++;
@@ -82,7 +82,7 @@ int conFieldParameter::CalculateNumberOfParameters () {
 	return 0;
 };
 
-int conFieldParameter::NumberOfParameters () {
+size_t conFieldParameter::NumberOfParameters () {
 		Pars = CalculateNumberOfParameters ();
 	output("FieldParameter returning %d parameters\n",Pars);
 	return Pars;

@@ -63,7 +63,7 @@ int Fourier::Finish () {
 	}
 
 
-int Fourier::NumberOfParameters () {
+size_t Fourier::NumberOfParameters () {
 		return Pars;
 	};
 

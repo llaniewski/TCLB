@@ -91,7 +91,7 @@ int acFDTest::OptimizerInit () {
 		GetParameters(start);
 		Parameters(PAR_LOWER, lower);
 		Parameters(PAR_UPPER, upper);
-		for (int i=0;i<Pars; i++) dx[i] = (upper[i]-lower[i])/2.0;
+		for (size_t i=0;i<Pars; i++) dx[i] = (upper[i]-lower[i])/2.0;
 		DEBUG_M;
 		return 0;
 	}
@@ -100,8 +100,8 @@ int acFDTest::OptimizerInit () {
 int acFDTest::OptimizerRun () {
 		double val0;
 		output("Evalulation for testing point");
-		for (int i=0;i<Pars; i++) x[i] = start[i];
-		val0 = FOptimize(Pars, x, grad, this);
+		for (size_t i=0;i<Pars; i++) x[i] = start[i];
+		val0 = FOptimize((unsigned int) Pars, x, grad, this);
 		FILE * f;
 		f = fopen((std::string(solver->info.outpath) + "_FD_test.csv").c_str(),"w");
 		fprintf(f, "Parameter, Value, Gradient, H");
@@ -110,20 +110,20 @@ int acFDTest::OptimizerRun () {
 		for (int o=0; o < order; o++) fprintf(f,", LeftObj%d",o+1);
 		for (int o=order; o >0; o--) fprintf(f,", CentralDiff%d",o);
 		fprintf(f,"\n");
-		for (int k=par_start; k<par_start+par_num; k++) {
+		for (size_t k=par_start; k<par_start+par_num; k++) {
 			output("Testing parameter %d",k);
 			for (int ih=0; ih<h_n; ih++) {
 				double h = dx[k] * exp(h_min + ((h_max - h_min)*ih)/(h_n-1));
 				output("Running h=%le\n",h);
-				for (int i=0;i<Pars; i++) x[i] = start[i];
+				for (size_t i=0;i<Pars; i++) x[i] = start[i];
 				double val[9]; const int p=4;
 				for (int m=-order; m<=order;m++) if(m != 0) {
 					x[k] = start[k] + m*h;
-					val[p+m] = FOptimize(Pars, x, NULL, this);
+					val[p+m] = FOptimize((unsigned int) Pars, x, NULL, this);
 				} else {
 					val[p+m] = val0;
 				}
-				fprintf(f,"%d, %.16lg, %.16lg, %.16lg", k, start[k], grad[k], h);
+				fprintf(f,"%ld, %.16lg, %.16lg, %.16lg", k, start[k], grad[k], h);
 				for (int m=-order; m<=order;m++) fprintf(f,", %.16lg", val[p+m]);
 				double diff;
 				switch(order) {

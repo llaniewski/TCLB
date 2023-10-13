@@ -4,6 +4,8 @@
     #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #endif
 
+#pragma GCC diagnostic ignored "-Wfloat-conversion"
+
 <?R
  library(gvector,quiet=TRUE,warn.conflicts=FALSE)
  library(polyAlgebra,quiet=TRUE,warn.conflicts=FALSE)
@@ -149,7 +151,7 @@ int Geometry::setFlag(const pugi::char_t * name)
 	ERROR("Unknown flag (in xml): %s\n", name);
 	return -1;
     }
-    fg = node.attribute("value").as_int();
+    fg = static_cast<flag_t>(node.attribute("value").as_int());
     E(setMask(node.attribute("mask").value()));
     fg_mode = MODE_OVERWRITE;
     return 0;
@@ -169,7 +171,7 @@ int Geometry::setMask(const pugi::char_t * name)
 	error("Unknown mask (in xml): %s\n", name);
 	return -1;
     }
-    fg_mask = node.attribute("value").as_int(-1);
+    fg_mask = static_cast<flag_t>(node.attribute("value").as_int(-1));
     return 0;
 }
 
@@ -199,7 +201,7 @@ int Geometry::setZone(const pugi::char_t * name)
     if (SettingZones.count(name) > 0) {
         ZoneNumber = SettingZones[name];
     } else {
-        ZoneNumber = SettingZones.size();
+        ZoneNumber = static_cast<int>(SettingZones.size());
         debug1("Setting new zone: %s -> %d\n", name, ZoneNumber);
         SettingZones[name] = ZoneNumber;
     }
@@ -513,8 +515,8 @@ inline int Geometry::loadSTL(lbRegion reg, pugi::xml_node n)
     char header[80];
     STL_tri *tri;
     int ntri;
-    int ret;
-    int insideOut=0;
+    size_t ret;
+    char insideOut=0;
     int axis = 1;
     if (!n.attribute("file")) {
 	error("No 'file' attribute in 'STL' element in xml conf\n");
@@ -577,21 +579,28 @@ inline int Geometry::loadSTL(lbRegion reg, pugi::xml_node n)
 	for (int i = 0; i < 5; i++) topo_hit[i] = 0;
 	
     for (int i = 0; i < ntri; i++) {
-	int min[3], max[3];
-	for (int j=0; j<3;j++) {
-		min[j] = ceil(tri[i].p1[j]);
-		if (tri[i].p2[j] < min[j])
-		    min[j] = ceil(tri[i].p2[j]);
-		if (tri[i].p3[j] < min[j])
-		    min[j] = ceil(tri[i].p3[j]);
-		max[j] = floor(tri[i].p1[j]);
-		if (tri[i].p2[j] > max[j])
-		    max[j] = floor(tri[i].p2[j]);
-		if (tri[i].p3[j] > max[j])
-		    max[j] = floor(tri[i].p3[j]);
-		min[j] -= 1;
-		max[j] += 1;
-	}
+		int min[3], max[3];
+		{
+			float minf[3], maxf[3];
+			for (int j=0; j<3;j++) {
+				minf[j] = ceil(tri[i].p1[j]);
+				if (tri[i].p2[j] < minf[j])
+					minf[j] = ceil(tri[i].p2[j]);
+				if (tri[i].p3[j] < minf[j])
+					minf[j] = ceil(tri[i].p3[j]);
+				maxf[j] = floor(tri[i].p1[j]);
+				if (tri[i].p2[j] > maxf[j])
+					maxf[j] = floor(tri[i].p2[j]);
+				if (tri[i].p3[j] > maxf[j])
+					maxf[j] = floor(tri[i].p3[j]);
+				minf[j] -= 1;
+				maxf[j] += 1;
+			}
+			for (int j=0; j<3; j++) {
+				min[j] = static_cast<int>(minf[j]);
+				max[j] = static_cast<int>(maxf[j]);
+			}
+		}		
 	if (insideOut == 2) {
             size_t regsize = region.sizeL();
             for (int x = min[0]; x <= max[0]; x++)
@@ -626,8 +635,8 @@ inline int Geometry::loadSTL(lbRegion reg, pugi::xml_node n)
 		c0 = v1[0] * v2[1] - v1[1] * v2[0];
             for (int x2 = min[ax2]; x2 <= max[ax2]; x2++)
                 for (int x3 = min[ax3]; x3 <= max[ax3]; x3++) {
-                    v[0] = x2 - tri[i].p1[ax2];
-                    v[1] = x3 - tri[i].p1[ax3];
+                    v[0] = (double) x2 - tri[i].p1[ax2];
+                    v[1] = (double) x3 - tri[i].p1[ax3];
                     c1 = v1[0] * v[1] - v1[1] * v[0];
                     c2 = v[0] * v2[1] - v[1] * v2[0];
                     c1 /= c0;

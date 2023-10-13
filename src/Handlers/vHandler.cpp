@@ -27,24 +27,20 @@ int vHandler::Type() {
 	return 0;
 }
 
-int vHandler::NumberOfParameters () {
-		output("Collecting parameters from Design elements\n");
-		if (parSize < 0) {
-			parSize = 0;
-			for (size_t i=0; i<solver->hands.size(); i++) if (solver->hands[i].Type()  == HANDLER_DESIGN) {
-				output("Getting number of parameters from %s\n", solver->hands[i]->node.name());
-				int k = solver->hands[i]->NumberOfParameters();
-				parSize += k;
-			}
-		} else {
-			output("Done some time ago\n");
-		}
-		return parSize;
-	};
+size_t vHandler::NumberOfParameters () {
+	output("Collecting parameters from Design elements\n");
+	for (size_t i=0; i<solver->hands.size(); i++) if (solver->hands[i].Type()  == HANDLER_DESIGN) {
+		output("Getting number of parameters from %s\n", solver->hands[i]->node.name());
+		size_t k = solver->hands[i]->NumberOfParameters();
+		parSize += k;
+	}
+	return parSize;
+};
 
 
 int vHandler::Parameters (int type, double * tab) {
-		int offset = 0, size = 0, ret=0;
+		size_t offset = 0, size = 0;
+		int ret=0;
 		for (size_t i=0; i<solver->hands.size(); i++) if (solver->hands[i].Type()  == HANDLER_DESIGN) {
 			output("Parameters from %s (%d)\n", solver->hands[i]->node.name(), type);
 			size = solver->hands[i]->NumberOfParameters();

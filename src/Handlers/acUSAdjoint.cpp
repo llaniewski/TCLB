@@ -16,7 +16,7 @@ int acUSAdjoint::Init () {
 		if (skip_grad) {
 			output("Skipping adjoint, as gradient is not needed");
 			solver->lattice->rewindRecord();
-			solver->iter -= everyIter;
+			solver->iter -= ifloor(everyIter);
 		} else {
                     solver->iter_type = (old_iter_type & (~ITER_TYPE)) | ITER_ADJOINT;
                     do {
@@ -39,7 +39,7 @@ int acUSAdjoint::Init () {
                     } while (!Now(solver->iter));
 		}
 		solver->lattice->stopRecord();
-		solver->iter += everyIter*2;
+		solver->iter += ifloor(everyIter)*2;
 		CudaDeviceSynchronize();
 		MPI_Barrier(MPMD.local);
 		GenericAction::Unstack();

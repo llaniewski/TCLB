@@ -8,11 +8,11 @@
 #include "Design.h"
 
 class  InternalTopology  : public  Design  {
-	int Pars;
+	size_t Pars;
 public:
 	static std::string xmlname;
 int Init ();
-int NumberOfParameters ();
+size_t NumberOfParameters ();
 int Parameters (int type, double * tab);
 };
 

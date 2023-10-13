@@ -63,7 +63,7 @@ int vtkFileOut::Open(const char* filename) {
 	char * n;
 	f = fopen(filename,"w");
 	if (f == NULL) {fprintf(stderr, "Error: Could not open vtk file %s\n", filename); return -1; } 
-	int s = strlen(filename)+5;
+	size_t s = strlen(filename)+5;
 	name = new char[s];
 	int rank;
 	MPI_Comm_rank(comm, &rank);

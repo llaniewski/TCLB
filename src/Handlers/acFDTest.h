@@ -14,7 +14,7 @@ class  acFDTest  : public  GenericOptimizer  {
 	double * grad;
 	double * lower, * upper;
 	int order;
-	int par_start, par_num;
+	size_t par_start, par_num;
 	double h_min,h_max;
 	int h_n;
 	public:

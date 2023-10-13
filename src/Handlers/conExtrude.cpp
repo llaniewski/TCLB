@@ -28,7 +28,7 @@ bool conExtrude::next(size_t k) {
 }
 
 int conExtrude::Init () {
-		Pars = -1;
+		Pars = 0;
 		pugi::xml_attribute attr;
                 pugi::xml_node par = node.first_child();
 		if (! par) {
@@ -98,7 +98,7 @@ int conExtrude::Finish () {
 }
 
 
-int conExtrude::NumberOfParameters () {
+size_t conExtrude::NumberOfParameters () {
 	return Pars;
 };
 

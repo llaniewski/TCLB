@@ -5,9 +5,12 @@
 
 #ifdef WITH_R
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
 #include <RcppCommon.h>
 #include <Rcpp.h>
 #include <RInside.h>                            // for the embedded R via RInside
+#pragma GCC diagnostic pop
 
 #undef Free					// Conflict of names
 #undef WARNING

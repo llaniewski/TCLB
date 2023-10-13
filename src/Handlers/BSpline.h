@@ -8,8 +8,8 @@
 #include "Design.h"
 
 class  BSpline  : public  Design  {
-	int Pars;
-	int Pars2;
+	size_t Pars;
+	size_t Pars2;
 	double * tab2;
 	double lower, upper;
 	FILE * f;
@@ -20,8 +20,8 @@ public:
 	static std::string xmlname;
 int Init ();
 int Finish ();
-int NumberOfParameters ();
-double Pos (int j);
+size_t NumberOfParameters ();
+double Pos (size_t j);
 int Parameters (int type, double * tab);
 };
 

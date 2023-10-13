@@ -16,7 +16,11 @@
  #define STRING_LEN 1024*4
 #endif
 
+
+
 namespace rfi {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
 
 const int version = 0x000104;
 
@@ -687,6 +691,7 @@ void RemoteForceInterface < TYPE, ROT, STORAGE, rfi_real_t, tab_allocator >::Dec
   myBox.upper[2] = z1 / base_units[0];
 }
 
+#pragma GCC diagnostic pop
 };
 
 

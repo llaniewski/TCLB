@@ -65,7 +65,7 @@ int OptimalControl::Init () {
 	};
 
 
-int OptimalControl::NumberOfParameters () {
+size_t OptimalControl::NumberOfParameters () {
 		return Pars;
 	};
 

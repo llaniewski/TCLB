@@ -42,7 +42,7 @@ public:
 	std::string print() { return name + " (ZoneSetting)"; }
 	rZoneSetting(const char* name_, const int idx_): name(name_), idx(idx_) {};
 	SEXP Dollar(std::string name) {
-	  return Rcpp::NumericVector(0.0);
+	  return rNull;
 	}
 	void DollarAssign(std::string zone, SEXP v_) {
 		WARNING("in zone %s setting parameter %s\n", zone.c_str(), name.c_str());
@@ -148,7 +148,7 @@ class rParameters : public rWrapper {
 public:
 	std::string print() { return "Parameters"; }
 	SEXP Dollar(std::string name) {
-		int len = hand->NumberOfParameters();
+		size_t len = hand->NumberOfParameters();
 		Rcpp::NumericVector ret(len);
 		if (name == "Values") {
 			hand->Parameters(PAR_GET, &ret[0]);
@@ -175,8 +175,8 @@ public:
 
 	void DollarAssign(std::string name, SEXP v_) {
 		Rcpp::NumericVector v(v_);
-		int len = hand->NumberOfParameters();
-		if (v.size() != len) {
+		size_t len = hand->NumberOfParameters();
+		if ((size_t) v.size() != len) {
 			ERROR("R: Wrong number of parameters");
 			return;
 		}
@@ -354,7 +354,7 @@ public:
 					if (Rcpp::IntegerVector::is_na(v[i])) {
 						some_na = true;
 					} else {
-						NodeType[i] = (NodeType[i] - (NodeType[i] & it.flag)) + ((v[i] - 1) << it.shift);
+						NodeType[i] = static_cast<flag_t>(NodeType[i] - (NodeType[i] & it.flag)) + static_cast<flag_t>((v[i] - 1) << it.shift);
 					}
 				}
 				if (some_na) {

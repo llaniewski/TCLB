@@ -16,7 +16,7 @@ class  conExtrude  : public  Design  {
 	double * Par;
 	double theta;
 	double margin;
-	std::vector<int> idx;
+	std::vector<size_t> idx;
 	Handler * hand;
 	bool next(size_t i);
 	double Fun(double,double);	
@@ -25,7 +25,7 @@ public:
 	static std::string xmlname;
 int Init ();
 int Finish ();
-int NumberOfParameters ();
+size_t NumberOfParameters ();
 double Pos (int j);
 int Parameters (int type, double * tab);
 };

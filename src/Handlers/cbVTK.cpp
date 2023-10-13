@@ -17,32 +17,32 @@ int cbVTK::Init () {
 		reg = solver->mpi.totalregion;
 	
 		attr = node.attribute("dx");
-		if (attr) { reg.dx = solver->units.alt(attr.value()); }
+		if (attr) { reg.dx = ifloor(solver->units.alt(attr.value())); }
 		if (reg.dx < 0) {
 			reg.dx = reg.nx + reg.dx;
 			reg.nx = reg.nx - reg.dx;
 		}
 		attr = node.attribute("dy");
-		if (attr) { reg.dy = solver->units.alt(attr.value()); }
+		if (attr) { reg.dy = ifloor(solver->units.alt(attr.value())); }
 		if (reg.dy < 0) {
 			reg.dy = reg.ny + reg.dy;
 			reg.ny = reg.ny - reg.dy;
 		}
 		attr = node.attribute("dz");
-		if (attr) { reg.dz = solver->units.alt(attr.value()); }
+		if (attr) { reg.dz = ifloor(solver->units.alt(attr.value())); }
 		if (reg.dz < 0) {
 			reg.dz = reg.nz + reg.dz;
 			reg.nz = reg.nz - reg.dz;
 		}
 
 		attr = node.attribute("nx");
-		if (attr) { reg.nx = solver->units.alt(attr.value()); }
+		if (attr) { reg.nx = iceil(solver->units.alt(attr.value())); }
 		if (reg.nx < 0) { reg.nx = solver->mpi.totalregion.nx - reg.dx + reg.nx; }
 		attr = node.attribute("ny");
-		if (attr) { reg.ny = solver->units.alt(attr.value()); }
+		if (attr) { reg.ny = iceil(solver->units.alt(attr.value())); }
 		if (reg.ny < 0) { reg.ny = solver->mpi.totalregion.ny - reg.dy + reg.nz; }
 		attr = node.attribute("nz");
-		if (attr) { reg.nz = solver->units.alt(attr.value()); }
+		if (attr) { reg.nz = iceil(solver->units.alt(attr.value())); }
 		if (reg.nz < 0) { reg.nz = solver->mpi.totalregion.nz - reg.dz + reg.nz; }
 
 		reg = reg.intersect(solver->mpi.totalregion);

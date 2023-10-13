@@ -8,8 +8,8 @@
 #include "Design.h"
 
 class  OptimalControlSecond  : public  Design  {
-	int Pars;
-	int Pars2;
+	size_t Pars;
+	size_t Pars2;
 	int zone_number, par_index;
 	int old_iter_type;
 	double * tab2;
@@ -18,7 +18,7 @@ class  OptimalControlSecond  : public  Design  {
 public:
 	static std::string xmlname;
 int Init ();
-int NumberOfParameters ();
+size_t NumberOfParameters ();
 int Parameters (int type, double * tab);
 };
 

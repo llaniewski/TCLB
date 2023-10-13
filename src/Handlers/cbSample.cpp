@@ -22,15 +22,15 @@ int cbSample::Init () {
 				lbRegion loc;
 				attr = par.attribute("dx");
 				if (attr) {
-					loc.dx = solver->units.alt(attr.value());
+					loc.dx = myround(solver->units.alt(attr.value()));
 				}
 				attr = par.attribute("dy");
 				if (attr) {
-					loc.dy = solver->units.alt(attr.value());
+					loc.dy = myround(solver->units.alt(attr.value()));
 				}
 				attr = par.attribute("dz");
 				if (attr) {
-					loc.dz = solver->units.alt(attr.value());
+					loc.dz = myround(solver->units.alt(attr.value()));
 				}
 				loc = solver->region.intersect(loc);
 				if (loc.nx == 1)  solver->lattice->sample->addPoint(loc,solver->mpi.rank);
@@ -43,7 +43,7 @@ int cbSample::Init () {
 		filename = fn;
 		solver->lattice->sample->units = solver->units;
 		solver->lattice->sample->mpis = solver->mpi;		
-		solver->lattice->sample->Allocate(&s,startIter,everyIter); 
+		solver->lattice->sample->Allocate(&s,startIter,ifloor(everyIter)); 
 		solver->lattice->sample->initCSV(filename.c_str());
 		return 0;
 		}

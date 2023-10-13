@@ -4,7 +4,7 @@ std::string BSpline::xmlname = "BSpline";
 #include "../spline.h"
 
 int BSpline::Init () {
-		Pars = -1;
+		Pars = 0;
 		pugi::xml_attribute attr;
                 pugi::xml_node par = node.first_child();
 		if (! par) {
@@ -70,14 +70,14 @@ int BSpline::Finish () {
 	}
 
 
-int BSpline::NumberOfParameters () {
+size_t BSpline::NumberOfParameters () {
 		return Pars;
 	};
 
 
-double BSpline::Pos (int j) {
-		if (per) return (1.0*j)/Pars2;
-		return j/(Pars2-1.0);
+double BSpline::Pos (size_t j) {
+		if (per) return static_cast<double>(j)/static_cast<double>(Pars2);
+		return static_cast<double>(j)/static_cast<double>(Pars2-1);
 	};
 
 
@@ -90,34 +90,34 @@ int BSpline::Parameters (int type, double * tab) {
 			{
                             double * mat = (double*) malloc(sizeof(double)*Pars*Pars);
                             double * Y = (double*) malloc(sizeof(double)*Pars);
-                            for (int i=0; i<Pars;i++) {
+                            for (size_t i=0; i<Pars;i++) {
                                     Y[i]=0;
-                                    for (int k=0; k<Pars;k++) mat[i+Pars*k] = 0;
+                                    for (size_t k=0; k<Pars;k++) mat[i+Pars*k] = 0;
                             }
-                            for (int j=0; j<Pars2; j++) {
+                            for (size_t j=0; j<Pars2; j++) {
                                     double x = Pos(j);
-                                    for (int i=0; i<Pars;i++) {
+                                    for (size_t i=0; i<Pars;i++) {
                                             double w = bspline_b(x, Pars, i, order, per);
                                             Y[i] += w * tab2[j];
-                                            for (int k=0; k<Pars;k++) mat[i+Pars*k] += w * bspline_b(x, Pars, k, order, per);
+                                            for (size_t k=0; k<Pars;k++) mat[i+Pars*k] += w * bspline_b(x, Pars, k, order, per);
                                     }
                             }
-                            for (int i=0; i<Pars;i++) {
-                                    for (int k=0; k<Pars;k++) printf("%5lf ", mat[i+Pars*k]);
+                            for (size_t i=0; i<Pars;i++) {
+                                    for (size_t k=0; k<Pars;k++) printf("%5lf ", mat[i+Pars*k]);
 				printf("| %5lf\n", Y[i]);
                             }
 			    
-			    GaussSolve (mat, Y, tab, Pars);
+			    GaussSolve (mat, Y, tab, (int) Pars);
                             free(mat);
                             free(Y);
 			}
 			return 0;
 		case PAR_SET:
 			output("Setting the params with a fourier series\n");
-			for (int j=0; j<Pars2; j++) {
+			for (size_t j=0; j<Pars2; j++) {
 				tab2[j] = 0;
 				double x = Pos(j);
-				for (int i=0; i<Pars;i++) {
+				for (size_t i=0; i<Pars;i++) {
 					tab2[j] += bspline_b(x, Pars, i, order, per) * tab[i];
 				}
 			}
@@ -126,21 +126,21 @@ int BSpline::Parameters (int type, double * tab) {
 		case PAR_GRAD:
 			output("Getting gradient and making fourier decomposition\n");
 			(*hand)->Parameters(type, tab2);
-			for (int i=0; i<Pars;i++) {
+			for (size_t i=0; i<Pars;i++) {
 				tab[i] = 0;
-				for (int j=0; j<Pars2; j++) {
+				for (size_t j=0; j<Pars2; j++) {
 					double x = Pos(j);
 					tab[i] += bspline_b(x, Pars, i, order, per) * tab2[j];
 				}
 			}
 			return 0;
 		case PAR_UPPER:
-			for (int i=0;i<Pars;i++) {
+			for (size_t i=0;i<Pars;i++) {
 				tab[i] = upper;
 			}
 			return 0;
 		case PAR_LOWER:
-			for (int i=0;i<Pars;i++) {
+			for (size_t i=0;i<Pars;i++) {
 				tab[i] = lower;
 			}
 			return 0;

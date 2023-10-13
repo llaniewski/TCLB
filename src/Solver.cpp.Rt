@@ -290,9 +290,9 @@ void MainFree( Solver *d);
 			Par_sizes = new int[mpi_size];
 			Par_disp = new int[mpi_size];
 			int divz,divy;
-			float com, mincom, optcom;
-			mincom = (1+mpi_size) * (info.region.ny+info.region.nz);
-			optcom = 2 * sqrt((float) info.region.ny*info.region.nz*mpi_size);
+			double com, mincom, optcom;
+			mincom = (double) (1 + mpi_size) * (info.region.ny + info.region.nz);
+			optcom = 2 * sqrt(static_cast<double>(info.region.ny*info.region.nz*mpi_size));
 			for (divz = 1; divz <= mpi_size; divz ++)
 				if (mpi_size % divz == 0) {
 	                                divy = mpi_size / divz;
@@ -355,8 +355,8 @@ void MainFree( Solver *d);
 	                        debug2("Processor %d will get: %dx%dx%d\n", i, mpi.node[i].region.nx, mpi.node[i].region.ny,mpi.node[i].region.nz);
 	                        if (k < mpi.node[i].region.size()) k = mpi.node[i].region.size();
 	                }
-	                float overhead = ((double)(  k*mpi_size - info.region.size()  )) / info.region.size();
-	                notice("Max region size: %d. Mesh size %d. Overhead: %2.f%%\n", k, info.region.size(), overhead * 100);
+	                double overhead = static_cast<double>( k*mpi_size - info.region.size() ) / static_cast<double>(info.region.size());
+	                notice("Max region size: %d. Mesh size %d. Overhead: %2.lf%%\n", k, info.region.size(), overhead * 100);
 		}
 	
 	        MPI_Bcast(mpi.node, mpi_size * sizeof(NodeInfo), MPI_BYTE, 0, MPMD.local);
@@ -632,14 +632,14 @@ int Solver::loadComponentFromBuffer(const char* comp,  real_t* buf) {
 	\param comp Density name to load
 */
 int Solver::loadComp(const char* filename, const char* comp) {
-	int n = region.size();
+	size_t n = region.size();
 	char fn[STRING_LEN];
 	real_t * buf = new real_t[n];
 	sprintf(fn,"%s_%d.comp", filename, D_MPI_RANK);
 	output("Loading component %s from file %s\n", comp, fn);
 	FILE * f = fopen(fn,"rb");
 	assert(f != NULL);
-	int nn = fread(buf, sizeof(real_t), n, f);
+	size_t nn = fread(buf, sizeof(real_t), n, f);
 	assert(n == nn);
 	fclose(f);
 //	for (int i=0; i<n;i ++) buf[i]=1.23;

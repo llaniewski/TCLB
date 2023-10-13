@@ -8,8 +8,8 @@
 #include "Design.h"
 
 class  Fourier  : public  Design  {
-	int Pars;
-	int Pars2;
+	size_t Pars;
+	size_t Pars2;
 	double * tab2;
 	double lower, upper;
 	FILE * f;
@@ -19,7 +19,7 @@ public:
 	static std::string xmlname;
 int Init ();
 int Finish ();
-int NumberOfParameters ();
+size_t NumberOfParameters ();
 int Parameters (int type, double * tab);
 };
 

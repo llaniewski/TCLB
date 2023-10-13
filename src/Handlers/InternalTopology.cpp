@@ -8,7 +8,7 @@ int InternalTopology::Init () {
 	};
 
 
-int InternalTopology::NumberOfParameters () {
+size_t InternalTopology::NumberOfParameters () {
 		if (Pars < 0) {
 			Pars =  solver->getPars();
 		}

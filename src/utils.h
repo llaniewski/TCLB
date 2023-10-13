@@ -5,6 +5,7 @@
 #include <string>
 
 #include <stdlib.h>
+#include <math.h>
 #include <stdio.h>
 #include <cstring>
 #include <errno.h>
@@ -31,9 +32,18 @@ inline void stripbare(char * str)
 	str[j] = 0;
 }
 
+
+inline int ifloor(double v) {
+	return static_cast<int>(floor(v));
+}
+
+inline int iceil(double v) {
+	return static_cast<int>(ceil(v));
+}
+
+
 inline int myround(double v) {
-	if (v > 0) return v+0.5;
-	return v-0.5;
+	return ifloor(v+0.5);
 }
 
 class name_set {
@@ -70,7 +80,7 @@ class name_set {
 		inline bool explicitlyIn(std::string what) {
 			return myset.count(what) > 0;
 		}
-        inline int size(){
+        inline size_t size(){
             return myset.size();
         }
         inline std::set< std::string >::iterator begin(){ 
@@ -117,7 +127,7 @@ inline int mkpath(char* file_path_) {
 
 inline FILE* fopen_gz(const char* filename, const char * mode) {
 	bool gzip=false;
-	int len = strlen(filename);
+	size_t len = strlen(filename);
 	if (len > 3) {
 		if (strcmp(&filename[len-3], ".gz") == 0) {
 			gzip = true;

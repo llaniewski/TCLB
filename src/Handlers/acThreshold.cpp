@@ -43,7 +43,7 @@ int acThreshold::Init () {
 		for (int i=0; i < levels; i++) {
 		        double th = (1.0 * i)/(levels-1);
 		        solver->lattice->SetSetting(it, th);
-		        if (slice != NULL) for (int j=0;j<par;j++) slice[j]=start[j]>th ? 1.0 : 0.0;
+		        if (slice != NULL) for (size_t j=0;j<par;j++) slice[j]=start[j]>th ? 1.0 : 0.0;
 //        		solver->setPar(slice);
 			SetParameters(slice);
         		if (GenericAction::ExecuteInternal()) return -1;

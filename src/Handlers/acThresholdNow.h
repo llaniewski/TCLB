@@ -8,7 +8,7 @@
 #include "GenericAction.h"
 
 class  acThresholdNow  : public  GenericAction  {
-	int par;
+	size_t par;
 	double level;
 	public:
 	static std::string xmlname;

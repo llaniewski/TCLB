@@ -15,8 +15,8 @@ inline double knot_bs(int i, int n, int k,bool cut) {
 
 template <typename T>
 T bspline_mod(double x, std::vector<T>& p, int k,bool cut) {
-  int n = p.size();
-  int i = floor(x * (n - k))+k; // [k, n-1]
+  int n = static_cast<int>(p.size());
+  int i = ifloor(x * (n - k))+k; // [k, n-1]
   if (k > n-1) {
     
     k = n-1;
@@ -42,13 +42,13 @@ T bspline(double x, const std::vector<T>& p, int k) {
   return bspline_mod(x,pcopy,k,true);
 }
 
-inline double bspline_b(double x, int n, int w, int k, bool per) {
+inline double bspline_b(double x, size_t n, size_t w, int k, bool per) {
   static std::vector<double> pcopy;
   if (w >= n) w=n-1;
   if (w < 0) w=0;
   if (per) n = n + k;
-  if (pcopy.size() != (size_t) n) pcopy.resize(n);
-  for (int i=0;i<n;i++) pcopy[i] = 0;
+  if (pcopy.size() != n) pcopy.resize(n);
+  for (size_t i=0;i<n;i++) pcopy[i] = 0;
   pcopy[w] = 1;
   w = w + n - k;
   if (per && w < n) pcopy[w] = 1;

@@ -33,7 +33,7 @@ int acOptimize::OptimizerInit () {
                         for (method in rows(methods)) {
                 ?> if (method == "<?%s method$name ?>") {
                         output("Setting the algorithm to <?%s method$name ?>(<?%s method$index ?>)\n");
-                        opt = nlopt_create(<?%s method$index ?>,Pars);
+                        opt = nlopt_create(<?%s method$index ?>,(unsigned int) Pars);
                 } else <?R } ?> {
                         error("Unknown Method in Optimize: %s\n", method.c_str());
                         return -1;
@@ -45,13 +45,13 @@ int acOptimize::OptimizerInit () {
 	if (solver->mpi.rank == 0) {
 		output("lower set to %lf\n", bound[0]);
                 nlopt_set_lower_bounds(opt, bound);
-		for (int i=0;i<Pars;i++) if (start[i] < bound[i]) start[i] = bound[i];
+		for (size_t i=0;i<Pars;i++) if (start[i] < bound[i]) start[i] = bound[i];
 	}
 	Parameters(PAR_UPPER, bound);
 	if (solver->mpi.rank == 0) {
 		output("upper set to %lf\n", bound[0]);
 		nlopt_set_upper_bounds(opt, bound);
-		for (int i=0;i<Pars;i++) if (start[i] > bound[i]) start[i] = bound[i];
+		for (size_t i=0;i<Pars;i++) if (start[i] > bound[i]) start[i] = bound[i];
 		delete[] bound;
                 res = nlopt_set_max_objective(opt, FOptimize, this);
                 if (res < 0) {
@@ -61,7 +61,7 @@ int acOptimize::OptimizerInit () {
                 attr = node.attribute("Material");
                 if (attr) {
                         std::string matdir(attr.value());
-                        for (int i=0;i<Pars; i++) material += start[i];
+                        for (size_t i=0;i<Pars; i++) material += start[i];
                         if (matdir == "more") {
                                 res = nlopt_add_inequality_constraint(opt, FMaterialMore, this, 1e-3);
                         } else if (matdir == "less") {

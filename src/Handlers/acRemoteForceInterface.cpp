@@ -31,7 +31,7 @@ int acRemoteForceInterface::ConnectRemoteForceInterface(std::string integrator_)
         if (attr) stats = attr.as_bool();
         attr = node.attribute("stats_iter");
         if (attr) {
-          stats_iter = solver->units.alt(attr.value());
+          stats_iter = myround(solver->units.alt(attr.value()));
           stats = true;
         }
         attr = node.attribute("stats_prefix");

@@ -13,7 +13,7 @@ double FMaterialLess(unsigned int n, const double * x, double * grad, void * dat
 
 class  GenericOptimizer  : public  GenericAction  {
 	public:
-	int Pars;
+	size_t Pars;
 	double material;
 	virtual int OptimizerInit();
 	virtual int OptimizerRun();

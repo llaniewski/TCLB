@@ -8,8 +8,8 @@
 #include "Design.h"
 
 class  RepeatControl  : public  Design  {
-	int Pars;
-	int Pars2;
+	size_t Pars;
+	size_t Pars2;
 	double * tab2;
 	double lower, upper;
 	FILE * f;
@@ -20,7 +20,7 @@ public:
 	static std::string xmlname;
 int Init ();
 int Finish ();
-int NumberOfParameters ();
+size_t NumberOfParameters ();
 double Flip (double v, double l, int j);
 int Parameters (int type, double * tab);
 };

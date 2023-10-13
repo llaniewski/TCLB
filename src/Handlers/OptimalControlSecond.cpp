@@ -63,7 +63,7 @@ int OptimalControlSecond::Init () {
 	};
 
 
-int OptimalControlSecond::NumberOfParameters () {
+size_t OptimalControlSecond::NumberOfParameters () {
 		return Pars;
 	};
 
