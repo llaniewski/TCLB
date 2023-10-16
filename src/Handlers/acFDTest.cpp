@@ -3,7 +3,6 @@ std::string acFDTest::xmlname = "FDTest";
 #include "../HandlerFactory.h"
 
 int acFDTest::OptimizerInit () {
-		start = NULL;
        		if (Pars == 0) {
        			ERROR("Error: No parameters defined!\n");
        			return -1;
@@ -80,17 +79,16 @@ int acFDTest::OptimizerInit () {
 			notice("H Level: %le\n", h);
 		}
 
-
-		start = new double[Pars];
-		grad = new double[Pars];
-		lower = new double[Pars];
-		upper = new double[Pars];
-		dx = new double[Pars];
-		x = new double[Pars];
+		start.resize(Pars);
+		grad.resize(Pars);
+		lower.resize(Pars);
+		upper.resize(Pars);
+		dx.resize(Pars);
+		x.resize(Pars);
 		DEBUG_M;
-		GetParameters(start);
-		Parameters(PAR_LOWER, lower);
-		Parameters(PAR_UPPER, upper);
+		GetParameters(start.data());
+		Parameters(PAR_LOWER, lower.data());
+		Parameters(PAR_UPPER, upper.data());
 		for (size_t i=0;i<Pars; i++) dx[i] = (upper[i]-lower[i])/2.0;
 		DEBUG_M;
 		return 0;
@@ -101,7 +99,7 @@ int acFDTest::OptimizerRun () {
 		double val0;
 		output("Evalulation for testing point");
 		for (size_t i=0;i<Pars; i++) x[i] = start[i];
-		val0 = FOptimize((unsigned int) Pars, x, grad, this);
+		val0 = FOptimize((unsigned int) Pars, x.data(), grad.data(), this);
 		FILE * f;
 		f = fopen((std::string(solver->info.outpath) + "_FD_test.csv").c_str(),"w");
 		fprintf(f, "Parameter, Value, Gradient, H");
@@ -119,7 +117,7 @@ int acFDTest::OptimizerRun () {
 				double val[9]; const int p=4;
 				for (int m=-order; m<=order;m++) if(m != 0) {
 					x[k] = start[k] + m*h;
-					val[p+m] = FOptimize((unsigned int) Pars, x, NULL, this);
+					val[p+m] = FOptimize((unsigned int) Pars, x.data(), NULL, this);
 				} else {
 					val[p+m] = val0;
 				}

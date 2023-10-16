@@ -9,10 +9,12 @@
 #include "GenericOptimizer.h"
 
 class  acFDTest  : public  GenericOptimizer  {
-	double * start;
-	double * dx, *x;
-	double * grad;
-	double * lower, * upper;
+	std::vector<double> start;
+	std::vector<double> dx;
+	std::vector<double> x;
+	std::vector<double> grad;
+	std::vector<double> lower;
+	std::vector<double> upper;
 	int order;
 	size_t par_start, par_num;
 	double h_min,h_max;

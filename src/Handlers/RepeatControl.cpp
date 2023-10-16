@@ -32,7 +32,8 @@ int RepeatControl::Init () {
 			Pars = 1;
 		}
 		output("Lenght of time-resolved control: %d\n", Pars2);
-		tab2 = new double[Pars2];
+		tab2.resize(Pars2);
+		
 		output("Lenght of repeated segment control: %d\n", Pars);
 
 		attr = node.attribute("lower");
@@ -85,7 +86,7 @@ int RepeatControl::Parameters (int type, double * tab) {
 		switch(type) {
 		case PAR_GET:
 			output("Getting the params and making pariodic means\n");
-			(*hand)->Parameters(type, tab2);
+			(*hand)->Parameters(type, tab2.data());
 			for (size_t i=0; i<Pars;i++) tab[i] = 0;
 			for (size_t j=0; j<Pars2; j++) tab[j % Pars] += Flip(tab2[j],flip_level,j);
 			for (size_t i=0; i<Pars;i++) tab[i] = tab[i] / floor(static_cast<double>(Pars2 - i - 1)/static_cast<double>(Pars)+1.0);
@@ -93,11 +94,11 @@ int RepeatControl::Parameters (int type, double * tab) {
 		case PAR_SET:
 			output("Setting the params with a reapet control\n");
 			for (size_t j=0; j<Pars2; j++) tab2[j] = Flip(tab[j % Pars],flip_level,j);
-			(*hand)->Parameters(type, tab2);
+			(*hand)->Parameters(type, tab2.data());
 			return 0;
 		case PAR_GRAD:
 			output("Getting gradient and making fourier decomposition\n");
-			(*hand)->Parameters(type, tab2);
+			(*hand)->Parameters(type, tab2.data());
 			for (size_t i=0; i<Pars;i++) tab[i] = 0;
 			for (size_t j=0; j<Pars2; j++) tab[j % Pars] += Flip(tab2[j],0.0,j);
 			return 0;

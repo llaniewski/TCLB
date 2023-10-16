@@ -10,7 +10,7 @@
 class  RepeatControl  : public  Design  {
 	size_t Pars;
 	size_t Pars2;
-	double * tab2;
+	std::vector<double> tab2;
 	double lower, upper;
 	FILE * f;
 	Handler * hand;
