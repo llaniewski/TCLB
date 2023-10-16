@@ -64,13 +64,12 @@ int cbFailcheck::DoIt () {
             if (components.in(it.name)) {
 			int comp = 1;
 			if (it.isVector) comp = 3;
-                    real_t* tmp = new real_t[reg.size()*comp];
-		    solver->lattice->GetQuantity(it.id, reg, tmp, 1);
+                    std::vector<real_t> tmp(reg.size()*comp);
+		    solver->lattice->GetQuantity(it.id, reg, tmp.data(), 1);
                     bool cond = false;
                     for (int k = 0; k < reg.size()*comp; k++){  
 	       		    cond = cond || (std::isnan(tmp[k]));
                     }
-		    delete[] tmp;
 			MPI_Allreduce(&cond,&fin,1,MPI_INT,MPI_LOR,MPMD.local);
 
                     if(fin ){

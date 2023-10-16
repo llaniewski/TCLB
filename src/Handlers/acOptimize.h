@@ -16,7 +16,7 @@ class  acOptimize  : public  GenericOptimizer  {
 	nlopt_opt opt;
 #endif
 	std::string method;
-	double * start;
+	std::vector<double> start;
 	public:
 int OptimizerInit ();
 int OptimizerRun ();

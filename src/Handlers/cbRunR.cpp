@@ -227,8 +227,8 @@ public:
 		if (si) v = solver->units.alt(it.unit);
 		int comp = 1;
 		if (it.isVector) comp = 3;
-		real_t* tmp = new real_t[reg.size()*comp];
-                solver->lattice->GetQuantity(it.id, reg, tmp, 1/v);
+		std::vector<real_t> tmp(reg.size()*comp);
+        solver->lattice->GetQuantity(it.id, reg, tmp.data(), 1/v);
 		ret = Rcpp::NumericVector(reg.size()*comp);
 		if (comp != 1) {
 			Rcpp::IntegerVector retdim(4);
@@ -247,7 +247,6 @@ public:
 		for (size_t i=0; i<reg.sizeL()*comp; i++) {
 			ret[i] = tmp[i];
 		}
-		delete[] tmp;
 		return ret;
 	}
 	Rcpp::CharacterVector Names() {
@@ -346,8 +345,8 @@ public:
 		lbRegion reg = solver->lattice->region;
 		size_t size = reg.sizeL();
 		{
-			flag_t * NodeType = new flag_t[size];
-			solver->lattice->GetFlags(reg, NodeType);
+			std::vector<flag_t> NodeType(size);
+			solver->lattice->GetFlags(reg, NodeType.data());
 			for (const Model::NodeTypeGroupFlag& it : solver->lattice->model->nodetypegroupflags) {
 				bool some_na = false;
 				for (size_t i=0;i<size;i++) {
@@ -361,8 +360,7 @@ public:
 					ERROR("Some NA in Geometry (%s) assignment", it.name.c_str());
 				}
 			}
-			solver->lattice->FlagOverwrite(NodeType, reg);
-			delete[] NodeType;
+			solver->lattice->FlagOverwrite(NodeType.data(), reg);
 		}
 		return;
 	}
@@ -406,8 +404,8 @@ SEXP Dollar(std::string name) {
 
 	const Model::NodeTypeGroupFlag& it = solver->lattice->model->nodetypegroupflags.by_name(name);
 	if (it) { // Geometry components
-		flag_t * NodeType = new flag_t[size];
-		solver->lattice->GetFlags(reg, NodeType);
+		std::vector<flag_t> NodeType(size);
+		solver->lattice->GetFlags(reg, NodeType.data());
 		Rcpp::IntegerVector small(size);
 		small.attr("dim") = retdim;
 		for (size_t i=0;i<size;i++) {
@@ -421,7 +419,6 @@ SEXP Dollar(std::string name) {
 		}
 		small.attr("levels") = levels;
 		small.attr("class") = "factor";
-		delete[] NodeType;
 		return small;
 	}
 	ERROR("R: Unknown component of Geometry");

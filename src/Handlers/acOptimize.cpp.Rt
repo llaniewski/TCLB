@@ -3,7 +3,6 @@
 
 int acOptimize::OptimizerInit () {
 #ifdef WITH_NLOPT
-	start = NULL;
 	pugi::xml_attribute attr;
 	nlopt_result res;
 	material=0.0;
@@ -13,10 +12,10 @@ int acOptimize::OptimizerInit () {
        			return -1;
        		}			
 		notice("Parameters in optimization: %d\n", Pars);
-		start = new double[Pars];
+                start.resize(Pars);
 		DEBUG_M;
 	}
-	GetParameters(start);
+	GetParameters(start.data());
 	DEBUG_M;
 	if (solver->mpi.rank == 0) {
                 method="MMA";
@@ -115,7 +114,7 @@ int acOptimize::OptimizerRun () {
 
 		double val;
         DEBUG_M;
-                nlopt_result res = nlopt_optimize(opt, start, &val);
+                nlopt_result res = nlopt_optimize(opt, start.data(), &val);
         DEBUG_M;
                 notice("NLOpt result: %d\n", res);
                 switch(res) {
