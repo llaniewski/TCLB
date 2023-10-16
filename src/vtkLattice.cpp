@@ -32,7 +32,7 @@ int vtkWriteLattice(char * filename, Lattice * lattice, UnitEnv units, name_set 
 		for (const Model::NodeTypeGroupFlag& it : lattice->model->nodetypegroupflags) {
 			if ((what->all && it.isSave) || what->explicitlyIn(it.name)) {
 				for (size_t i=0;i<size;i++) {
-					small[i] = static_cast<small_t> (NodeType[i] & it.flag) >> it.shift;
+					small[i] = static_cast<small_t>((NodeType[i] & it.flag) >> it.shift);
 				}
 				vtkFile.WriteField(it.name.c_str(),small);
 			}
