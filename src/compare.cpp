@@ -9,6 +9,7 @@
 #include <set>
 #include <memory>
 #include <math.h>
+#include <cstring>
 
 std::string getPath (const std::string& str)
 {
@@ -28,38 +29,37 @@ struct base64decoder {
 			rev64[((unsigned char *)base64char)[i]] = i;
 		rev64[(unsigned char)'='] = 0;
 	};
-	void dc64(const unsigned char *txt, unsigned char *optr, size_t n) {
+	void dc64(const unsigned char *txt, size_t n4, unsigned char *optr, size_t n3) {
 		int v;
-		while (n > 0) {
-			v = rev64[txt[0]];
+		size_t i,j;
+		for (i=0,j=0; i < n4 && j < n3; i += 4, j += 3) {
+			v = 0;
+			if (i+0 < n4) v += rev64[txt[i+0]];
 			v <<= 6;
-			v += rev64[txt[1]];
+			if (i+1 < n4) v += rev64[txt[i+1]];
 			v <<= 6;
-			v += rev64[txt[2]];
+			if (i+2 < n4) v += rev64[txt[i+2]];
 			v <<= 6;
-			v += rev64[txt[3]];
+			if (i+3 < n4) v += rev64[txt[i+3]];
 
-			if (n > 2) optr[2] = static_cast<unsigned char>(v & 0xFF);
+			if (j+2 < n3) optr[j+2] = static_cast<unsigned char>(v & 0xFF);
 			v >>= 8;
-			if (n > 1) optr[1] = static_cast<unsigned char>(v & 0xFF);
+			if (j+1 < n3) optr[j+1] = static_cast<unsigned char>(v & 0xFF);
 			v >>= 8;
-			if (n > 0) optr[0] = static_cast<unsigned char>(v);
-			n -= 3;
-			optr += 3;
-			txt += 4;
+			if (j+0 < n3) optr[j+0] = static_cast<unsigned char>(v);
 		}
+		assert(j >= n3);
 	}
 
-	void decode64(const char *txt, void **optr, size_t len) {
-		size_t nlen;
-		unsigned char *ptr;
-		txt += 1;
-		dc64((unsigned char *)txt, (unsigned char *)&nlen, 4);
-		txt += 8;
-		assert(len == nlen);
-		ptr = (unsigned char *)malloc(nlen);
-		dc64((unsigned char *)txt, ptr, nlen);
-		*optr = ptr;
+	void decode64(const char *txt, size_t txtlen, void **out, size_t *outlen) {
+		txt += 1; txtlen -= 1;
+		size_t len;
+		dc64((unsigned char *)txt, 8, (unsigned char *)&len, 4);
+		txt += 8; txtlen -= 8;
+		unsigned char *ptr = (unsigned char *)malloc(len);
+		dc64((unsigned char *)txt, txtlen, ptr, len);
+		*outlen = len;
+		*out = ptr;
 	}
 };
 
@@ -133,7 +133,10 @@ struct Tab : public TabBase {
 		assert(std::string("base64") == node.attribute("encoding").value());
 		size_t psize = 1L * (pnx - pdx) * (pny - pdy) * (pnz - pdz) * comp;
 		T *ptr;
-		b64.decode64(node.child_value(), (void **)&ptr, psize * sizeof(T));
+		size_t len4 = strlen(node.child_value());
+		size_t len = 0;
+		b64.decode64(node.child_value(), len4, (void **)&ptr, &len);
+		assert(len == psize * sizeof(T));
 		T* tmp = ptr;
 		for (int z = pdz; z < pnz; z++) {
 			for (int y = pdy; y < pny; y++) {
