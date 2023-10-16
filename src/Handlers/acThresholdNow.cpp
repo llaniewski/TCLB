@@ -4,8 +4,8 @@ std::string acThresholdNow::xmlname = "ThresholdNow";
 
 int acThresholdNow::Init () {
 		double val;
-		double * start = NULL;
-		double * slice = NULL;
+		std::vector<double> start;
+		std::vector<double> slice;
 		GenericAction::Init();
 		pugi::xml_attribute attr = node.attribute("Level");
 		if (attr) {
@@ -23,12 +23,12 @@ int acThresholdNow::Init () {
         			return -1;
         		}			
 			output("Parameters: %d\n", par);
-			start = new double[par];
-			slice = new double[par];
+			start.resize(par);
+			slice.resize(par);
 		}
 		DEBUG_M;
 //		solver->getPar(start);
-		GetParameters(start);
+		GetParameters(start.data());
 		DEBUG_M;
 		int msg=0;
 		const Model::Setting& it = solver->lattice->model->settings.by_name("Threshold");
@@ -37,9 +37,11 @@ int acThresholdNow::Init () {
 			return -1;
 		}
 	        solver->lattice->SetSetting(it, level);
-	        if (slice != NULL) for (size_t j=0;j<par;j++) slice[j]=start[j]>level ? 1.0 : 0.0;
+	        if (solver->mpi_rank == 0) {
+				for (size_t j=0;j<par;j++) slice[j]=start[j]>level ? 1.0 : 0.0;
+			}
 //       		solver->setPar(slice);
-		SetParameters(slice);
+		SetParameters(slice.data());
 		return 0;
 	}
 

@@ -8,12 +8,15 @@
 #include "Design.h"
 
 class  conExtrude  : public  Design  {
+public:
+	typedef std::array<std::vector<double>,4> coords_t;
+private:
 	size_t Pars;
 	size_t Pars2;
 	int direction;
-	double * coords[4];
-	double * tab2;
-	double * Par;
+	coords_t coords;
+	std::vector<double> tab2;
+	std::vector<double> Par;
 	double theta;
 	double margin;
 	std::vector<size_t> idx;

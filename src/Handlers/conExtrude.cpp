@@ -4,10 +4,10 @@ std::string conExtrude::xmlname = "Extrude";
 #include <algorithm>
 
 struct conExtrudeCompare {
-        double ** coords;
+		const conExtrude::coords_t& coords;
         int direction;
         bool positive;
-        conExtrudeCompare(double ** coords_, int direction_, bool positive_): coords(coords_), direction(direction_), positive(positive_) {}
+        conExtrudeCompare(const conExtrude::coords_t& coords_, int direction_, bool positive_): coords(coords_), direction(direction_), positive(positive_) {}
         bool operator()(int a, int b) const {
                 for (int i=0;i<4;i++) if (i != direction) {
                         if (coords[i][a] < coords[i][b]) return true;
@@ -76,10 +76,10 @@ int conExtrude::Init () {
 		        margin = solver->units.alt(attr.value());
 		        output("Setting margin in %s to %lg\n",node.name(),margin);
                 }
-	        tab2 = new double[Pars2];
+			tab2.resize(Pars2);
 		for (int i=0;i<4;i++) {
-		        coords[i] = new double[Pars2];
-		        (*hand)->Parameters(PAR_X+i, coords[i]);
+				coords[i].resize(Pars2);
+		        (*hand)->Parameters(PAR_X+i, coords[i].data());
                 }
                 idx.resize(Pars2);
                 for (size_t i=0; i<Pars2; i++) idx[i] = i;
@@ -87,7 +87,7 @@ int conExtrude::Init () {
                 Pars = 0;
                 for (size_t i=0; i<Pars2; i++) if (next(i)) Pars++;
                 output("%s with %d parameters\n", node.name(), Pars);
-                Par = new double[Pars];
+				Par.resize(Pars);
 		return Design::Init();
 	};
 
@@ -127,10 +127,10 @@ int conExtrude::Parameters (int type, double * tab) {
 		                if (next(i)) k++;
                         }
                         assert(k == Pars);
-                        (*hand)->Parameters(type,tab2);
+                        (*hand)->Parameters(type,tab2.data());
 			return 0;
 		case PAR_GRAD:
-                        (*hand)->Parameters(type,tab2);
+                        (*hand)->Parameters(type,tab2.data());
                         for (size_t i=0; i<Pars; i++) tab[i] = 0;
 		        for (size_t i=0; i<Pars2; i++) {
 		                size_t j = idx[i];
@@ -140,7 +140,7 @@ int conExtrude::Parameters (int type, double * tab) {
                         assert(k == Pars);
 			return 0;
 		case PAR_GET:
-		        (*hand)->Parameters(type,tab2); // NOTE: no break - continues below
+		        (*hand)->Parameters(type,tab2.data()); // NOTE: no break - continues below
 		case PAR_UPPER:
 		case PAR_LOWER:
 		        {
