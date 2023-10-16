@@ -5,8 +5,8 @@ std::string conFieldParameter::xmlname = "FieldParameter";
 int conFieldParameter::Init () {
 		mpi_size = solver->mpi_size;
 		mpi_rank = solver->mpi_rank;
-		Par_sizes = new int[mpi_size];
-		Par_disp = new int[mpi_size];
+		Par_sizes.resize(mpi_size);
+		Par_disp.resize(mpi_size);
 		pugi::xml_attribute attr = node.attribute("field");
 		if (!attr) {
 			ERROR("No \"field\" attribute in GeometryParameter\n");
@@ -71,7 +71,7 @@ size_t conFieldParameter::CalculateNumberOfParameters () {
 	Par_size = j;
 	printf("-- %d -- %d --\n",(int)n, (int)j);
 	debug1("Par_size: %d\n",Par_size);
-	MPI_Gather(&Par_size, 1, MPI_INT, Par_sizes, 1, MPI_INT, 0, MPMD.local);
+	MPI_Gather(&Par_size, 1, MPI_INT, Par_sizes.data(), 1, MPI_INT, 0, MPMD.local);
 	if (mpi_rank == 0) {
 		int i;
 		Par_disp[0] = 0;
@@ -91,12 +91,12 @@ size_t conFieldParameter::NumberOfParameters () {
 
 int conFieldParameter::LocalParameters(int type, double * tab) {
 	size_t n = solver->region.sizeL();
-	real_t * buf = new real_t[n];
+	std::vector<real_t> buf(n);
 
-		if ((type == PAR_GET) || (type == PAR_SET)) solver->lattice->Get_Field(field_id, buf);
+		if ((type == PAR_GET) || (type == PAR_SET)) solver->lattice->Get_Field(field_id, buf.data());
 		if ( type == PAR_GRAD ) {
 		#ifdef ADJOINT
-			solver->lattice->Get_Field_Adj(field_id,buf);
+			solver->lattice->Get_Field_Adj(field_id,buf.data());
 		#else
 			ERROR("Cannot get gradient of Field Parameter without adjoint\n");
 		#endif // ADJOINT
@@ -152,14 +152,13 @@ int conFieldParameter::LocalParameters(int type, double * tab) {
 		}
 		break;
 	}
-	if ( type == PAR_SET ) solver->lattice->Set_Field(field_id, buf);
+	if ( type == PAR_SET ) solver->lattice->Set_Field(field_id, buf.data());
 	assert(j == Par_size);
-	delete[] buf;
 	return 0;
 };
 
 int conFieldParameter::Parameters (int type, double * tab) {
-	double * ptab = new double[Par_size];
+	std::vector<double> ptab(Par_size);
 	switch(type) {
 	case PAR_GET:
 	case PAR_GRAD:
@@ -167,12 +166,12 @@ int conFieldParameter::Parameters (int type, double * tab) {
 	case PAR_Y:
 	case PAR_Z:
 	case PAR_T:
-		LocalParameters(type, ptab);
-		MPI_Gatherv(ptab, Par_size, MPI_DOUBLE, tab, Par_sizes, Par_disp, MPI_DOUBLE, 0, MPMD.local);
+		LocalParameters(type, ptab.data());
+		MPI_Gatherv(ptab.data(), Par_size, MPI_DOUBLE, tab, Par_sizes.data(), Par_disp.data(), MPI_DOUBLE, 0, MPMD.local);
 		break;
 	case PAR_SET:
-		MPI_Scatterv(tab, Par_sizes, Par_disp,  MPI_DOUBLE, ptab, Par_size, MPI_DOUBLE, 0, MPMD.local);
-		LocalParameters(type, ptab);
+		MPI_Scatterv(tab, Par_sizes.data(), Par_disp.data(),  MPI_DOUBLE, ptab.data(), Par_size, MPI_DOUBLE, 0, MPMD.local);
+		LocalParameters(type, ptab.data());
 		break;
 	case PAR_UPPER:
 		for (size_t i=0;i<Pars;i++) tab[i]=1;
@@ -184,7 +183,6 @@ int conFieldParameter::Parameters (int type, double * tab) {
 		ERROR("Unknown type %d in call to Parameters in %s\n",type,node.name());
 		exit(-1);
 	}
-	delete[] ptab;
 	return 0;
 };
 

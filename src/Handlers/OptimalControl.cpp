@@ -60,7 +60,7 @@ int OptimalControl::Init () {
 		} else {
 			f = NULL;
 		}
-		tmptab = new double[Pars];
+		tmptab.resize(Pars);
 		return Design::Init();
 	};
 
@@ -72,7 +72,7 @@ size_t OptimalControl::NumberOfParameters () {
 
 int OptimalControl::Parameters (int type, double * tab) {
 		if (solver->mpi_rank != 0) {
-			tab = tmptab;
+			tab = tmptab.data();
 		}
 		switch(type) {
 		case PAR_GET:
@@ -96,8 +96,8 @@ int OptimalControl::Parameters (int type, double * tab) {
 			return 0;
 		case PAR_GRAD:
 			output("Getting gradient of a param in zone\n");
-			solver->lattice->zSet.get_grad(par_index, zone_number, tmptab);
-			MPI_Reduce(tmptab, tab, (int) Pars, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+			solver->lattice->zSet.get_grad(par_index, zone_number, tmptab.data());
+			MPI_Reduce(tmptab.data(), tab, (int) Pars, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 			if (f != NULL) {
 				fprintf(f,"GRAD");
 				for (size_t i=0;i<Pars;i++) fprintf(f,",%lg",(double) tab[i]);

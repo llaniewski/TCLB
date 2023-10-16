@@ -11,8 +11,8 @@ class  conFieldParameter  : public Design  {
 	int field_id;
 	size_t Pars;
 	int Par_size; ///< Parameter space dimension
-	int *Par_sizes; ///< Parameter space dimensions on all the processors
-	int *Par_disp; ///< Offsets in the Parameter vector for all the processors
+	std::vector<int> Par_sizes; ///< Parameter space dimensions on all the processors
+	std::vector<int> Par_disp; ///< Offsets in the Parameter vector for all the processors
 	int mpi_size, mpi_rank;
 	size_t CalculateNumberOfParameters ();
 	bool FlagInDesignSpace(big_flag_t);

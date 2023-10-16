@@ -32,7 +32,7 @@ int BSpline::Init () {
 			notice("number of modes not set in %s - setting to %d\n",node.name(), Pars);
 		}
 		output("Lenght of time-resolved control: %d\n", Pars2);
-		tab2 = new double[Pars2];
+		tab2.resize(Pars2);
 		output("Lenght of b-spline control: %d\n", Pars);
 
 		per = false;
@@ -86,7 +86,7 @@ int BSpline::Parameters (int type, double * tab) {
 		switch(type) {
 		case PAR_GET:
 			output("Getting the params and making fourier decomposition\n");
-			(*hand)->Parameters(type, tab2);
+			(*hand)->Parameters(type, tab2.data());
 			{
                             double * mat = (double*) malloc(sizeof(double)*Pars*Pars);
                             double * Y = (double*) malloc(sizeof(double)*Pars);
@@ -121,11 +121,11 @@ int BSpline::Parameters (int type, double * tab) {
 					tab2[j] += bspline_b(x, Pars, i, order, per) * tab[i];
 				}
 			}
-			(*hand)->Parameters(type, tab2);
+			(*hand)->Parameters(type, tab2.data());
 			return 0;
 		case PAR_GRAD:
 			output("Getting gradient and making fourier decomposition\n");
-			(*hand)->Parameters(type, tab2);
+			(*hand)->Parameters(type, tab2.data());
 			for (size_t i=0; i<Pars;i++) {
 				tab[i] = 0;
 				for (size_t j=0; j<Pars2; j++) {
