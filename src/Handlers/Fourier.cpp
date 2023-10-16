@@ -67,6 +67,18 @@ size_t Fourier::NumberOfParameters () {
 		return Pars;
 	};
 
+double Fourier::base_fun(size_t i, size_t j) {
+	double i0 = static_cast<double>((i+1)>>1);
+	bool i1 = i & 1 != 0;
+	double x = static_cast<double>(j)/static_cast<double>(Pars2);
+	double a = 2*pi*i0*x;
+	if (i1) {
+		return sin(a);
+	} else {
+		return cos(a);
+	}
+}
+
 
 int Fourier::Parameters (int type, double * tab) {
 		double s = 0.5*(upper - lower);
@@ -74,10 +86,10 @@ int Fourier::Parameters (int type, double * tab) {
 		case PAR_GET:
 			output("Getting the params and making fourier decomposition\n");
 			(*hand)->Parameters(type, tab2);
-			for (int i=0; i<Pars;i++) {
-				int i0 = (i+1)>>1; int i1 = i & 1;
+			for (size_t i=0; i<Pars;i++) {
+				int i0 = (int) (i+1)>>1; int i1 = (int) i & 1;
 				tab[i] = 0;
-				for (int j=0; j<Pars2; j++) {
+				for (size_t j=0; j<Pars2; j++) {
 					if (i1) {
 						tab[i] += sin(i0*pi*2*j/Pars2) * tab2[j];
 					} else {
@@ -94,10 +106,10 @@ int Fourier::Parameters (int type, double * tab) {
 			return 0;
 		case PAR_SET:
 			output("Setting the params with a fourier series\n");
-			for (int j=0; j<Pars2; j++) {
+			for (size_t j=0; j<Pars2; j++) {
 				tab2[j] = 0;
-				for (int i=0; i<Pars;i++) {
-					int i0 = (i+1)>>1; int i1 = i & 1;
+				for (size_t i=0; i<Pars;i++) {
+					int i0 = (int) (i+1)>>1; int i1 = (int) i & 1;
 					if (i1) {
 						tab2[j] += sin(i0*pi*2*j/Pars2) * tab[i];
 					} else {
@@ -110,10 +122,10 @@ int Fourier::Parameters (int type, double * tab) {
 		case PAR_GRAD:
 			output("Getting gradient and making fourier decomposition\n");
 			(*hand)->Parameters(type, tab2);
-			for (int i=0; i<Pars;i++) {
-				int i0 = (i+1)>>1; int i1 = i & 1;
+			for (size_t i=0; i<Pars;i++) {
+				int i0 = (int) (i+1)>>1; int i1 = (int) i & 1;
 				tab[i] = 0;
-				for (int j=0; j<Pars2; j++) {
+				for (size_t j=0; j<Pars2; j++) {
 					if (i1) {
 						tab[i] += sin(i0*pi*2*j/Pars2) * tab2[j];
 					} else {
@@ -123,15 +135,15 @@ int Fourier::Parameters (int type, double * tab) {
 			}
 			return 0;
 		case PAR_UPPER:
-			for (int i=0;i<Pars;i++) {
-				int i0 = (i+1)>>1; int i1 = i & 1;
+			for (size_t i=0;i<Pars;i++) {
+				int i0 = (int) (i+1)>>1; int i1 = (int) i & 1;
 				tab[i]=s/i0;
 			}
 			tab[0] = upper;
 			return 0;
 		case PAR_LOWER:
-			for (int i=0;i<Pars;i++) {
-				int i0 = (i+1)>>1; int i1 = i & 1;
+			for (size_t i=0;i<Pars;i++) {
+				int i0 = (int) (i+1)>>1; int i1 = (int) i & 1;
 				tab[i]= -s/i0;
 			}
 			tab[0] = lower;
