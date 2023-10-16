@@ -21,7 +21,7 @@ public:
 int Init ();
 int Finish ();
 size_t NumberOfParameters ();
-double Flip (double v, double l, int j);
+double Flip (double v, double l, size_t j);
 int Parameters (int type, double * tab);
 };
 

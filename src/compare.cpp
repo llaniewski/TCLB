@@ -28,7 +28,7 @@ struct base64decoder {
 			rev64[((unsigned char *)base64char)[i]] = i;
 		rev64[(unsigned char)'='] = 0;
 	};
-	void dc64(const unsigned char *txt, unsigned char *optr, int n) {
+	void dc64(const unsigned char *txt, unsigned char *optr, size_t n) {
 		int v;
 		while (n > 0) {
 			v = rev64[txt[0]];
@@ -39,19 +39,19 @@ struct base64decoder {
 			v <<= 6;
 			v += rev64[txt[3]];
 
-			if (n > 2) optr[2] = v & 0xFF;
+			if (n > 2) optr[2] = static_cast<unsigned char>(v & 0xFF);
 			v >>= 8;
-			if (n > 1) optr[1] = v & 0xFF;
+			if (n > 1) optr[1] = static_cast<unsigned char>(v & 0xFF);
 			v >>= 8;
-			if (n > 0) optr[0] = v;
+			if (n > 0) optr[0] = static_cast<unsigned char>(v);
 			n -= 3;
 			optr += 3;
 			txt += 4;
 		}
 	}
 
-	void decode64(const char *txt, void **optr, int len) {
-		int nlen;
+	void decode64(const char *txt, void **optr, size_t len) {
+		size_t nlen;
 		unsigned char *ptr;
 		txt += 1;
 		dc64((unsigned char *)txt, (unsigned char *)&nlen, 4);

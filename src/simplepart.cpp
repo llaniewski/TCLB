@@ -2,6 +2,7 @@
 #include "MPMD.hpp"
 #include "RemoteForceInterface.hpp"
 #include "pugixml.hpp"
+#include "utils.h"
 #include <math.h>
 #include <vector>
 
@@ -243,8 +244,8 @@ int main(int argc, char *argv[]) {
               upper = RFI.WorkerBox(worker).upper[j];
             }
             if (periodic[j]) {
-              maxper[j] = floor((upper - p->x[j] + p->r) / prd);
-              minper[j] = ceil((lower - p->x[j] - p->r) / prd);
+              maxper[j] = ifloor((upper - p->x[j] + p->r) / prd);
+              minper[j] = iceil((lower - p->x[j] - p->r) / prd);
             } else {
               if ((p->x[j] + p->r >= lower) && (p->x[j] - p->r <= upper)) {
                 minper[j] = 0;

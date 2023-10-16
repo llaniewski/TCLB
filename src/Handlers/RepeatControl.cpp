@@ -71,7 +71,7 @@ size_t RepeatControl::NumberOfParameters () {
 	};
 
 
-double RepeatControl::Flip (double v, double l, int j) {
+double RepeatControl::Flip (double v, double l, size_t j) {
 		if (!flip) return v;
 		j -= j % Pars;
 		j /= Pars;
@@ -86,26 +86,26 @@ int RepeatControl::Parameters (int type, double * tab) {
 		case PAR_GET:
 			output("Getting the params and making pariodic means\n");
 			(*hand)->Parameters(type, tab2);
-			for (int i=0; i<Pars;i++) tab[i] = 0;
-			for (int j=0; j<Pars2; j++) tab[j % Pars] += Flip(tab2[j],flip_level,j);
-			for (int i=0; i<Pars;i++) tab[i] = tab[i] / floor((Pars2 - i - 1.0)/Pars+1);
+			for (size_t i=0; i<Pars;i++) tab[i] = 0;
+			for (size_t j=0; j<Pars2; j++) tab[j % Pars] += Flip(tab2[j],flip_level,j);
+			for (size_t i=0; i<Pars;i++) tab[i] = tab[i] / floor(static_cast<double>(Pars2 - i - 1)/static_cast<double>(Pars)+1.0);
 			return 0;
 		case PAR_SET:
 			output("Setting the params with a reapet control\n");
-			for (int j=0; j<Pars2; j++) tab2[j] = Flip(tab[j % Pars],flip_level,j);
+			for (size_t j=0; j<Pars2; j++) tab2[j] = Flip(tab[j % Pars],flip_level,j);
 			(*hand)->Parameters(type, tab2);
 			return 0;
 		case PAR_GRAD:
 			output("Getting gradient and making fourier decomposition\n");
 			(*hand)->Parameters(type, tab2);
-			for (int i=0; i<Pars;i++) tab[i] = 0;
-			for (int j=0; j<Pars2; j++) tab[j % Pars] += Flip(tab2[j],0.0,j);
+			for (size_t i=0; i<Pars;i++) tab[i] = 0;
+			for (size_t j=0; j<Pars2; j++) tab[j % Pars] += Flip(tab2[j],0.0,j);
 			return 0;
 		case PAR_UPPER:
-			for (int i=0;i<Pars;i++) tab[i] = upper;
+			for (size_t i=0;i<Pars;i++) tab[i] = upper;
 			return 0;
 		case PAR_LOWER:
-			for (int i=0;i<Pars;i++) tab[i] = lower;
+			for (size_t i=0;i<Pars;i++) tab[i] = lower;
 			return 0;
 		default:
 			ERROR("Unknown type %d in call to Parameters in %s\n", type, node.name());
