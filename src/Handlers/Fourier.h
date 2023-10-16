@@ -15,6 +15,7 @@ class  Fourier  : public  Design  {
 	FILE * f;
 	Handler * hand;
 	double pi;
+	double base_fun(size_t i, size_t j);
 public:
 	static std::string xmlname;
 int Init ();

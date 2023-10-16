@@ -25,10 +25,10 @@ int InternalTopology::Parameters (int type, double * tab) {
 		case PAR_GRAD:
 			return solver->getDPar(tab);
 		case PAR_UPPER:
-			for (int i=0;i<Pars;i++) tab[i]=1;
+			for (size_t i=0;i<Pars;i++) tab[i]=1;
 			return 0;
 		case PAR_LOWER:
-			for (int i=0;i<Pars;i++) tab[i]=0;
+			for (size_t i=0;i<Pars;i++) tab[i]=0;
 			return 0;
 		default:
 			ERROR("Unknown type %d in call to Parameters in %s\n",type,node.name());

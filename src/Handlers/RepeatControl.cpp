@@ -27,7 +27,7 @@ int RepeatControl::Init () {
 		Pars2 = (*hand)->NumberOfParameters();
 		attr = node.attribute("length");
 		if (attr) {
-			Pars = solver->units.alt(attr.value());
+			Pars = myround(solver->units.alt(attr.value()));
 		} else {
 			Pars = 1;
 		}
@@ -66,7 +66,7 @@ int RepeatControl::Finish () {
 	}
 
 
-int RepeatControl::NumberOfParameters () {
+size_t RepeatControl::NumberOfParameters () {
 		return Pars;
 	};
 

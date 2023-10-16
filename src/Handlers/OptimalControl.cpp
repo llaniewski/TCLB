@@ -80,16 +80,16 @@ int OptimalControl::Parameters (int type, double * tab) {
 			solver->lattice->zSet.get(par_index, zone_number, tab);
 			if (f != NULL) {
 				fprintf(f,"GET");
-				for (int i=0;i<Pars;i++) fprintf(f,",%lg",(double) tab[i]);
+				for (size_t i=0;i<Pars;i++) fprintf(f,",%lg",(double) tab[i]);
 				fprintf(f,"\n"); fflush(f);
 			}
 			return 0;
 		case PAR_SET:
 			output("Setting the params in the zone\n");
-			MPI_Bcast(tab, Pars, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+			MPI_Bcast(tab, (int) Pars, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 			if (f != NULL) {
 				fprintf(f,"SET");
-				for (int i=0;i<Pars;i++) fprintf(f,",%lg",(double) tab[i]);
+				for (size_t i=0;i<Pars;i++) fprintf(f,",%lg",(double) tab[i]);
 				fprintf(f,"\n"); fflush(f);
 			}
 			solver->lattice->zSet.set(par_index, zone_number, tab);
@@ -97,18 +97,18 @@ int OptimalControl::Parameters (int type, double * tab) {
 		case PAR_GRAD:
 			output("Getting gradient of a param in zone\n");
 			solver->lattice->zSet.get_grad(par_index, zone_number, tmptab);
-			MPI_Reduce(tmptab, tab, Pars, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+			MPI_Reduce(tmptab, tab, (int) Pars, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 			if (f != NULL) {
 				fprintf(f,"GRAD");
-				for (int i=0;i<Pars;i++) fprintf(f,",%lg",(double) tab[i]);
+				for (size_t i=0;i<Pars;i++) fprintf(f,",%lg",(double) tab[i]);
 				fprintf(f,"\n"); fflush(f);
 			}
 			return 0;
 		case PAR_UPPER:
-			for (int i=0;i<Pars;i++) tab[i]=upper;
+			for (size_t i=0;i<Pars;i++) tab[i]=upper;
 			return 0;
 		case PAR_LOWER:
-			for (int i=0;i<Pars;i++) tab[i]=lower;
+			for (size_t i=0;i<Pars;i++) tab[i]=lower;
 			return 0;
 		default:
 			ERROR("Unknown type %d in call to Parameters in %s\n", type, node.name());

@@ -12,6 +12,9 @@
 #include <assert.h>
 #include <sys/stat.h>
 
+#include "Global.h"
+#include "types.h"
+
 inline void stripbare(char * str)
 {
 	int i = 0, j=0;

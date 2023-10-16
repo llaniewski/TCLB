@@ -69,7 +69,7 @@ size_t Fourier::NumberOfParameters () {
 
 double Fourier::base_fun(size_t i, size_t j) {
 	double i0 = static_cast<double>((i+1)>>1);
-	bool i1 = i & 1 != 0;
+	bool i1 = (i & 1) != 0;
 	double x = static_cast<double>(j)/static_cast<double>(Pars2);
 	double a = 2*pi*i0*x;
 	if (i1) {
@@ -87,20 +87,12 @@ int Fourier::Parameters (int type, double * tab) {
 			output("Getting the params and making fourier decomposition\n");
 			(*hand)->Parameters(type, tab2);
 			for (size_t i=0; i<Pars;i++) {
-				int i0 = (int) (i+1)>>1; int i1 = (int) i & 1;
 				tab[i] = 0;
 				for (size_t j=0; j<Pars2; j++) {
-					if (i1) {
-						tab[i] += sin(i0*pi*2*j/Pars2) * tab2[j];
-					} else {
-						tab[i] += cos(i0*pi*2*j/Pars2) * tab2[j];
-					}
+					tab[i] += base_fun(i,j) * tab2[j];
 				}
-				if (i == 0) {
-					tab[i] = tab[i] / Pars2;
-				} else {
-					tab[i] = 2 * tab[i] / Pars2;
-				}
+				tab[i] = tab[i] / static_cast<double>(Pars2);
+				if (i != 0) tab[i] = 2 * tab[i];
 				output("%s[%d] = %lf\n", node.name(), i, tab[i]);
 			}
 			return 0;
@@ -109,12 +101,7 @@ int Fourier::Parameters (int type, double * tab) {
 			for (size_t j=0; j<Pars2; j++) {
 				tab2[j] = 0;
 				for (size_t i=0; i<Pars;i++) {
-					int i0 = (int) (i+1)>>1; int i1 = (int) i & 1;
-					if (i1) {
-						tab2[j] += sin(i0*pi*2*j/Pars2) * tab[i];
-					} else {
-						tab2[j] += cos(i0*pi*2*j/Pars2) * tab[i];
-					}
+					tab2[j] += base_fun(i,j) * tab[i];
 				}
 			}
 			(*hand)->Parameters(type, tab2);
@@ -123,14 +110,9 @@ int Fourier::Parameters (int type, double * tab) {
 			output("Getting gradient and making fourier decomposition\n");
 			(*hand)->Parameters(type, tab2);
 			for (size_t i=0; i<Pars;i++) {
-				int i0 = (int) (i+1)>>1; int i1 = (int) i & 1;
 				tab[i] = 0;
 				for (size_t j=0; j<Pars2; j++) {
-					if (i1) {
-						tab[i] += sin(i0*pi*2*j/Pars2) * tab2[j];
-					} else {
-						tab[i] += cos(i0*pi*2*j/Pars2) * tab2[j];
-					}
+					tab[i] += base_fun(i,j) * tab2[j];
 				}
 			}
 			return 0;
