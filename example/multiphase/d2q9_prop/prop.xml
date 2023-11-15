@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<CLBConfig version="2.0" output="output/">
+	<Geometry nx="256" ny="128">
+		<MRT><Box/></MRT>
+		<None name="patch"><Box nx="16" ny="16" dx="0" dy="64"/></None>
+		<WVelocity><Box nx="1"/></WVelocity>
+		<EPressure><Box dx="-1"/></EPressure>
+		<Wall>
+			<Box nx="16" ny="16" dx="32" dy="32"/>
+			<Box ny="1"/>
+			<Box dy="-1"/>
+		</Wall>
+	</Geometry>
+	<Model>
+		<Param name="VelocityX" value="0.02"/>
+		<Param name="Viscosity" value="0.02"/>
+		<Param name="VolumeFraction" value="1" zone="patch"/>
+	</Model>
+	<VTK/>
+	<VTK Iterations="1000"/>
+	<Solve Iterations="10000"/>
+</CLBConfig>
