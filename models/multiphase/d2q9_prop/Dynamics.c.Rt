@@ -4,9 +4,9 @@
 	source("lib/boundary.R")
 
     u = PV("u", xy)
-    toth = PV("toth")
+    htot = PV("htot")
     v = PV("v", xy)
-    totg = PV("totg")
+    gtot = PV("gtot")
 
 	H = PV("H")
     um = PV("um", xy)
@@ -19,8 +19,8 @@
 
     vf = PV("vf")
 
-    EQh = MRT_eq(U, rho=toth, J=toth*u, ortogonal=FALSE)
-    EQg = MRT_eq(U, rho=totg, J=totg*v, ortogonal=FALSE)
+    EQh = MRT_eq(U, rho=htot, J=htot*u, ortogonal=FALSE)
+    EQg = MRT_eq(U, rho=gtot, J=gtot*v, ortogonal=FALSE)
 
     R = PV("R",1:9-1)
     Rh = PV("Rh",1:9-1)
@@ -142,30 +142,67 @@ CudaDeviceFunction void EPressure() {
 
 CudaDeviceFunction void CollisionMRT()
 {
-    real_t <?R C(R,sep=",") ?>;
-    real_t <?R C(Rg,sep=",") ?>;
-    real_t <?R C(Rh,sep=",") ?>;
-    real_t omega = 1.0 - 1.0/(3*Viscosity + 0.5);
-    real_t H, vf, umx, umy;
 <?R
     omega = PV("omega")
-    M = EQ$mat
-    C( Rg, g %*% M )
-    C( Rh, h %*% M )
-    C( R, Rg + Rh )
-    C( H, Rg[1] + Rh[1])
-    C( um, (Rg[2:3] + Rh[2:3])*H^{-1})
-    C( vf, Rh[1]*H^{-1})
-    C( R, EQ$Req)
-    C( Rg, Rg - R*(1-vf))
-    C( Rh, Rh - R*vf)
-    C( Rg, Rg * omega)
-    C( Rh, Rh * omega)
-    C( Rg, Rg + R*(1-vf))
-    C( Rh, Rh + R*vf)
-    C( g, Rg %*% solve(M) )
-    C( h, Rh %*% solve(M) )
+    # M = EQ$mat
+    # C( Rg, g %*% M )
+    # C( Rh, h %*% M )
+    # C( R, Rg + Rh )
+    # C( H, Rg[1] + Rh[1])
+    # C( um, (Rg[2:3] + Rh[2:3])*H^{-1})
+    # C( vf, Rh[1]*H^{-1})
+    # C( R, EQ$Req)
+    # C( Rg, Rg - R*(1-vf))
+    # C( Rh, Rh - R*vf)
+    # C( Rg, Rg * omega)
+    # C( Rh, Rh * omega)
+    # C( Rg, Rg + R*(1-vf))
+    # C( Rh, Rh + R*vf)
+    # C( g, Rg %*% solve(M) )
+    # C( h, Rh %*% solve(M) )
+
+    Z = matrix(0,nrow(EQ$mat),ncol(EQ$mat))
+    M = rbind(cbind(EQ$mat,Z),cbind(Z,EQ$mat))
+    gh = V(g,h)
+    Rgh = V(Rg,Rh)
+    gJ = PV("gJ",xy)
+    hJ = PV("hJ",xy)
+    Rgh[1] = gtot
+    Rgh[2:3] = gJ
+    Rgh[1+9] = htot
+    Rgh[2:3+9] = hJ
+    Rgheq = EQ$Req
+    ghvf = htot * H^{-1}
+    ghum = (gJ + hJ) * H^{-1}
+    Rgheq = subst(V(EQ$Req*(1-ghvf),EQ$Req*ghvf), H=gtot+htot, umx=ghum[1], umy=ghum[2])
+    Rgheq[2:3] = gJ
+    Rgheq[2:3+9] = hJ
+    ngJ = PV("ngJ",xy)
+    nhJ = PV("nhJ",xy)
+    # nRgheq = Rgheq
+    nRgheq = subst(Rgheq, gJx=ngJ[1], gJy=ngJ[2], hJx=nhJ[1], hJy=nhJ[2])
+    F = PV("F",xy)
+?>
+    
+    real_t <?R C(Rgh,sep=",") ?>;
+    real_t omega = 1.0 - 1.0/(3*Viscosity + 0.5);
+    real_t H, vf, umx, umy;
+    real_t <?R C(V(ngJ,nhJ),sep=",") ?>;
+    real_t <?R C(F,sep=",") ?>;
+<?R
+    C( Rgh, gh %*% M )
+    C( H, gtot + htot )
+    C( um, (gJ + hJ) * H^{-1} )
+    #C( ngJ, um * gtot )
+    #C( nhJ, um * htot )
+    #C( ngJ, omega*gJ + ( 1 - omega )*um*gtot)
+    #C( nhJ, omega*hJ + ( 1 - omega )*um*htot )
+    C( F, (hJ*gtot - gJ*htot) * H^{-1})
+    C( ngJ, gJ + ( 1 - omega )*F)
+    C( nhJ, hJ - ( 1 - omega )*F)
+    C( Rgh, (Rgh - Rgheq)*omega + nRgheq )
+    C( gh, Rgh %*% solve(M) )
 ?>
 }
-
+;
 
