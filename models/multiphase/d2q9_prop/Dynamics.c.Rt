@@ -28,19 +28,43 @@
 ?>
 
 CudaDeviceFunction real_t getH(){
+    RunBoundary();
 	return <?R C(sum(f)) ?> ;
 }
     
+
+CudaDeviceFunction real_t getP(){
+    RunBoundary();
+	real_t H = <?R C(sum(f)) ?> ;
+    return (H-1)/3.0;
+}
+ 
 CudaDeviceFunction real_t getVF(){
+    RunBoundary();
 	return (<?R C(sum(h)) ?>) / (<?R C(sum(f)) ?>) ;
 }
 
+<?R
+    gJ = PV("gJ",xy)
+    hJ = PV("hJ",xy)
+    ngJ = PV("ngJ",xy)
+    nhJ = PV("nhJ",xy)
+?>
+
 CudaDeviceFunction vector_t getU(){
-	real_t d = <?R C(sum(f)) ?>;
-	vector_t u;
-<?R C(PV("u.",xyz), f %*% U * PV("d")^{-1}) ?>
-    u.x += GravitationX * 0.5;
-    u.y += GravitationY * 0.5;
+    RunBoundary();
+    real_t <?R C(V(gtot,htot,gJ,hJ,ngJ,nhJ),sep=",") ?>;
+<?R
+    C(gtot, sum(g))
+    C(htot, sum(h))
+    C(gJ, g %*% U[,1:2])
+    C(hJ, h %*% U[,1:2])
+?>
+    Relax(htot/(gtot+htot), gJx, gJy, hJx, hJy, ngJx, ngJy, nhJx, nhJy);
+    vector_t u;
+<?R
+    C(PV("u.",xyz), V(ngJ * gtot^{-1},0))
+?>
 	return u;
 }
 
@@ -85,15 +109,23 @@ CudaDeviceFunction void Init() {
 	SetEquilibrum(H, umx, umy, vf);
 }
 
-CudaDeviceFunction void Run() {
+CudaDeviceFunction void RunBoundary() {
     switch (NodeType & NODE_BOUNDARY) {
 	case NODE_WVelocity:
 		WVelocity();
+		break;
+	case NODE_WPressure:
+		WPressure();
 		break;
 	case NODE_EPressure:
 		EPressure();
 		break;
     }
+}
+
+
+CudaDeviceFunction void Run() {
+    RunBoundary();
     switch (NodeType & NODE_COLLISION) {
     case NODE_Wall:
         BounceBack();
@@ -127,6 +159,19 @@ CudaDeviceFunction void WVelocity() {
 ?>
 }
 
+
+CudaDeviceFunction void WPressure() {
+    real_t <?R C(ftmp, sep=", ") ?>;
+    real_t vf = VolumeFraction;
+<?R 
+    C(ftmp, g+h)
+    ZouHeRewrite(EQ_b, ftmp, c(-1,0), type="pressure")
+    sel = as.vector(U %*% c(-1,0,0) < 0)
+    C(g[sel],(ftmp * (1-vf))[sel])
+    C(h[sel],(ftmp * vf)[sel])
+?>
+}
+
 CudaDeviceFunction void EPressure() {
     real_t <?R C(ftmp, sep=", ") ?>;
     real_t vf = VolumeFraction;
@@ -137,6 +182,47 @@ CudaDeviceFunction void EPressure() {
     C(g[sel],(ftmp * (1-vf))[sel])
     C(h[sel],(ftmp * vf)[sel])
 ?>
+}
+
+CudaDeviceFunction void Relax(
+        real_t phi,
+        real_t gJx, real_t gJy, 
+        real_t hJx, real_t hJy, 
+        real_t& ngJx, real_t& ngJy, 
+        real_t& nhJx, real_t& nhJy) {
+    
+    gJx = gJx*Rho +   0.5*(AccelX*Rho   + NablaPX)*(1-phi);
+    gJy = gJy*Rho +   0.5*(AccelY*Rho   + NablaPY)*(1-phi);
+    hJx = hJx*Rho_s + 0.5*(AccelX*Rho_s + NablaPX)*   phi;
+    hJy = hJy*Rho_s + 0.5*(AccelY*Rho_s + NablaPY)*   phi;
+    real_t F,G,H;
+    G = (18*SlotVisc) / (PartDiam*PartDiam) * phi * Rho;
+    H = (12*SlotVisc) / (Width*Width);
+    if (phi < 1e-5) {
+        real_t a;
+        a = Rho + 0.5*H;
+        ngJx = gJx / a;
+        ngJy = gJy / a;
+        nhJx = 0;
+        nhJy = 0;
+    } else if (phi < SatVolumeFraction) {
+        F = Friction * phi / (SatVolumeFraction-phi);
+        real_t a,b,c,d;
+        a = (1-phi) * Rho   + 0.5*(H + G);
+        b =               0 + 0.5*(  - G);
+        c =               0 + 0.5*(  - G);
+        d =    phi  * Rho_s + 0.5*(F + G);
+        real_t detinv = 1.0/(a*d-b*c);
+        ngJx = (1-phi) * ( d*gJx - c*hJx) * detinv;
+        ngJy = (1-phi) * ( d*gJy - c*hJy) * detinv;
+        nhJx =    phi  * (-b*gJx + a*hJx) * detinv;
+        nhJy =    phi  * (-b*gJy + a*hJy) * detinv;
+    } else {
+        ngJx = 0;
+        ngJy = 0;
+        nhJx = 0;
+        nhJy = 0;
+    }
 }
 
 
@@ -174,7 +260,11 @@ CudaDeviceFunction void CollisionMRT()
     Rgheq = EQ$Req
     ghvf = htot * H^{-1}
     ghum = (gJ + hJ) * H^{-1}
-    Rgheq = subst(V(EQ$Req*(1-ghvf),EQ$Req*ghvf), H=gtot+htot, umx=ghum[1], umy=ghum[2])
+    #Rgheq = subst(V(EQ$Req*(1-ghvf),EQ$Req*ghvf), H=gtot+htot, umx=ghum[1], umy=ghum[2])
+    Rgheq = V(
+        subst(EQ$Req, H=gtot, umx=gJ[1] * H^{-1}, umy=gJ[1] * H^{-1}),
+        subst(EQ$Req, H=gtot, umx=hJ[1] * H^{-1}, umy=hJ[1] * H^{-1})
+    )
     Rgheq[2:3] = gJ
     Rgheq[2:3+9] = hJ
     ngJ = PV("ngJ",xy)
@@ -192,14 +282,20 @@ CudaDeviceFunction void CollisionMRT()
 <?R
     C( Rgh, gh %*% M )
     C( H, gtot + htot )
+    C( vf, htot*H^{-1} )
     C( um, (gJ + hJ) * H^{-1} )
-    #C( ngJ, um * gtot )
-    #C( nhJ, um * htot )
-    #C( ngJ, omega*gJ + ( 1 - omega )*um*gtot)
+?>
+    Relax(vf, gJx, gJy, hJx, hJy, ngJx, ngJy, nhJx, nhJy);
+<?R
+    C( ngJ, 2*ngJ - gJ )
+    C( nhJ, 2*nhJ - hJ )
+    #C( ngJ, 0.99*um * gtot )
+    #C( nhJ, 0.99*um * htot )
+    #C( ngJ, omega*gJ + ( 1 - omega )*um*gtot )
     #C( nhJ, omega*hJ + ( 1 - omega )*um*htot )
-    C( F, (hJ*gtot - gJ*htot) * H^{-1})
-    C( ngJ, gJ + ( 1 - omega )*F)
-    C( nhJ, hJ - ( 1 - omega )*F)
+    #C( F, (hJ*gtot - gJ*htot) * H^{-1} )
+    #C( ngJ, gJ + ( 1 - omega )*F )
+    #C( nhJ, hJ - ( 1 - omega )*F )
     C( Rgh, (Rgh - Rgheq)*omega + nRgheq )
     C( gh, Rgh %*% solve(M) )
 ?>
