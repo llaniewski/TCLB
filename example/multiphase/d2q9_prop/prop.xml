@@ -1,22 +1,44 @@
 <?xml version="1.0"?>
 <CLBConfig version="2.0" output="output/">
+	<Units>
+		<Param value="0.1m" gauge="128"/>
+		<Param value="9.81m/s2" gauge="2.5e-6"/>
+		<Param value="1000kg/m3" gauge="1"/>
+		<!-- 1m/s 1Pa 1e-6m2/s -->
+	</Units>
 	<Geometry nx="256" ny="128">
 		<MRT><Box/></MRT>
-		<None name="patch"><Box nx="16" ny="16" dx="0" dy="64"/></None>
-		<WVelocity><Box nx="1"/></WVelocity>
+		<None name="inletpatch"><Box nx="16" ny="16" dx="0" dy="64"/></None>
+		<!-- <None name="patch"><Box nx="64" ny="64" dx="128" dy="32"/></None> -->
+		<None name="patch"><Box ny="64"/></None>
+<!--		<WPressure><Box nx="1"/></WPressure>
 		<EPressure><Box dx="-1"/></EPressure>
 		<Wall>
 			<Box nx="16" ny="16" dx="32" dy="32"/>
 			<Box ny="1"/>
 			<Box dy="-1"/>
-		</Wall>
+		</Wall> -->
 	</Geometry>
 	<Model>
-		<Param name="VelocityX" value="0.02"/>
+		<Param name="VelocityX" value="0.0"/>
 		<Param name="Viscosity" value="0.02"/>
-		<Param name="VolumeFraction" value="1" zone="patch"/>
+		<Param name="VolumeFraction" value="0.0"/>
+		<Param name="VolumeFraction" value="0.1" zone="patch"/>
+		<Param name="SlotVisc" value="1e-6m2/s"/>
+		<Param name="VelocityX" value="0.8333m/s"/>
+		<Param name="SatVolumeFraction" value="0.5"/>
+		<Param name="Width" value="1e-3m"/>
+		<Param name="PartDiam" value="0.15e-3m"/>
+		<Param name="Friction" value="0.0001"/>
+		<Param name="Rho" value="1000kg/m3"/>
+		<Param name="Rho_s" value="2500kg/m3"/>
+		<!-- <Param name="AccelY" value="9.81m/s2"/>-->
+		<!-- 1e-6m2/s 0.02s/m2-->
+		<Param name="NablaPX" value="10000Pa/m"/>
 	</Model>
 	<VTK/>
-	<VTK Iterations="1000"/>
+	<VTK Iterations="100"/>
+	<Solve Iterations="1000"/>
+	<Param name="VolumeFraction" value="0.0" zone="inletpatch"/>
 	<Solve Iterations="10000"/>
 </CLBConfig>
