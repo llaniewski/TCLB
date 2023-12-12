@@ -11,4 +11,9 @@
         int replDo();
         void parseEval(const std::string& source);
     };
+
+    namespace RunPython {
+        int replRun();
+        void parseEval(const std::string& source);
+    };
 #endif // RUNR_H

@@ -653,23 +653,77 @@ RInside& GlobalRInside() {
 	return *Rptr;
 }
 
-RInside& RunR::GetR() {
-	return GlobalRInside();
+namespace RunR {
+	RInside& GetR() {
+		return GlobalRInside();
+	};
+
+	void parseEval(const std::string& source) {
+		RInside& R = GlobalRInside();
+		R.parseEval(source);
+	}
+
+	int replInit() {
+		R_ReplDLLinit();
+		return 0;
+	}
+
+	int replDo() {
+		return R_ReplDLLdo1();
+	}
 };
 
-void RunR::parseEval(const std::string& source) {
-	RInside& R = GlobalRInside();
-	R.parseEval(source);
+namespace RunPython {
+	bool has_reticulate = false;
+	bool py_initialised = false;
+
+	void initializePy() {
+		RInside& R = GlobalRInside();
+		has_reticulate = R.parseEval("require(reticulate, quietly=TRUE)");
+		if (!has_reticulate) throw std::string("Tried to call Python, but no reticulate installed");
+		py_initialised = true;
+		R.parseEval(
+			"py_names = function(obj) names(obj)                                   \n"
+			"py_element = function(obj, name) `[[`(obj,name)                       \n"
+			"py_element_assign = function(obj, name, value) `[[<-`(obj,name,value) \n"
+			"r_to_py.CLB = function(x, convert=FALSE) py$S3(reticulate:::py_capsule(x))\n"
+		);
+		parseEval(
+			"class S3:                                                             \n"
+			"  def __init__(self, obj):                                            \n"
+			"    object.__setattr__(self,'obj',obj)                                \n"
+			"  def print(self):                                                    \n"
+			"    return r.print(self.obj)                                          \n"
+			"  def __dir__(self):                                                  \n"
+			"    return r.py_names(self.obj)                                       \n"
+			"  def __getattr__(self, index):                                       \n"
+			"    if index.startswith('_'):                                         \n"
+			"      return None                                                     \n"
+			"    return r.py_element(self.obj, index)                              \n"
+			"  def __setattr__(self, index, value):                                \n"
+			"    return r.py_element_assign(self.obj, index, value)                \n"
+			"  def __call__(self):                                                 \n"
+			"    raise TypeError('not really callable')                            \n"
+		);
+		R.parseEval(
+			"py$Solver = r_to_py(Solver)"
+		);
+	}
+	void parseEval(const std::string& source) {
+		if (! py_initialised) initializePy();
+		Rcpp::Function py_run_string("py_run_string");
+		py_run_string(source);
+		return;
+	}
+
+	int replRun() {
+		if (! py_initialised) initializePy();
+		Rcpp::Function repl_python("repl_python");
+		repl_python();
+		return 0;
+	}
 }
 
-int RunR::replInit() {
-	R_ReplDLLinit();
-	return 0;
-}
-
-int RunR::replDo() {
-	return R_ReplDLLdo1();
-}
 
 
 #endif // WITH_R

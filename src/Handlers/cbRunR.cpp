@@ -8,11 +8,14 @@
 int RunRHandler::Init() {
 	Callback::Init();
 	RInside& R = RunR::GetR();
-
 	R["Solver"]          = rWrap(solver,this);
 
+	python = false;
 	interactive = false;
 	echo = true;
+
+	std::string name = node.name();
+	if (name == "RunPython") python = true;
 
 	pugi::xml_attribute attr;
 	attr = node.attribute("interactive");
@@ -52,7 +55,11 @@ int RunRHandler::DoIt() {
 				output("%s\n",source.c_str());
 				output("----------------\n");
 			}
-			RunR::parseEval(source);
+			if (python) {
+				RunPython::parseEval(source);
+			} else {
+				RunR::parseEval(source);
+			}
 		}
 		if (!interactive) {
 			if (echo) NOTICE("You can run interactive R session with Ctrl+X");
@@ -65,10 +72,21 @@ int RunRHandler::DoIt() {
 			}
 		}
 		if (interactive) {
-			RunR::replInit();
-			while( RunR::replDo() > 0 ) {}
+			if (python) {
+				RunPython::replRun();
+			} else {
+				RunR::replInit();
+				while( RunR::replDo() > 0 ) {}
+			}
 		}
+	} catch (Rcpp::exception& ex) {
+		ERROR("Caught Rcpp exception");
+		return -1;
+	} catch(std::exception &ex) {	
+		ERROR("Caught std exception: %s", ex.what());
+		return -1;
 	} catch (...) {
+		ERROR("Caught exception");
 		return -1;
 	}
 	return 0;
@@ -80,12 +98,11 @@ int RunRHandler::DoIt() {
 // Function created only to check to create Handler for specific conditions
 vHandler * Ask_For_RunR(const pugi::xml_node& node) {
   std::string name = node.name();
-  if (name == "RunR") {
+  if (name == "RunR" | name == "RunPython") {
 #ifdef WITH_R
     return new RunRHandler;
 #else
-    ERROR("No R support. configure with --enable-rinside\n");
-    exit(-1);  
+    ERROR("No R support. configure with --enable-rinside\n"); exit(-1);  
 #endif
   }
   return NULL;

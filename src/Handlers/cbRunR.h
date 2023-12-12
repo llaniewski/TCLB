@@ -14,6 +14,7 @@ class RunRHandler : public  Callback  {
     std::string source;
     bool interactive;
     bool echo;
+    bool python;
 public:
     int Init ();
     int DoIt ();
