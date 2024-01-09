@@ -447,7 +447,7 @@ public:
 	  } else if (name == "Geometry") {  
 	    return rWrap(new rGeometry());
 	  } else if (name == "Info") {
-		return rWrap(new rInfo());
+            return rWrap(new rInfo());
 	  }
 	  return rNull;
 	}
@@ -460,6 +460,7 @@ public:
 		ret.push_back("Globals");
 		ret.push_back("Actions");
 		ret.push_back("Geometry");
+		ret.push_back("Info");
 		return ret;
 	}
 };
@@ -642,6 +643,7 @@ namespace RunPython {
 	}	
 
 	void initializePy() {
+		if (py_initialised) return;
 		RInside& R = RunR::GetR();
 		has_reticulate = R.parseEval("require(reticulate, quietly=TRUE)");
 		if (!has_reticulate) throw std::string("Tried to call Python, but no reticulate installed");
@@ -686,6 +688,33 @@ int cbRunR::Init() {
 	Callback::Init();
 	RInside& R = RunR::GetR();
 	R["Solver"] = RunR::wrap_solver(solver,this);
+
+	R.parseEval(
+		"get_vtk = function(solver) {\n"
+		"	require(reticulate, quietly=TRUE)\n"
+		"	vtk = import('vtk')\n"
+		"	numpy_support = import('vtk.util.numpy_support')\n"
+		"	img = vtk$vtkImageData()\n"
+		"	tab = solver$Geometry$X\n"
+		"	img$SetDimensions(dim(tab)[1]+1L, dim(tab)[2]+1L, dim(tab)[3]+1L)\n"
+		"	spacing = c(1,1,1)\n"
+		"	img$SetSpacing(spacing[1],spacing[2],spacing[3])\n"
+		"	for (n in names(Solver$Quantities)) if (!grepl('[.]si$',n)) {\n"
+		"		tab = solver$Quantities[[n]]\n"
+		"		vtk_data = numpy_support$numpy_to_vtk(num_array=as.vector(tab))\n"
+		"		vtk_data$SetName(n)\n"
+		"		if (length(dim(tab)) == 3) {\n"
+		"			img$GetCellData()$SetScalars(vtk_data)\n"
+		"		} else if (length(dim(tab)) == 4) {\n"
+		"			vtk_data$SetNumberOfComponents(dim(tab)[1])\n"
+		"			img$GetCellData()$SetVectors(vtk_data)\n"
+		"		} else {\n"
+		"			stop('This should not happen')\n"
+		"		}\n"
+		"	}\n"
+		"	img\n"
+		"}\n"
+	);
 
 	python = false;
 	interactive = false;
