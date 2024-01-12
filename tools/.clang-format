@@ -9,7 +9,7 @@ DerivePointerAlignment: false
 PointerAlignment: Left
 BinPackArguments: false
 BinPackParameters: false
-ReflowComments: false
+# ReflowComments: false
 IncludeBlocks: Regroup
 IncludeIsMainRegex: $
 IndentAccessModifiers: false
