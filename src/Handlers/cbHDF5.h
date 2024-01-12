@@ -2,20 +2,20 @@
 #define CBHDF5_H
 
 #include "../CommonHandler.h"
-
-#include "vHandler.h"
 #include "Callback.h"
+#include "vHandler.h"
 
-class  cbHDF5  : public  Callback  {
-	lbRegion reg;
-	std::string nm;
-	name_set s;
-	unsigned long int chunkdim[3];
-	unsigned int options;
+class cbHDF5 : public Callback {
+    lbRegion reg;
+    std::string nm;
+    name_set s;
+    unsigned long int chunkdim[3];
+    unsigned int options;
+
 public:
-	static std::string xmlname;
-	int Init ();
-	int DoIt ();
+    static std::string xmlname;
+    int Init();
+    int DoIt();
 };
 
-#endif // CBHDF5_H
+#endif  // CBHDF5_H

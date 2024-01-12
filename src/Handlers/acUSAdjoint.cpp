@@ -38,7 +38,7 @@ int acUSAdjoint::Init() {
         } while (!Now(solver->iter));
     }
     solver->lattice->stopRecord();
-    solver->iter += everyIter * 2;
+    solver->iter += everyIter*2;
     CudaDeviceSynchronize();
     MPI_Barrier(MPMD.local);
     GenericAction::Unstack();

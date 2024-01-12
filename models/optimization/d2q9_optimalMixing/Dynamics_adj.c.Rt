@@ -4,13 +4,10 @@
 	g = PV("gb[",1:5-1,"]")
 ?>
 
-CudaDeviceFunction real_t getRhoB(){
-	return <?R C(sum(f)) ?> ;
+CudaDeviceFunction real_t getRhoB() {
+    return <?R C(sum(f)) ?>;
 }
 
-CudaDeviceFunction real_t getTB()
-{
-	return <?R C(sum(g)) ?> ;
+CudaDeviceFunction real_t getTB() {
+    return <?R C(sum(g)) ?>;
 }
-
-

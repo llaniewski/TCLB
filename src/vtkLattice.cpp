@@ -31,8 +31,8 @@ int vtkWriteLattice(const std::string& filename, CartLattice& lattice, const Uni
 
     vtkFileOut vtkFile(MPMD.local);
     if (vtkFile.Open(filename.c_str())) return -1;
-    double spacing = 1 / units.alt("m");
-    vtkFile.Init(total_output_reg, reg, "Scalars=\"rho\" Vectors=\"velocity\"", spacing, lattice.px * spacing, lattice.py * spacing, lattice.pz * spacing);
+    double spacing = 1/units.alt("m");
+    vtkFile.Init(total_output_reg, reg, "Scalars=\"rho\" Vectors=\"velocity\"", spacing, lattice.px*spacing, lattice.py*spacing, lattice.pz*spacing);
 
     {
         std::vector<big_flag_t> NodeType = lattice.getFlags(reg);
@@ -40,7 +40,7 @@ int vtkWriteLattice(const std::string& filename, CartLattice& lattice, const Uni
         std::vector<unsigned char> small(size);
         for (const Model::NodeTypeGroupFlag& it : lattice.model->nodetypegroupflags) {
             if ((what.all && it.isSave) || what.explicitlyIn(it.name)) {
-                for (size_t i = 0; i < size; i++) { small[i] = (NodeType[i] & it.flag) >> it.shift; }
+                for (size_t i=0; i<size; i++) { small[i] = (NodeType[i] & it.flag) >> it.shift; }
                 vtkFile.WriteField(it.name.c_str(), small.data());
             }
         }
@@ -51,7 +51,7 @@ int vtkWriteLattice(const std::string& filename, CartLattice& lattice, const Uni
             double v = units.alt(it.unit);
             int comp = 1;
             if (it.isVector) comp = 3;
-            std::vector<real_t> tmp = lattice.getQuantity(it, reg, 1 / v);
+            std::vector<real_t> tmp = lattice.getQuantity(it, reg, 1/v);
             vtkFile.WriteField(it.name.c_str(), tmp.data(), comp);
         }
     }
@@ -84,7 +84,7 @@ int vtuWriteLattice(const std::string& filename, ArbLattice& lattice, const Unit
             if (what.in(quant.name)) {
                 const double v = units.alt(quant.unit);
                 const size_t comps = quant.isVector ? 3 : 1;
-                auto tmp = lattice.getQuantity(quant, 1 / v);
+                auto tmp = lattice.getQuantity(quant, 1/v);
                 vtu_file.writeField(quant.name, tmp.data(), comps);
             }
         }
@@ -107,7 +107,7 @@ int binWriteLattice(const std::string& filename, LatticeBase& lattice, const Uni
             ERROR("Cannot open file: %s\n", fn.c_str());
             return -1;
         }
-        fwrite(tmp.data(), sizeof(real_t) * comp, size, f);
+        fwrite(tmp.data(), sizeof(real_t)*comp, size, f);
         fclose(f);
     }
     return 0;
@@ -121,7 +121,7 @@ inline int txtWriteElement(FILE* f, double tmp) {
 }
 template <typename T>
 int txtWriteField(FILE* f, T* tmp, int stop, int n) {
-    for (int i = 0; i < n; i++) {
+    for (int i=0; i<n; i++) {
         txtWriteElement(f, tmp[i]);
         if (((i + 1) % stop) == 0) fprintf(f, "\n");
         else
@@ -142,14 +142,14 @@ int txtWriteLattice(const std::string& filename, LatticeBase& lattice, const Uni
             ERROR("Cannot open file: %s\n", fn.c_str());
             return -1;
         }
-        fprintf(f, "dx: %lg\n", 1 / units.alt("m"));
-        fprintf(f, "dt: %lg\n", 1 / units.alt("s"));
-        fprintf(f, "dm: %lg\n", 1 / units.alt("kg"));
-        fprintf(f, "dT: %lg\n", 1 / units.alt("K"));
+        fprintf(f, "dx: %lg\n", 1/units.alt("m"));
+        fprintf(f, "dt: %lg\n", 1/units.alt("s"));
+        fprintf(f, "dm: %lg\n", 1/units.alt("kg"));
+        fprintf(f, "dT: %lg\n", 1/units.alt("K"));
         fprintf(f, "size: %ld\n", size);
-	fprintf(f, "shape:");
-	for (int d : shp) fprintf(f, " %d", d);
-	fprintf(f, "\n");
+        fprintf(f, "shape:");
+        for (int d : shp) fprintf(f, " %d", d);
+        fprintf(f, "\n");
         fclose(f);
     }
 
@@ -175,7 +175,7 @@ int txtWriteLattice(const std::string& filename, LatticeBase& lattice, const Uni
             }
             double v = units.alt(it.unit);
             int comp = it.getComp();
-            auto tmp = lattice.getQuantity(it, 1 / v);
+            auto tmp = lattice.getQuantity(it, 1/v);
             txtWriteField(f, tmp.data(), row*comp, size*comp);
             fclose(f);
         }

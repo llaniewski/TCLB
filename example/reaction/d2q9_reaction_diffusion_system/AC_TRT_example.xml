@@ -1,3 +1,4 @@
+<?xml version="1.0"?>
 <CLBConfig version="2.0" output="output/SimpleDiffusion/"> <!-- The root xml element -->
   <Geometry predef="none" nx="256" ny="256"> <!-- Mesh size, by default nz=1. MPI divisions are along X -->
     <!-- <SRT_DF><Box/></SRT_DF>  -->
@@ -29,8 +30,6 @@
     <VTK Iterations="640"/> <!-- Save HDF5/VTK every n iterations -->
   </Solve>
 </CLBConfig>
-
-
 <!-- 
 According to chapter 10.7.2, eq 10.48, p429 from 'The Lattice Boltzmann Method: Principles and Practice'
 by T. Krüger, H. Kusumaatmaja, A. Kuzmin, O. Shardt, G. Silva, E.M. Viggen

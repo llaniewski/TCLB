@@ -2,18 +2,17 @@
 #define GENERICACTION_H
 
 #include "../CommonHandler.h"
-
-#include "vHandler.h"
 #include "Action.h"
+#include "vHandler.h"
 
-class  GenericAction  : public  Action  {
-	int stack;
-	public:
+class GenericAction : public Action {
+    int stack;
 
-int Init ();
-int ExecuteInternal ();
-int Unstack ();
-int Finish ();
+public:
+    int Init();
+    int ExecuteInternal();
+    int Unstack();
+    int Finish();
 };
 
-#endif // GENERICACTION_H
+#endif  // GENERICACTION_H

@@ -3,13 +3,12 @@
 
 #include "vHandler.h"
 
-class  NullHandler  : public vHandler   {
+class NullHandler : public vHandler {
 public:
-int DoIt()   { return 0; };
-int Init()   { return 0; };
-int Finish() { return 0; };
-int Type()   { return HANDLER_GENERIC; };
+    int DoIt() { return 0; };
+    int Init() { return 0; };
+    int Finish() { return 0; };
+    int Type() { return HANDLER_GENERIC; };
 };
 
-#endif // NULL_HANDLER_H
-
+#endif  // NULL_HANDLER_H

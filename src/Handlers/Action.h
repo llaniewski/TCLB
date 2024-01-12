@@ -4,12 +4,12 @@
 #include "../CommonHandler.h"
 #include "vHandler.h"
 
-class  Action  : public  vHandler  {
+class Action : public vHandler {
 public:
-int DoIt ();
-int Init ();
-int Finish ();
-int Type();
+    int DoIt();
+    int Init();
+    int Finish();
+    int Type();
 };
 
-#endif // ACTION_H
+#endif  // ACTION_H

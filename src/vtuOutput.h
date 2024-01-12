@@ -56,15 +56,16 @@ class VtkFileOut {
     void writeGeomInfo(const double* coords, const unsigned* verts) const;
     void writeFieldImpl(const std::string& name, const void* data, size_t size, std::string_view vtk_type_name, int components) const;
 
-   public:
-    VtkFileOut(std::string name, size_t num_cells, size_t num_points, const double* coords, const unsigned* verts, MPI_Comm comm, bool has_scalars, bool has_vectors);
+public:
+    VtkFileOut(
+        std::string name, size_t num_cells, size_t num_points, const double* coords, const unsigned* verts, MPI_Comm comm, bool has_scalars, bool has_vectors);
     void writeFooters() const;
 
     template <typename T>
     void writeField(const std::string& name, const T* data, size_t comps = 1) const {
         if (comps != 1) assert(detail::VTKTypeTraits<T>::components == 1);  // Passing number of components with a vector/array type makes no sense
-        comps = detail::VTKTypeTraits<T>::components * comps;
-        writeFieldImpl(name, data, sizeof(T) * comps * num_cells, detail::VTKTypeTraits<T>::name, comps);
+        comps = detail::VTKTypeTraits<T>::components*comps;
+        writeFieldImpl(name, data, sizeof(T)*comps*num_cells, detail::VTKTypeTraits<T>::name, comps);
     }
 };
 

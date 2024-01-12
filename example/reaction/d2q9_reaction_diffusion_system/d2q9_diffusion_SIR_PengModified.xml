@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<CLBConfig version="2.0" output='output/'>
+<CLBConfig version="2.0" output="output/">
 	<Geometry nx="100" ny="100">
 
 		<None name="city">
@@ -20,10 +20,10 @@
 
         
 		<!-- Init_DRE_1 and Init_ODE_2 should start the same -->
-		<Param name="Init_DRE_1" value="0." />	 <!-- W -->
+		<Param name="Init_DRE_1" value="0."/>	 <!-- W -->
 
-		<Param name="Init_ODE_1" value="0.9" />	<!-- S -->		
-		<Param name="Init_ODE_2" value="0." />	 <!-- I -->
+		<Param name="Init_ODE_1" value="0.9"/>	<!-- S -->		
+		<Param name="Init_ODE_2" value="0."/>	 <!-- I -->
 		<Param name="Init_ODE_3" value="0.1"/>	<!-- R -->
 
 

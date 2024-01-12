@@ -222,7 +222,7 @@ void ArbLattice::partition() {
 
 void ArbLattice::computeGhostNodes() {
     std::unordered_set<long> ghosts;
-    const Span all_nbrs(connect.nbrs.get(), Q * connect.getLocalSize());
+    const Span all_nbrs(connect.nbrs.get(), Q*connect.getLocalSize());
     for (auto nbr : all_nbrs)
         if (connect.isGhost(nbr)) ghosts.insert(nbr);
     ghost_nodes.reserve(ghosts.size());
@@ -294,7 +294,7 @@ void ArbLattice::allocDeviceMemory() {
     sizes.coords_pitch = local_sz;
     coords_device = cudaMakeUnique2D<real_t>(sizes.coords_pitch, 3);
     sizes.snaps_pitch = local_sz + ghost_nodes.size() + 1;
-    snaps_device = cudaMakeUnique2D<storage_t>(sizes.snaps_pitch, sizes.snaps * NF);
+    snaps_device = cudaMakeUnique2D<storage_t>(sizes.snaps_pitch, sizes.snaps*NF);
     node_types_device = cudaMakeUnique<flag_t>(local_sz);
 }
 
@@ -350,11 +350,11 @@ void ArbLattice::computeNodeTypesOnHost(pugi::xml_node arb_node, const std::map<
 
 std::pmr::vector<real_t> ArbLattice::computeCoords() const {
     const auto local_sz = connect.getLocalSize();
-    std::pmr::vector<real_t> retval(sizes.coords_pitch * 3, &global_pinned_resource);
+    std::pmr::vector<real_t> retval(sizes.coords_pitch*3, &global_pinned_resource);
     for (size_t dim = 0; dim != 3; ++dim) {
         size_t i = 0;
-        for (; i != local_sz; ++i) retval[local_permutation[i] + dim * sizes.coords_pitch] = connect.coord(dim, i);
-        for (; i != sizes.coords_pitch; ++i) retval[i + dim * sizes.coords_pitch] = std::numeric_limits<real_t>::signaling_NaN();  // padding
+        for (; i != local_sz; ++i) retval[local_permutation[i] + dim*sizes.coords_pitch] = connect.coord(dim, i);
+        for (; i != sizes.coords_pitch; ++i) retval[i + dim*sizes.coords_pitch] = std::numeric_limits<real_t>::signaling_NaN();  // padding
     }
     return retval;
 }
@@ -369,7 +369,7 @@ unsigned int ArbLattice::lookupLocalGhostIndex(ArbLatticeConnectivity::Index gid
 
 std::pmr::vector<unsigned> ArbLattice::computeNeighbors() const {
     const auto local_sz = connect.getLocalSize();
-    std::pmr::vector<unsigned> retval(sizes.neighbors_pitch * Q, &global_pinned_resource);
+    std::pmr::vector<unsigned> retval(sizes.neighbors_pitch*Q, &global_pinned_resource);
     const unsigned invalid_nbr = local_sz + ghost_nodes.size();
     const auto nbr_global_to_local = [&](ArbLatticeConnectivity::Index gid) -> unsigned {
         if (gid == -1) return invalid_nbr;  // dummy row
@@ -380,14 +380,14 @@ std::pmr::vector<unsigned> ArbLattice::computeNeighbors() const {
     };
     for (size_t q = 0; q != Q; ++q) {
         size_t lid = 0;
-        for (; lid != local_sz; ++lid) retval[local_permutation[lid] + q * sizes.neighbors_pitch] = nbr_global_to_local(connect.neighbor(q, lid));
-        for (; lid != sizes.neighbors_pitch; ++lid) retval[lid + q * sizes.neighbors_pitch] = invalid_nbr;
+        for (; lid != local_sz; ++lid) retval[local_permutation[lid] + q*sizes.neighbors_pitch] = nbr_global_to_local(connect.neighbor(q, lid));
+        for (; lid != sizes.neighbors_pitch; ++lid) retval[lid + q*sizes.neighbors_pitch] = invalid_nbr;
     }
     return retval;
 }
 
 void ArbLattice::initDeviceData(pugi::xml_node arb_node, const std::map<std::string, int>& setting_zones) {
-    fillWithStorageNaNAsync(snaps_device.get(), sizes.snaps_pitch * sizes.snaps * NF, inStream);
+    fillWithStorageNaNAsync(snaps_device.get(), sizes.snaps_pitch*sizes.snaps*NF, inStream);
     computeNodeTypesOnHost(arb_node, setting_zones, /*permute*/ true);
     copyVecToDeviceAsync(node_types_device.get(), node_types_host, inStream);
     const auto nbrs = computeNeighbors();
@@ -426,7 +426,7 @@ void ArbLattice::initContainer() {
 }
 
 int ArbLattice::fullLatticePos(double pos) const {
-    const auto retval = std::lround(pos / connect.grid_size - .5);
+    const auto retval = std::lround(pos/connect.grid_size - .5);
     assert(retval <= std::numeric_limits<int>::max() && retval >= std::numeric_limits<int>::min());
     return static_cast<int>(retval);
 }
@@ -434,7 +434,7 @@ int ArbLattice::fullLatticePos(double pos) const {
 lbRegion ArbLattice::getLocalBoundingBox() const {
     const auto local_sz = connect.getLocalSize();
     const Span x(connect.coords.get(), local_sz), y(std::next(connect.coords.get(), local_sz), local_sz),
-        z(std::next(connect.coords.get(), 2 * local_sz), local_sz);
+        z(std::next(connect.coords.get(), 2*local_sz), local_sz);
     const auto [minx_it, maxx_it] = std::minmax_element(x.begin(), x.end());
     const auto [miny_it, maxy_it] = std::minmax_element(y.begin(), y.end());
     const auto [minz_it, maxz_it] = std::minmax_element(z.begin(), z.end());
@@ -448,7 +448,7 @@ ArbLattice::ArbVTUGeom ArbLattice::makeVTUGeom() const {
     // Bounding box for node-encapsulating cubes is larger by 1 (in each direction) than that of the nodes themselves
     const Index nx = local_bounding_box.nx + 1, ny = local_bounding_box.ny + 1, nz = local_bounding_box.nz + 1;
     const Index sx = local_bounding_box.dx, sy = local_bounding_box.dy, sz = local_bounding_box.dz;
-    const auto lin_pos_bb = [&](Index x, Index y, Index z) { return x + (y + z * ny) * nx; };
+    const auto lin_pos_bb = [&](Index x, Index y, Index z) { return x + (y + z*ny)*nx; };
     const auto get_bb_verts = [&](unsigned node) {
         const double x = connect.coord(0, node), y = connect.coord(1, node), z = connect.coord(2, node);
         const int posx = fullLatticePos(x), posy = fullLatticePos(y), posz = fullLatticePos(z);
@@ -480,8 +480,8 @@ ArbLattice::ArbVTUGeom ArbLattice::makeVTUGeom() const {
 
     ArbVTUGeom retval{connect.getLocalSize(),
                       full_to_red_map.size(),
-                      std::make_unique<double[]>(full_to_red_map.size() * 3),
-                      std::make_unique<unsigned[]>(connect.getLocalSize() * 8)};
+                      std::make_unique<double[]>(full_to_red_map.size()*3),
+                      std::make_unique<unsigned[]>(connect.getLocalSize()*8)};
     // Iterating across the entire bounding box is a bit hairy, but saves memory compared to the alternative (and we only do it once)
     for (Index vx = sx; vx != nx + sx; ++vx)
         for (Index vy = sy; vy != ny + sy; ++vy)
@@ -489,26 +489,26 @@ ArbLattice::ArbVTUGeom ArbLattice::makeVTUGeom() const {
                 const auto lin_ind = lin_pos_bb(vx - sx, vy - sy, vz - sz);
                 if (const auto iter = full_to_red_map.find(lin_ind); iter != full_to_red_map.end()) {
                     const auto red_ind = iter->second;
-                    retval.coords[red_ind * 3] = static_cast<double>(vx) * connect.grid_size;
-                    retval.coords[red_ind * 3 + 1] = static_cast<double>(vy) * connect.grid_size;
-                    retval.coords[red_ind * 3 + 2] = static_cast<double>(vz) * connect.grid_size;
+                    retval.coords[red_ind*3] = static_cast<double>(vx)*connect.grid_size;
+                    retval.coords[red_ind*3 + 1] = static_cast<double>(vy)*connect.grid_size;
+                    retval.coords[red_ind*3 + 2] = static_cast<double>(vz)*connect.grid_size;
                 }
             }
     for (unsigned node = 0; node != connect.getLocalSize(); ++node) {
         const auto verts = get_bb_verts(node);
         const auto node_permuted = local_permutation[node];
-        std::transform(verts.begin(), verts.end(), std::next(retval.verts.get(), node_permuted * verts.size()), [&](Index v) { return full_to_red_map.at(v); });
+        std::transform(verts.begin(), verts.end(), std::next(retval.verts.get(), node_permuted*verts.size()), [&](Index v) { return full_to_red_map.at(v); });
     }
     return retval;
 }
 
 storage_t* ArbLattice::getSnapPtr(int snap_ind) {
-    return std::next(snaps_device.get(), sizes.snaps_pitch * NF * snap_ind);
+    return std::next(snaps_device.get(), sizes.snaps_pitch*NF*snap_ind);
 }
 
 #ifdef ADJOINT
 storage_t* ArbLattice::getAdjointSnapPtr(int snap_ind) {
-    return std::next(snaps_device.get(), sizes.snaps_pitch * NF * (sizes.snaps - 2 + snap_ind));
+    return std::next(snaps_device.get(), sizes.snaps_pitch*NF*(sizes.snaps - 2 + snap_ind));
 }
 #endif
 
@@ -517,16 +517,30 @@ void ArbLattice::SetFirstTabs(int tab_in, int tab_out) {
     setSnapOut(tab_out);
 }
 
-
-
-
-std::vector<big_flag_t> ArbLattice::getFlags() const { throw std::runtime_error{"UNIMPLEMENTED"}; return {}; };
-std::vector<real_t> ArbLattice::getField(const Model::Field& f) { throw std::runtime_error{"UNIMPLEMENTED"}; return {}; };
-std::vector<real_t> ArbLattice::getFieldAdj(const Model::Field& f) { throw std::runtime_error{"UNIMPLEMENTED"}; return {}; };
-void ArbLattice::setFlags(const std::vector<big_flag_t>& x) { throw std::runtime_error{"UNIMPLEMENTED"}; return; };
-void ArbLattice::setField(const Model::Field& f, const std::vector<real_t>& x) { throw std::runtime_error{"UNIMPLEMENTED"}; return; };
-void ArbLattice::setFieldAdjZero(const Model::Field& f) { throw std::runtime_error{"UNIMPLEMENTED"}; return; };
-
+std::vector<big_flag_t> ArbLattice::getFlags() const {
+    throw std::runtime_error{"UNIMPLEMENTED"};
+    return {};
+};
+std::vector<real_t> ArbLattice::getField(const Model::Field& f) {
+    throw std::runtime_error{"UNIMPLEMENTED"};
+    return {};
+};
+std::vector<real_t> ArbLattice::getFieldAdj(const Model::Field& f) {
+    throw std::runtime_error{"UNIMPLEMENTED"};
+    return {};
+};
+void ArbLattice::setFlags(const std::vector<big_flag_t>& x) {
+    throw std::runtime_error{"UNIMPLEMENTED"};
+    return;
+};
+void ArbLattice::setField(const Model::Field& f, const std::vector<real_t>& x) {
+    throw std::runtime_error{"UNIMPLEMENTED"};
+    return;
+};
+void ArbLattice::setFieldAdjZero(const Model::Field& f) {
+    throw std::runtime_error{"UNIMPLEMENTED"};
+    return;
+};
 
 std::vector<real_t> ArbLattice::getQuantity(const Model::Quantity& q, real_t scale) {
     size_t size = getLocalSize();
@@ -584,11 +598,11 @@ void ArbLattice::initCommManager() {
     for (const auto& [id, set] : needed_fields) {
         unpack_ind_iter = std::transform(set.begin(), set.end(), unpack_ind_iter, [&](NodeFieldP nfp) {
             const auto [node, field] = nfp;
-            return lookupLocalGhostIndex(node) + field * sizes.snaps_pitch;
+            return lookupLocalGhostIndex(node) + field*sizes.snaps_pitch;
         });
     }
     assert(unpack_ind_iter == unpack_inds_host.end());
-    CudaMemcpyAsync(comm_manager.unpack_inds.get(), unpack_inds_host.data(), unpack_inds_host.size() * sizeof(size_t), CudaMemcpyHostToDevice, inStream);
+    CudaMemcpyAsync(comm_manager.unpack_inds.get(), unpack_inds_host.data(), unpack_inds_host.size()*sizeof(size_t), CudaMemcpyHostToDevice, inStream);
 
     std::vector<size_t> comm_sizes_in(mpitools::MPI_Size(comm));
     std::vector<size_t> comm_sizes(mpitools::MPI_Size(comm));
@@ -612,8 +626,8 @@ void ArbLattice::initCommManager() {
     }
     std::vector<MPI_Request> reqs;
     reqs.reserve(requested_fields.size() + needed_fields.size());
-    for (auto& [id, rf] : requested_fields) MPI_Irecv(rf.data(), rf.size() * 2, mpitools::getMPIType<size_t>(), id, 0, comm, &reqs.emplace_back());
-    for (const auto& [id, nf] : needed_fields) MPI_Isend(nf.data(), nf.size() * 2, mpitools::getMPIType<size_t>(), id, 0, comm, &reqs.emplace_back());
+    for (auto& [id, rf] : requested_fields) MPI_Irecv(rf.data(), rf.size()*2, mpitools::getMPIType<size_t>(), id, 0, comm, &reqs.emplace_back());
+    for (const auto& [id, nf] : needed_fields) MPI_Isend(nf.data(), nf.size()*2, mpitools::getMPIType<size_t>(), id, 0, comm, &reqs.emplace_back());
     MPI_Waitall(reqs.size(), reqs.data(), MPI_STATUSES_IGNORE);
     std::pmr::vector<size_t> pack_inds_host(send_buf_size, &global_pinned_resource);
     auto pack_ind_iter = pack_inds_host.begin();
@@ -624,11 +638,11 @@ void ArbLattice::initCommManager() {
             assert(node < connect.chunk_end);
             const auto lid = local_permutation.at(node - connect.chunk_begin);
             assert(lid < sizes.border_nodes);
-            return lid + field * sizes.snaps_pitch;
+            return lid + field*sizes.snaps_pitch;
         });
     }
     assert(pack_ind_iter == pack_inds_host.end());
-    CudaMemcpyAsync(comm_manager.pack_inds.get(), pack_inds_host.data(), pack_inds_host.size() * sizeof(size_t), CudaMemcpyHostToDevice, inStream);
+    CudaMemcpyAsync(comm_manager.pack_inds.get(), pack_inds_host.data(), pack_inds_host.size()*sizeof(size_t), CudaMemcpyHostToDevice, inStream);
     CudaStreamSynchronize(inStream);
 
     if (debug_name.size() != 0) {
@@ -688,7 +702,7 @@ void ArbLattice::MPIStream_A() {
     launcher.pack(outStream);
     CudaMemcpyAsync(comm_manager.send_buf_host.data(),
                     comm_manager.send_buf_device.get(),
-                    comm_manager.send_buf_host.size() * sizeof(storage_t),
+                    comm_manager.send_buf_host.size()*sizeof(storage_t),
                     CudaMemcpyDeviceToHost,
                     outStream);
 }
@@ -699,7 +713,7 @@ void ArbLattice::MPIStream_B() {
     communicateBorder();
     CudaMemcpyAsync(comm_manager.recv_buf_device.get(),
                     comm_manager.recv_buf_host.data(),
-                    comm_manager.recv_buf_host.size() * sizeof(storage_t),
+                    comm_manager.recv_buf_host.size()*sizeof(storage_t),
                     CudaMemcpyHostToDevice,
                     inStream);
     launcher.unpack(inStream);
@@ -708,7 +722,7 @@ void ArbLattice::MPIStream_B() {
 
 static int saveImpl(const std::string& filename, const storage_t* device_ptr, size_t size) {
     std::pmr::vector<storage_t> tab(size);
-    CudaMemcpy(tab.data(), device_ptr, size * sizeof(storage_t), CudaMemcpyDeviceToHost);
+    CudaMemcpy(tab.data(), device_ptr, size*sizeof(storage_t), CudaMemcpyDeviceToHost);
     auto file = fopen(filename.c_str(), "wb");
     if (!file) {
         const auto err_msg = std::string("Failed to open ") + filename + " for writing";
@@ -740,15 +754,15 @@ static int loadImpl(const std::string& filename, storage_t* device_ptr, size_t s
         ERROR(err_msg.c_str());
         return EXIT_FAILURE;
     }
-    CudaMemcpy(device_ptr, tab.data(), size * sizeof(storage_t), CudaMemcpyHostToDevice);
+    CudaMemcpy(device_ptr, tab.data(), size*sizeof(storage_t), CudaMemcpyHostToDevice);
     return EXIT_SUCCESS;
 }
 void ArbLattice::savePrimal(const std::string& filename, int snap_ind) const {
-    if (saveImpl(filename, getSnapPtr(snap_ind), sizes.snaps_pitch * NF)) throw std::runtime_error{"savePrimal failed"};
+    if (saveImpl(filename, getSnapPtr(snap_ind), sizes.snaps_pitch*NF)) throw std::runtime_error{"savePrimal failed"};
 }
 
 int ArbLattice::loadPrimal(const std::string& filename, int snap_ind) {
-    return loadImpl(filename, getSnapPtr(snap_ind), sizes.snaps_pitch * NF);
+    return loadImpl(filename, getSnapPtr(snap_ind), sizes.snaps_pitch*NF);
 }
 #ifdef ADJOINT
 int ArbLattice::loadAdj(const std::string& filename, int asnap_ind) {
@@ -819,15 +833,15 @@ void ArbLattice::debugDumpVTU() const {
             vtu_file.writeField("globalIdOg", tab3.data());
         }
         {
-            std::vector<signed long int> tab1(getLocalSize() * Q);
-            std::vector<int> tab2(getLocalSize() * Q);
+            std::vector<signed long int> tab1(getLocalSize()*Q);
+            std::vector<int> tab2(getLocalSize()*Q);
             for (size_t node = 0; node != connect.getLocalSize(); ++node) {
                 auto i = local_permutation.at(node);
                 for (size_t q = 0; q != Q; ++q) {
                     const auto nbr = connect.neighbor(q, node);
-                    tab1[i * Q + q] = nbr;
+                    tab1[i*Q + q] = nbr;
                     const int owner = std::distance(global_node_dist.cbegin(), std::upper_bound(global_node_dist.cbegin(), global_node_dist.cend(), nbr)) - 1;
-                    tab2[i * Q + q] = owner;
+                    tab2[i*Q + q] = owner;
                 }
             }
             vtu_file.writeField("neighbour", tab1.data(), Q);

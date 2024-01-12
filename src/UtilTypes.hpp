@@ -4,13 +4,16 @@
 /// Utility abstraction for a dynamically-sized contiguous range of elements of type T
 template <typename T>
 class Span {
-   public:
+public:
     Span() = default;
     Span(T* data, size_t size) : data_(data), size_(size) {}
     Span(T* first, T* last) : data_(first), size_(static_cast<size_t>(std::distance(first, last))) {}
     template <typename Iterator, std::enable_if_t<!std::is_pointer_v<Iterator>, bool> = true>
-    Span(Iterator first, Iterator last) : Span(std::addressof(*first), std::addressof(*last)) {}  // Be careful not to call this with a non-contiguous iterator pair, std::contiguous_iterator is locked behind C++20
-    template <typename T_other, std::enable_if_t<std::is_same_v<T, typename std::add_const_t<T>> && std::is_same_v<T_other, typename std::remove_const_t<T>>, bool> = true>
+    Span(Iterator first, Iterator last)
+        : Span(std::addressof(*first), std::addressof(*last)) {
+    }  // Be careful not to call this with a non-contiguous iterator pair, std::contiguous_iterator is locked behind C++20
+    template <typename T_other,
+              std::enable_if_t<std::is_same_v<T, typename std::add_const_t<T>> && std::is_same_v<T_other, typename std::remove_const_t<T>>, bool> = true>
     Span(Span<T_other> other) : Span(other.begin(), other.end()) {}  // Converting constructor: Span<T> -> Span<const T>
 
     T* begin() const { return data_; }
@@ -21,22 +24,24 @@ class Span {
     T& operator[](size_t i) const { return data_[i]; }
     T* data() const { return data_; }
 
-   private:
+private:
     T* data_ = nullptr;
     size_t size_ = 0;
 };
 template <typename Iterator>
-Span(Iterator, Iterator) -> Span<typename std::remove_reference_t<decltype(*std::declval<Iterator>())>>;  // std::iterator_traits ignores constness, hence the hand-rolled type inspection
+Span(Iterator, Iterator) -> Span<typename std::remove_reference_t<decltype(*std::declval<Iterator>())>>;  // std::iterator_traits ignores constness, hence the
+                                                                                                          // hand-rolled type inspection
 
 /// Compressed-Row-Sparse format graph utility
 template <typename Vert, typename Size = size_t>
 class CrsGraph {
-   public:
+public:
     using vertex_type = Vert;
     using size_type = Size;
 
     CrsGraph() = default;
-    CrsGraph(Span<const size_type> row_sizes) : n_rows_(static_cast<size_type>(row_sizes.size())), row_offs_(std::make_unique<size_type[]>(row_sizes.size() + 1)) {
+    CrsGraph(Span<const size_type> row_sizes)
+        : n_rows_(static_cast<size_type>(row_sizes.size())), row_offs_(std::make_unique<size_type[]>(row_sizes.size() + 1)) {
         row_offs_[0] = 0;
         std::inclusive_scan(row_sizes.begin(), row_sizes.end(), std::next(row_offs_.get()));
         cols_ = std::make_unique<vertex_type[]>(row_offs_[n_rows_]);
@@ -52,7 +57,7 @@ class CrsGraph {
     Span<vertex_type> getRawEntries() const { return {cols_.get(), static_cast<size_t>(numEntries())}; }
     ///////////////////
 
-   private:
+private:
     size_type n_rows_ = 0;
     std::unique_ptr<size_type[]> row_offs_;
     std::unique_ptr<vertex_type[]> cols_;

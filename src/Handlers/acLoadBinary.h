@@ -2,14 +2,13 @@
 #define ACLOADBINARY_H
 
 #include "../CommonHandler.h"
-
-#include "vHandler.h"
 #include "Action.h"
+#include "vHandler.h"
 
-class  acLoadBinary  : public  Action  {
-	public:
-	static std::string xmlname;
-int Init ();
+class acLoadBinary : public Action {
+public:
+    static std::string xmlname;
+    int Init();
 };
 
-#endif // ACLOADBINARY_H
+#endif  // ACLOADBINARY_H

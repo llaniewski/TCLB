@@ -1,3 +1,4 @@
+<?xml version="1.0"?>
 <CLBConfig version="2.0" output="output/AC_TRT/">
   <Geometry predef="none" nx="256" ny="256">
     <!-- <SRT_DF_SOI><Box/></SRT_DF_SOI>  -->
@@ -30,9 +31,6 @@
   <Solve Iterations="12800"><VTK Iterations="640"/></Solve>
   <VTK/>
 </CLBConfig>
-
-
-
 <!-- 
 According to chapter 10.7.2, eq 10.48, p429 from 'The Lattice Boltzmann Method: Principles and Practice'
 by T. Krüger, H. Kusumaatmaja, A. Kuzmin, O. Shardt, G. Silva, E.M. Viggen

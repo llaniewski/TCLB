@@ -1,3 +1,4 @@
+<?xml version="1.0"?>
 <CLBConfig version="2.0" output="output/">
   <!--Created using CLBConfigWriter-->
   <Geometry predef="none" model="MRT" nx="128.0" ny="128.0">

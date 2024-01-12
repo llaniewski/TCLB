@@ -2,16 +2,15 @@
 #define GENERICCONTAINER_H
 
 #include "../CommonHandler.h"
-
-#include "vHandler.h"
 #include "Action.h"
 #include "GenericAction.h"
+#include "vHandler.h"
 
-class  GenericContainer  : public  GenericAction  {
-	public:
-	static std::string xmlname;
-int Init ();
-int Finish ();
+class GenericContainer : public GenericAction {
+public:
+    static std::string xmlname;
+    int Init();
+    int Finish();
 };
 
-#endif // GENERICCONTAINER_H
+#endif  // GENERICCONTAINER_H

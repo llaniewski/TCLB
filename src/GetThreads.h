@@ -9,7 +9,7 @@
 std::string cxx_demangle(std::string str);
 
 inline int ceiling_div(int x, int y) {
-    return x / y + (x % y != 0);
+    return x/y + (x % y != 0);
 }
 
 template <class EX>
@@ -40,12 +40,12 @@ class ThreadNumberCalculatorBase {
     }
     static inline bool compare(const type* a, const type* b) { return a->name < b->name; }
 
-   protected:
+protected:
     dim3 thr;
     unsigned int maxthr;
     std::string name;
 
-   public:
+public:
     static void InitAll();
     ThreadNumberCalculatorBase();
     virtual void Init() = 0;
@@ -55,7 +55,7 @@ class ThreadNumberCalculatorBase {
 
 template <class EX>
 class ThreadNumberCalculator : public ThreadNumberCalculatorBase {
-   public:
+public:
     virtual void Init() {
         name = cxx_demangle(typeid(EX).name());
         maxthr = GetThreads<EX>();
@@ -67,7 +67,7 @@ class ThreadNumberCalculator : public ThreadNumberCalculatorBase {
         } else {
             if (val > MAX_THREADS) { val = MAX_THREADS; }
             thr.x = X_BLOCK;
-            thr.y = val / X_BLOCK;
+            thr.y = val/X_BLOCK;
         }
     };
 };
@@ -77,7 +77,7 @@ class ThreadNumber {
     typedef ThreadNumberCalculator<EX> calc_t;
     static calc_t calc;
 
-   public:
+public:
     static inline dim3 threads() { return calc.threads(); }
 };
 
@@ -100,14 +100,27 @@ LaunchParams ComputeLaunchParams(const EX& executor) {
 template <class EX>
 void LaunchExecutor(const EX& executor) {
     const auto exec_params = ComputeLaunchParams(executor);
-    debug1("Launching kernel: blocks: %dx%dx%d; threads: %dx%dx%d;", exec_params.blx.x, exec_params.blx.y, exec_params.blx.z, exec_params.thr.x, exec_params.thr.y, exec_params.thr.z);
+    debug1("Launching kernel: blocks: %dx%dx%d; threads: %dx%dx%d;",
+           exec_params.blx.x,
+           exec_params.blx.y,
+           exec_params.blx.z,
+           exec_params.thr.x,
+           exec_params.thr.y,
+           exec_params.thr.z);
     CudaKernelRun(Kernel<EX>, exec_params.blx, exec_params.thr, executor);
 }
 
 template <class EX>
 void LaunchExecutorAsync(const EX& executor, CudaStream_t stream) {
     const auto exec_params = ComputeLaunchParams(executor);
-    debug1("Launching async kernel: blocks: %dx%dx%d; threads: %dx%dx%d; stream: %p", exec_params.blx.x, exec_params.blx.y, exec_params.blx.z, exec_params.thr.x, exec_params.thr.y, exec_params.thr.z, stream);
+    debug1("Launching async kernel: blocks: %dx%dx%d; threads: %dx%dx%d; stream: %p",
+           exec_params.blx.x,
+           exec_params.blx.y,
+           exec_params.blx.z,
+           exec_params.thr.x,
+           exec_params.thr.y,
+           exec_params.thr.z,
+           stream);
     CudaKernelRunAsync(Kernel<EX>, exec_params.blx, exec_params.thr, stream, executor);
 }
 
@@ -117,19 +130,20 @@ void LaunchExecutorAsync(const EX& executor, CudaStream_t stream) {
 struct LinearExecutor {
     unsigned size;
     LaunchParams ComputeLaunchParams(dim3 max_threads) const {
-        const unsigned max_threads_per_block = max_threads.x * max_threads.y * max_threads.z;
-        const unsigned blocks_needed = std::max(1u, (size + max_threads_per_block - 1) / max_threads_per_block);
+        const unsigned max_threads_per_block = max_threads.x*max_threads.y*max_threads.z;
+        const unsigned blocks_needed = std::max(1u, (size + max_threads_per_block - 1)/max_threads_per_block);
         dim3 blocks;
         blocks.x = blocks_needed;
         return {blocks, max_threads};
     }
 
-   protected:
+protected:
     /// Get the linear grid index of the current thread (You must pass in the grid params, since they're only available in device code)
-    template <typename D1, typename D2, typename D3>  /// TODO: the template here is due to the fact that we use uint3 instead of dim3 on CPU. Investigate why and unify everything to dim3
-    CudaDeviceFunction unsigned threadID(D1 thread, D2 block, D3 block_size) const {
-        const auto threads_per_block = block_size.x * block_size.y * block_size.z;
-        return thread.x + block_size.x * (thread.y + thread.z * block_size.y) + block.x * threads_per_block;
+    template <typename D1, typename D2, typename D3>  /// TODO: the template here is due to the fact that we use uint3 instead of dim3 on CPU. Investigate why
+                                                      /// and unify everything to dim3
+                                                      CudaDeviceFunction unsigned threadID(D1 thread, D2 block, D3 block_size) const {
+        const auto threads_per_block = block_size.x*block_size.y*block_size.z;
+        return thread.x + block_size.x*(thread.y + thread.z*block_size.y) + block.x*threads_per_block;
     }
     /// Check whether the current thread is within the execution range
     CudaDeviceFunction bool inRange(unsigned thread_id) const { return thread_id < size; }

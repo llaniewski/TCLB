@@ -55,14 +55,15 @@ class ArbLatticeAccess {
     flag_t node_type;                      /// Node type
     const ArbLatticeContainer* container;  /// pointer to container with all of the required device info
 
-    CudaDeviceFunction real_t getDim(int dim) const { return container->coords[lid + dim * container->coords_pitch]; }
+    CudaDeviceFunction real_t getDim(int dim) const { return container->coords[lid + dim*container->coords_pitch]; }
     CudaDeviceFunction static flag_t lookupNodeType(const ArbLatticeContainer& container, unsigned lid) { return container.node_types[lid]; }
 
-    // Note: conversion to/from storage_t requires additional shift value based on Fields (in R), and is therefore invoked in the individual store/load functions
+    // Note: conversion to/from storage_t requires additional shift value based on Fields (in R), and is therefore invoked in the individual store/load
+    // functions
     template <int field_index>
     CudaDeviceFunction storage_t loadImpl(int dir_index) const {
-        const int nbr_at_dir = container->nbrs[lid + dir_index * container->nbrs_pitch];
-        return container->snap_in[nbr_at_dir + field_index * container->snaps_pitch];
+        const int nbr_at_dir = container->nbrs[lid + dir_index*container->nbrs_pitch];
+        return container->snap_in[nbr_at_dir + field_index*container->snaps_pitch];
     }
     template <int field_index, int dx, int dy, int dz>
     CudaDeviceFunction storage_t loadStaticImpl() const {
@@ -71,50 +72,53 @@ class ArbLatticeAccess {
     }
     template <int field_index>
     CudaDeviceFunction storage_t loadDynamicImpl(int dx, int dy, int dz) const {
-        const int dir_index = Model_m::getDirIndex(OffsetDir{dx, dy, dz}, container->stencil_offset, container->stencil_size, container->dynamic_offset_lookup_table);
+        const int dir_index =
+            Model_m::getDirIndex(OffsetDir{dx, dy, dz}, container->stencil_offset, container->stencil_size, container->dynamic_offset_lookup_table);
         return loadImpl<field_index>(dir_index);
     }
     template <int field_index>
     CudaDeviceFunction void storeImpl(storage_t value) const {
-        container->snap_out[lid + field_index * container->snaps_pitch] = value;
+        container->snap_out[lid + field_index*container->snaps_pitch] = value;
     }
 
-   public:
-    CudaDeviceFunction ArbLatticeAccess(unsigned lid_, const ArbLatticeContainer& container_) : lid(lid_), node_type(lookupNodeType(container_, lid_)), container(&container_) {}
+public:
+    CudaDeviceFunction ArbLatticeAccess(unsigned lid_, const ArbLatticeContainer& container_)
+        : lid(lid_), node_type(lookupNodeType(container_, lid_)), container(&container_) {}
 
     CudaDeviceFunction real_t getX() const { return getDim(0); }
     CudaDeviceFunction real_t getY() const { return getDim(1); }
     CudaDeviceFunction real_t getZ() const { return getDim(2); }
     CudaDeviceFunction flag_t getNodeType() const { return node_type; }
-    CudaDeviceFunction cut_t getQ(int) const { /// TODO
+    CudaDeviceFunction cut_t getQ(int) const {  /// TODO
         printf("Cuts not implemented for arbitrary lattice");
         assert(false);
         return NO_CUT;
     }
-<?R
+    <?R
 for (f in rows(Fields)) { ?>
 private:
     CudaDeviceFunction void store_<?%s f$nicename ?>(real_t value) const {
         const real_t val_to_store = <?%s real_to_storage("value", f)?>;
         storeImpl<<?%s trimws(f$Index)?>>(val_to_store);
     }
+
 public:
     template <int dx, int dy, int dz = 0>
     CudaDeviceFunction real_t load_<?%s f$nicename ?>() const {
         const storage_t stored_val = loadStaticImpl<<?%s trimws(f$Index)?>, dx, dy, dz>();
         return <?%s storage_to_real("stored_val", f)?>;
     }
-    template<int = 0, int = 0, int = 0> // Dummy template params are to get around nvcc template overloading bug(?)
+    template <int = 0, int = 0, int = 0>  // Dummy template params are to get around nvcc template overloading bug(?)
     CudaDeviceFunction real_t load_<?%s f$nicename ?>(int dx, int dy, int dz = 0) const {
         const storage_t stored_val = loadDynamicImpl<<?%s trimws(f$Index)?>>(dx, dy, dz);
         return <?%s storage_to_real("stored_val", f)?>;
     }
-<?R
+    <?R
 }
 for (s in rows(all_stages)) { ?>
-    template<class Node>
+    template <class Node>
     CudaDeviceFunction void pop<?%s s$suffix ?>(Node& node) const {
-<?R
+        <?R
 dens = Density;
 dens$load = s$load.densities;
 for (d in rows(dens)) if (d$load) {
@@ -122,25 +126,28 @@ for (d in rows(dens)) if (d$load) {
   dp = c(-d$dx, -d$dy, -d$dz)
   cat(paste0("        node.", d$name, " = load_", f$nicename, "<"), paste(dp, collapse=", "), " >();\n")
   } else if (!is.na(d$default)) { ?>
-  <?%s paste("node",d$name,sep=".") ?> = <?%f d$default ?>; <?R
-} ?>    }
-    template<class Node>
+        <?%s paste("node",d$name,sep=".") ?> = <?%f d$default ?>;
+        <?R
+} ?>
+    }
+    template <class Node>
     CudaDeviceFunction void push<?%s s$suffix ?>(const Node& node) const {
-<?R
+        <?R
 for (f in rows(Fields)[s$save.fields]) {
   cat(paste0("        store_", f$nicename, "(node.", f$name, ");\n"))
-} ?>    }
+} ?>
+    }
 #ifdef ADJOINT
-    template<class Node>
+    template <class Node>
     CudaDeviceFunction void pop<?%s s$suffix ?>_adj(Node& node) const {
         /// TODO
     }
-    template<class Node>
+    template <class Node>
     CudaDeviceFunction void push<?%s s$suffix ?>_adj(const Node& node) const {
         /// TODO
     }
 #endif
-<?R } ?>
+    <?R } ?>
 };
 
 #endif  // ARBLATTICEACCESS_HPP

@@ -2,16 +2,16 @@
 #define CBSAVEMEMORYDUMP_H
 
 #include "../CommonHandler.h"
-
-#include "vHandler.h"
 #include "Callback.h"
+#include "vHandler.h"
 
-class  cbSaveMemoryDump  : public  Callback  {
-	std::string fn;
-	public:
-	static std::string xmlname;
-int Init ();
-int DoIt ();
+class cbSaveMemoryDump : public Callback {
+    std::string fn;
+
+public:
+    static std::string xmlname;
+    int Init();
+    int DoIt();
 };
 
-#endif // CBSAVEMEMORYDUMP_H
+#endif  // CBSAVEMEMORYDUMP_H

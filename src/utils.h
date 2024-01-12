@@ -46,7 +46,7 @@ inline int myround(double v) {
 class name_set {
     std::set<std::string> myset;
 
-   public:
+public:
     bool all;
     typedef std::set<std::string>::iterator iterator;
     void add_from_string(std::string in, char separator) {
@@ -77,7 +77,9 @@ class name_set {
     std::set<std::string>::iterator end() { return myset.end(); }
 };
 
-int mkdir_p(const std::string& path, std::filesystem::perms perms = std::filesystem::perms::owner_all | std::filesystem::perms::group_all | std::filesystem::perms::others_read | std::filesystem::perms::others_exec);
+int mkdir_p(const std::string& path,
+            std::filesystem::perms perms = std::filesystem::perms::owner_all | std::filesystem::perms::group_all | std::filesystem::perms::others_read |
+                                           std::filesystem::perms::others_exec);
 
 void fprintB64(FILE* f, const void* tab, size_t len);
 

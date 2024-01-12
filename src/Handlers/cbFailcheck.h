@@ -2,18 +2,18 @@
 #define CBFAILCHECK_H
 
 #include "../CommonHandler.h"
-
-#include "vHandler.h"
 #include "Callback.h"
+#include "vHandler.h"
 
-class  cbFailcheck  : public  Callback  {
-	lbRegion reg;
-	bool currentlyactive;
-	public:
-	static std::string xmlname;
-int Init ();
-int DoIt ();
-int Finish ();
+class cbFailcheck : public Callback {
+    lbRegion reg;
+    bool currentlyactive;
+
+public:
+    static std::string xmlname;
+    int Init();
+    int DoIt();
+    int Finish();
 };
 
-#endif // CBFAILCHECK_H
+#endif  // CBFAILCHECK_H

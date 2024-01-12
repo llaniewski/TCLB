@@ -2,16 +2,15 @@
 #define ACMODEL_H
 
 #include "../CommonHandler.h"
-
-#include "vHandler.h"
 #include "Action.h"
 #include "GenericAction.h"
 #include "GenericContainer.h"
+#include "vHandler.h"
 
-class  acModel  : public  GenericContainer  {
-	public:
-	static std::string xmlname;
-int Init ();
+class acModel : public GenericContainer {
+public:
+    static std::string xmlname;
+    int Init();
 };
 
-#endif // ACMODEL_H
+#endif  // ACMODEL_H

@@ -3,7 +3,6 @@
 	c_header();
 ?>
 
-CudaDeviceFunction real_t getWB(){
-        return wb;
+CudaDeviceFunction real_t getWB() {
+    return wb;
 }
-

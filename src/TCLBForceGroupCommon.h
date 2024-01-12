@@ -10,7 +10,7 @@ typedef char rfi_code_t;
 #define RFI_CODE_FORCES 4
 #define RFI_CODE_ABORT 0xFF
 
-#define RFI_FINISHED ((rfi_size_t) -1)
+#define RFI_FINISHED ((rfi_size_t)-1)
 
 #define RFI_DATA_R 0
 #define RFI_DATA_POS 1

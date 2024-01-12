@@ -6,13 +6,13 @@ static void Base64char3(unsigned char* in, int len, char* out) {
     if (len > 3) len = 3;
     int i;
     unsigned int w = 0;
-    for (i = 0; i < len; i++) w = (w << 8) + (int)(in[i]);
+    for (i=0; i<len; i++) w = (w << 8) + (int)(in[i]);
     for (; i < 3; i++) w = w << 8;
-    for (i = 0; i < 4; i++) {
+    for (i=0; i<4; i++) {
         out[3 - i] = base64char[w & 0x3F];
         w = w >> 6;
     }
-    for (i = len; i < 3; i++) out[i + 1] = '=';
+    for (i=len; i<3; i++) out[i + 1] = '=';
 }
 
 void fprintB64(FILE* f, const void* tab, size_t len) {
@@ -54,21 +54,21 @@ FILE* fopen_gz(const char* filename, const char* mode) {
     if (gzip) {
         warning("Opening a gzip file: %s (%s)\n", filename, mode);
         if (strcmp(mode, "r") == 0) {
-            char cmd[STRING_LEN * 2];
+            char cmd[STRING_LEN*2];
             if (access(filename, R_OK)) return NULL;
             sprintf(cmd, "gzip -d <%s", filename);
             return popen(cmd, "r");
         } else if (strcmp(mode, "rb") == 0) {
-            char cmd[STRING_LEN * 2];
+            char cmd[STRING_LEN*2];
             if (access(filename, R_OK)) return NULL;
             sprintf(cmd, "gzip -d <%s", filename);
             return popen(cmd, "r");
         } else if (strcmp(mode, "w") == 0) {
-            char cmd[STRING_LEN * 2];
+            char cmd[STRING_LEN*2];
             sprintf(cmd, "gzip >%s", filename);
             return popen(cmd, "w");
         } else if (strcmp(mode, "a") == 0) {
-            char cmd[STRING_LEN * 2];
+            char cmd[STRING_LEN*2];
             sprintf(cmd, "gzip >>%s", filename);
             return popen(cmd, "w");
         } else {

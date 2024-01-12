@@ -44,50 +44,36 @@ for (i in 1:nrow(tab)) {
 
         print(xml)
         sink(xml)  
-?>
-
-<?xml version="1.0"?>
+?><?xml version="1.0"?>
 <CLBConfig version="2.0" output="output/">
-<Geometry nx="<?%f 20*D ?>" ny="<?%f D+2 ?>" >
-<CM><Box /></CM>
-<Smoothing><Box /></Smoothing>
+<Geometry nx="<?%f 20*D ?>" ny="<?%f D+2 ?>">
+<CM><Box/></CM>
+<Smoothing><Box/></Smoothing>
 <None name="taylorBubble">
-    <Box    dx="<?%f D ?>"              nx="<?%f 3*D ?>"     dy="<?%f 0.5*(D+2) - 0.5*0.75*D ?>" fy="<?%f 0.5*(D+2) + 0.5*0.75*D ?>" />
-    <Sphere dx="<?%f 4*D-0.5*0.75*D ?>" nx="<?%f 0.75*D  ?>" dy="<?%f 0.5*(D+2) - 0.5*0.75*D ?>" fy="<?%f 0.5*(D+2) + 0.5*0.75*D ?>" />
+    <Box dx="<?%f D ?>" nx="<?%f 3*D ?>" dy="<?%f 0.5*(D+2) - 0.5*0.75*D ?>" fy="<?%f 0.5*(D+2) + 0.5*0.75*D ?>"/>
+    <Sphere dx="<?%f 4*D-0.5*0.75*D ?>" nx="<?%f 0.75*D  ?>" dy="<?%f 0.5*(D+2) - 0.5*0.75*D ?>" fy="<?%f 0.5*(D+2) + 0.5*0.75*D ?>"/>
 </None>
 <Wall mask="ALL">
-    <Box   dy="-1" />
-    <Box   ny="1"  />
-    <Box   nx="1"  />
-    <Box   dx="-1" />
+    <Box dy="-1"/>
+    <Box ny="1"/>
+    <Box nx="1"/>
+    <Box dx="-1"/>
 </Wall>
 <centerLine>
-<Box dy="<?%f (D+2)/2 ?>" ny="1" />
+<Box dy="<?%f (D+2)/2 ?>" ny="1"/>
 </centerLine>
 </Geometry>
 <Model>
-<Params
-	Density_h  ="<?%f rhol ?>"  Density_l  ="<?%f rhog ?>"
-	Viscosity_h="<?%f nul ?>"   Viscosity_l="<?%f nug  ?>"
-	PhaseField_h="1"            PhaseField_l="0" 
-	PhaseField_init="1"         PhaseField_init-taylorBubble="0" 
-	
-	M="0.05"   
-	IntWidth="5"     
-	sigma="<?%.12f sigma ?>"
-	
-	GravitationX="<?%.12f -1*g ?>"
-	omega_bulk="1.0"
-/>
+<Params Density_h="<?%f rhol ?>" Density_l="<?%f rhog ?>" Viscosity_h="<?%f nul ?>" Viscosity_l="<?%f nug  ?>" PhaseField_h="1" PhaseField_l="0" PhaseField_init="1" PhaseField_init-taylorBubble="0" M="0.05" IntWidth="5" sigma="<?%.12f sigma ?>" GravitationX="<?%.12f -1*g ?>" omega_bulk="1.0"/>
 </Model>
 <VTK/>
 <Solve Iterations="25"/>
 <Geometry>
     <None mask="ADDITIONALS">
-        <Box />
+        <Box/>
     </None>
 <centerLine>
-<Box dy="<?%f (D+2)/2 ?>" ny="1" />
+<Box dy="<?%f (D+2)/2 ?>" ny="1"/>
 </centerLine>
 </Geometry>
 <VTK/>
@@ -96,9 +82,7 @@ for (i in 1:nrow(tab)) {
 	<VTK Iterations="<?%f 2*tstar ?>"/>
 	<Log Iterations="50"/>
 </Solve>
-</CLBConfig>
-
-<?R
+</CLBConfig><?R
     sink()
     detach()
 }

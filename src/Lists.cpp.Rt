@@ -1,5 +1,6 @@
 <?R source("conf.R"); ?>
 #include "Lists.h"
+
 #include "Consts.h"
 //#include "ModelConsts.h"
 #include <cmath>
@@ -10,7 +11,10 @@
 	for (v in rows(Settings)) if (!is.na(v$derived)) {
 		i = which(as.character(Settings$name) == as.character(v$derived));
 		sel = Settings[i[1],] ?>
-double DF_<?%s v$name ?> (double <?%s v$name ?>) { return <?%s v$equation ?>;} <?R
+double DF_<?%s v$name ?>(double <?%s v$name ?>) {
+    return <?%s v$equation ?>;
+}
+<?R
 	}
 ?>
 
@@ -18,19 +22,23 @@ double DF_<?%s v$name ?> (double <?%s v$name ?>) { return <?%s v$equation ?>;} <
 	for (objname in names(Objectives)) {
 		obj = Objectives[[objname]]
 ?>
-void OF_<?%s objname ?>(double *glob, double *obj, double *grad) { <?R
+void OF_<?%s objname ?>(double* glob, double* obj, double* grad) {
+    <?R
 	for (i in names(obj)) {
 		if (i != ".M") {
 			v = Globals[i == Globals$name,,drop=FALSE]
 			if (nrow(v) == 1) { ?>
-	double <?%s v$name ?> = glob[<?%s v$Index ?>]; <?R
+    double <?%s v$name ?> = glob[<?%s v$Index ?>];
+    <?R
 			}
 		}
 	} ?>
-	obj[0] = <?R C(obj) ?>; <?R
+    obj[0] = <?R C(obj) ?>;
+    <?R
 	for (v in rows(Globals)) {
 		der = deriv(obj, v$name) ?>
-	grad[<?%s v$Index ?>] = <?R C(der) ?>; <?R
+    grad[<?%s v$Index ?>] = <?R C(der) ?>;
+    <?R
 	} ?>
 }
 <?R } ?>
@@ -78,7 +86,7 @@ void OF_<?%s objname ?>(double *glob, double *obj, double *grad) { <?R
 
 Model_m::Model_m() {
     name = "<?%s MODEL ?>";
-<?R 
+    <?R 
 	il = data.frame(
 		id = Settings$Index,
 		name = q(Settings$name),

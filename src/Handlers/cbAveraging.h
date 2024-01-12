@@ -2,16 +2,15 @@
 #define CBAVERAGING_H
 
 #include "../CommonHandler.h"
-
-#include "vHandler.h"
 #include "Callback.h"
+#include "vHandler.h"
 
-class  cbAveraging  : public  Callback  {
-        public:
-	static std::string xmlname;
-int Init ();
-int DoIt ();
-int Finish ();
+class cbAveraging : public Callback {
+public:
+    static std::string xmlname;
+    int Init();
+    int DoIt();
+    int Finish();
 };
 
-#endif // CBAVERAGING_H
+#endif  // CBAVERAGING_H

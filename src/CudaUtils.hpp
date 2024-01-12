@@ -24,12 +24,12 @@ CudaUniquePtr<T> cudaMakeUnique(size_t size) {
     static_assert(std::is_trivial_v<T>, "Objects allocated on device must be of trivial type");
 
     void* ptr = nullptr;
-    CudaMalloc(&ptr, size * sizeof(T));  // Alignment?
+    CudaMalloc(&ptr, size*sizeof(T));  // Alignment?
     if (!ptr) throw std::bad_alloc{};
     return CudaUniquePtr<T>(static_cast<T*>(ptr));
 }
 
-/// Allocate 2D row-major array with row padding to promote coalesced memory access. At least num_rows * num_cols * sizeof(T) will be allocated
+/// Allocate 2D row-major array with row padding to promote coalesced memory access. At least num_rows*num_cols*sizeof(T) will be allocated
 /// \tparam T allocation type, must be trivial
 /// \param num_cols number of columns required, this will be updated to reflect the padding (num_cols_pre <= num_cols_post)
 /// \param num_rows number of rows
@@ -39,10 +39,10 @@ CudaUniquePtr<T> cudaMakeUnique2D(size_t& num_cols, size_t num_rows) {
     static_assert(std::is_trivial_v<T>, "Objects allocated on device must be of trivial type");
 
     void* ptr = nullptr;
-    size_t row_sz_bytes = num_cols * sizeof(T);
+    size_t row_sz_bytes = num_cols*sizeof(T);
     CudaMallocPitch(&ptr, &row_sz_bytes, row_sz_bytes, num_rows);
     assert(row_sz_bytes % sizeof(T) == 0);
-    num_cols = row_sz_bytes / sizeof(T);
+    num_cols = row_sz_bytes/sizeof(T);
     if (!ptr) throw std::bad_alloc{};
     return CudaUniquePtr<T>(static_cast<T*>(ptr));
 }
@@ -54,7 +54,7 @@ CudaUniquePtr<T> cudaMakeUnique2D(size_t& num_cols, size_t num_rows) {
 /// \param vec source host vector
 template <typename T, typename Alloc>
 void copyVecToDevice(T* device_ptr, const std::vector<T, Alloc>& vec) {
-    CudaMemcpy(device_ptr, vec.data(), vec.size() * sizeof(T), CudaMemcpyHostToDevice);
+    CudaMemcpy(device_ptr, vec.data(), vec.size()*sizeof(T), CudaMemcpyHostToDevice);
 }
 
 /// Copy std::vector to device asynchronously
@@ -65,7 +65,7 @@ void copyVecToDevice(T* device_ptr, const std::vector<T, Alloc>& vec) {
 /// \param stream execution stream
 template <typename T, typename Alloc>
 void copyVecToDeviceAsync(T* device_ptr, const std::vector<T, Alloc>& vec, CudaStream_t stream) {
-    CudaMemcpyAsync(device_ptr, vec.data(), vec.size() * sizeof(T), CudaMemcpyHostToDevice, stream);
+    CudaMemcpyAsync(device_ptr, vec.data(), vec.size()*sizeof(T), CudaMemcpyHostToDevice, stream);
 }
 
 /// std::fill_n executed in device memory

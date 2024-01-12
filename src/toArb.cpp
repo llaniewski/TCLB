@@ -7,7 +7,7 @@
 #include <vector>
 
 static long linPos(long x, long y, long z, long nx, long ny) {
-    return x + nx * y + nx * ny * z;
+    return x + nx*y + nx*ny*z;
 }
 
 // i mod m, assuming i is greater than -m and less than 2*m
@@ -24,10 +24,10 @@ static long linPosBoundschecked(long x, long y, long z, long nx, long ny, long n
 // Mark the lattice nodes which are in the bulk region
 static auto makeBulkBmp(const Geometry& geo, big_flag_t bulk_mask, big_flag_t bulk_flag) -> std::vector<bool> {
     const auto nx = geo.totalregion.nx, ny = geo.totalregion.ny, nz = geo.totalregion.nz;
-    std::vector<bool> retval(nx * ny * nz);
-    for (long z = 0; z < nz; z++)
-        for (long y = 0; y < ny; y++)
-            for (long x = 0; x < nx; x++)
+    std::vector<bool> retval(nx*ny*nz);
+    for (long z=0; z<nz; z++)
+        for (long y=0; y<ny; y++)
+            for (long x=0; x<nx; x++)
                 if ((geo.geom[geo.region.offset(x, y, z)] & bulk_mask) == bulk_flag) {
                     const auto lin_pos = linPos(x, y, z, nx, ny);
                     retval[lin_pos] = true;
@@ -82,15 +82,15 @@ static int writeArbLatticeNodes(const Geometry& geo,
         return nbr_it != lin_to_arb_index_map.end() ? nbr_it->second : -1;
     };
     for (long lin_pos = 0, z = 0; z < nz; z++)
-        for (long y = 0; y < ny; y++)
-            for (long x = 0; x < nx; x++) {
+        for (long y=0; y<ny; y++)
+            for (long x=0; x<nx; x++) {
                 const auto current_lin_pos = lin_pos++;
                 if (lin_to_arb_index_map.find(current_lin_pos) == lin_to_arb_index_map.end()) continue;  // void node
 
                 // Coordinates
-                const double x_coord = (static_cast<double>(x) + .5) * spacing;
-                const double y_coord = (static_cast<double>(y) + .5) * spacing;
-                const double z_coord = (static_cast<double>(z) + .5) * spacing;
+                const double x_coord = (static_cast<double>(x) + .5)*spacing;
+                const double y_coord = (static_cast<double>(y) + .5)*spacing;
+                const double z_coord = (static_cast<double>(z) + .5)*spacing;
                 file << x_coord << ' ' << y_coord << ' ' << z_coord << ' ';
 
                 // Neighbors
@@ -181,7 +181,7 @@ static int writeArbXml(const Solver& solver, const Geometry& geo, const Model& m
 
 static long liRegionSize(const lbRegion& region) {
     const long nx = region.nx, ny = region.ny, nz = region.nz;
-    return nx * ny * nz;
+    return nx*ny*nz;
 }
 
 int toArbitrary(const Solver& solver, const Geometry& geo, const Model& model) {
@@ -196,9 +196,9 @@ int toArbitrary(const Solver& solver, const Geometry& geo, const Model& model) {
     }
     const auto bulk_bmp = makeBulkBmp(geo, bulk_mask, bulk_flag);
     const auto id_map = makeArbLatticeIndexMap(geo.totalregion, bulk_bmp);
-    output("Interior size: %lu / %li", id_map.size(), liRegionSize(geo.totalregion));
+    output("Interior size: %lu/%li", id_map.size(), liRegionSize(geo.totalregion));
     const auto filename = solver.outGlobalFile("ARB", ".cxn");
-    const double spacing = 1 / solver.units.alt("m");
+    const double spacing = 1/solver.units.alt("m");
     output("Writing arbitrary lattice data to %s...", filename.c_str());
     if (writeArbLattice(geo, model, solver.setting_zones, id_map, bulk_bmp, filename, spacing)) return EXIT_FAILURE;
     return writeArbXml(solver, geo, model, filename);

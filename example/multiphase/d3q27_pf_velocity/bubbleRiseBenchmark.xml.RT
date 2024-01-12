@@ -28,8 +28,7 @@ time = c(12000, 12000)
 
 for (i in c(1,2)){
     print(names[i])
-    sink(names[i]) ?>
-<?xml version="1.0"?>
+    sink(names[i]) ?><?xml version="1.0"?>
 <!--Model:	d3q27_pf_velocity 
     Created: 	25-03-2021 
 
@@ -73,11 +72,10 @@ for (i in c(1,2)){
 	<VTK/>
 	<Solve Iterations="<?%f time[i] ?>">
 		<VTK Iterations="<?%f time[i]/6 ?>"/>
-		<Log Iterations="<?%f time[i]/100 ?>" />
-		<Failcheck Iterations="<?%f time[i]/100 ?>" />
+		<Log Iterations="<?%f time[i]/100 ?>"/>
+		<Failcheck Iterations="<?%f time[i]/100 ?>"/>
 	</Solve>
-</CLBConfig>
-<?R
+</CLBConfig><?R
     sink()
 }
 ?>

@@ -23,7 +23,7 @@
 		<Param name="C_1" value="0.1666"/>
 		
         
-		<Param name="Init_DRE_1" value="-0.5" />	
+		<Param name="Init_DRE_1" value="-0.5"/>	
         <Param name="Init_DRE_1" value="0.5" zone="city"/>	
 
     </Model>

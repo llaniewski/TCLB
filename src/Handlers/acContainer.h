@@ -2,16 +2,16 @@
 #define ACCONTAINER_H
 
 #include "../CommonHandler.h"
-
-#include "vHandler.h"
 #include "Action.h"
 #include "GenericAction.h"
+#include "vHandler.h"
 
-class  acContainer  : public  GenericAction  {
-	int times;
-	public:
-	static std::string xmlname;
-int Init ();
+class acContainer : public GenericAction {
+    int times;
+
+public:
+    static std::string xmlname;
+    int Init();
 };
 
-#endif // ACCONTAINER_H
+#endif  // ACCONTAINER_H

@@ -3,21 +3,21 @@
   c_header(); ?>
 
 #ifndef CONFIG_H
-  #include "../config.h"
-  #define CONFIG_H 
+#include "../config.h"
+#define CONFIG_H
 #endif
 
 #ifndef CONSTS_H
-#define CONSTS_H 
+#define CONSTS_H
 
 #define VERSION "<?%s git_version() ?>"
 #define MODEL "<?%s MODEL ?>"
 #define NUMBER_OF_DENSITIES <?%d nrow(DensityAll) ?>
 
 #ifdef CROSS_CPU
-  #define MAX_THREADS 1
+#define MAX_THREADS 1
 #else
-  #define MAX_THREADS 128
+#define MAX_THREADS 128
 #endif
 
 #define PART_MAR <?%f PartMargin ?>
@@ -48,11 +48,12 @@
 ?>
 
 typedef <?%s FlagT ?> flag_t;
-//typedef unsigned int big_flag_t;
+// typedef unsigned int big_flag_t;
 typedef flag_t big_flag_t;
 
 <?R for (e in names(Enums)) { ?>
-enum <?%s e ?> { <?%s paste(Enums[[e]],collapse=",") ?> }; <?R
+enum <?%s e ?> { <?%s paste(Enums[[e]],collapse=",") ?> };
+<?R
 } ?>
 
 <?R for (n in names(Options)) {

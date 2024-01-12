@@ -14,86 +14,78 @@ function error {
 }
 
 function verb {
-	if $VERB
-	then
+	if $VERB; then
 		echo "$@"
 	fi
 }
 
 function rm_tmp {
-  if test "x${PWD##*/}" == "xinstall_tmp"
-  then
-	cd .. && rm -fr install_tmp
-  else
-  	echo "Not in install_tmp directory while exiting"
-  	echo PWD: $PWD
-  fi
-  return 0;
+	if test "x${PWD##*/}" == "xinstall_tmp"; then
+		cd .. && rm -fr install_tmp
+	else
+		echo "Not in install_tmp directory while exiting"
+		echo PWD: $PWD
+	fi
+	return 0
 }
 
 function pms_error {
-	if test -z "$PMS"
-	then
+	if test -z "$PMS"; then
 		echo "The package manager needed for installation of '$1'"
 	else
 		echo "The package manager '$PMS' not supported for installation of '$1'"
 	fi
-	exit -1;
+	exit -1
 }
 
 function try {
 	comment=$1
 	log=$(echo $comment | sed 's|[ /]|.|g').log
 	shift
-	for RETRY in $(seq $TRYCOUNT)
-	do
-		FIRST=false; LAST=false; RTXT=""
+	for RETRY in $(seq $TRYCOUNT); do
+		FIRST=false
+		LAST=false
+		RTXT=""
 		test "$RETRY" == 1 && FIRST=true
 		test "$RETRY" == "$TRYCOUNT" && LAST=true
 		$FIRST || RTXT=" (retry $RETRY/$TRYCOUNT)"
-		if $DRY
-		then
+		if $DRY; then
 			echo "$comment$RTXT:"
 			echo "         $@"
-			return 0;
-		elif $GRPOUTPUT
-		then
+			return 0
+		elif $GRPOUTPUT; then
 			echo "::group::$comment$RTXT"
-			if "$@"
-			then
+			if "$@"; then
 				echo "::endgroup::"
-				return 0;
+				return 0
 			else
 				echo "---- FAILED ----"
 				echo "::endgroup::"
-				if $LAST
-				then
-					exit -1;
+				if $LAST; then
+					exit -1
 				fi
 			fi
 		else
 			echo -n "$comment$RTXT... "
-			if "$@" >$log 2>&1
-			then
+			if "$@" >$log 2>&1; then
 				echo "OK"
-				return 0;
+				return 0
 			else
 				echo "FAILED"
-				if $LAST
-				then
+				if $LAST; then
 					echo "----------------- CMD ----------------"
 					echo $@
 					echo "----------------- LOG ----------------"
-					cat  $log
+					cat $log
 					echo "--------------------------------------"
-					exit -1;
+					exit -1
 				fi
 			fi
 		fi
 		test $TRYDELAY != "0" && sleep $TRYDELAY
 	done
 	echo "That's weird. We should not arrive here."
-	exit -1;
+	exit -1
 }
 
 function install_rpackage_github {
@@ -129,32 +121,27 @@ function update_apt {
 	try "Updating APT" $SUDO apt-get update -qq
 }
 
-
 function gitdep.cp {
 	echo -n "Copy $1... "
-	if ! test -f "gitdep_repo/$1"
-	then
+	if ! test -f "gitdep_repo/$1"; then
 		echo "No such file"
-		exit -1;
+		exit -1
 	fi
-	if ! test -d "../$2"
-	then
-		echo "Targed directory $2 doesn't exist";
-		exit -1;
+	if ! test -d "../$2"; then
+		echo "Targed directory $2 doesn't exist"
+		exit -1
 	fi
-	if diff gitdep_repo/$1 ../$2 >/dev/null
-	then
+	if diff gitdep_repo/$1 ../$2 >/dev/null; then
 		echo "Same"
 	else
 		echo "Changed"
-		if $DRY
-		then
+		if $DRY; then
 			echo "cp \"gitdep_repo/$1\" \"../$2\""
 		else
 			cp "gitdep_repo/$1" "../$2"
 		fi
 	fi
-	return 0;
+	return 0
 }
 
 function gitdep {
@@ -164,12 +151,11 @@ function gitdep {
 	shift
 	echo "repo: $REPO dir:$DIR files:$@"
 	try "Clone $REPO" git clone $REPO gitdep_repo
-	for i in "$@"
-	do
+	for i in "$@"; do
 		gitdep.cp "$i" "$DIR"
 	done
 	rm -r gitdep_repo
-	return 0;
+	return 0
 }
 
 # --------------- Main install script -----------------------
@@ -178,7 +164,6 @@ function gitdep {
 mkdir -p install_tmp >/dev/null 2>&1 || error Failed to create install_tmp directory
 cd install_tmp >/dev/null 2>&1 || error Failed to go into install_tmp directory
 trap rm_tmp EXIT
-
 
 DRY=false
 GRPOUTPUT=false
@@ -195,22 +180,22 @@ CLEAN=false
 CLEAN_APT=false
 
 case "$1" in
--v|--verbose) VERB=true; shift ;;
+-v | --verbose)
+	VERB=true
+	shift
+	;;
 "") usage ;;
 esac
 
-for i in apt-get yum brew
-do
-	if test -f "$(command -v $i)"
-	then
+for i in apt-get yum brew; do
+	if test -f "$(command -v $i)"; then
 		verb "Discovered Package Manager: $i"
 		PMS=$i
 		break
 	fi
 done
 
-while test -n "$1"
-do
+while test -n "$1"; do
 	case "$1" in
 	--help)
 		echo ""
@@ -257,29 +242,35 @@ do
 		echo ""
 		echo "  *) needs sudo"
 		echo ""
-		exit 0;
+		exit 0
 		;;
 	--dry) DRY=true ;;
 	--small) SMALL=true ;;
 	--group) GRPOUTPUT=true ;;
-	--retry) shift; TRYCOUNT="$1" ;;
-	--retry-delay) shift; TRYDELAY="$1" ;;
+	--retry)
+		shift
+		TRYCOUNT="$1"
+		;;
+	--retry-delay)
+		shift
+		TRYDELAY="$1"
+		;;
 	--skipssl) WGETOPT="--no-check-certificate" ;;
-	--pms) shift; PMS="$1" ;;
+	--pms)
+		shift
+		PMS="$1"
+		;;
 	--github) GITHUB=true ;;
 	--rstudio-repo) RSTUDIO_REPO=true ;;
 	--clean) CLEAN=true ;;
-    -v|--verbose) error "-v/--verbose should be the first argument" ;;
+	-v | --verbose) error "-v/--verbose should be the first argument" ;;
 	--sudo)
-		if test "$UID" == "0"
-		then
+		if test "$UID" == "0"; then
 			verb "--sudo: running as root"
 		else
-			if test -f "$(command -v sudo)"
-			then
+			if test -f "$(command -v sudo)"; then
 				SUDO="sudo -n"
-				if $SUDO true 2>/dev/null
-				then
+				if $SUDO true 2>/dev/null; then
 					verb "--sudo: sudo working without password"
 				else
 					error "--sudo: sudo requires a password"
@@ -305,12 +296,10 @@ do
 			try "Installing R base" $SUDO yum install -y R
 			;;
 		apt-get)
-			if $RSTUDIO_REPO
-			then
+			if $RSTUDIO_REPO; then
 				CRAN="http://cran.rstudio.com"
 				DIST=$(lsb_release -cs)
-				if lsb_release -sid | grep "Mint"
-				then
+				if lsb_release -sid | grep "Mint"; then
 					DIST=trusty # All Mints are Trusty :-)
 				fi
 				try "Adding repository" add-apt-repository "deb ${CRAN}/bin/linux/ubuntu $DIST/"
@@ -323,35 +312,34 @@ do
 			try "Installing R from brew" brew install r
 			;;
 		*)
-			pms_error R ;;
+			pms_error R
+			;;
 		esac
 		#try "Changing access to R lib paths" chmod 2777 /usr/local/lib/R /usr/local/lib/R/site-library
 		;;
-	-r|--rpackage)
+	-r | --rpackage)
 		shift
 		test -z "$1" && error "usage tools/install.sh [--github] --rpackage package_name"
 		case "$1" in
 		*/*) GITHUB=true ;;
 		esac
 
-		if $GITHUB
-		then
+		if $GITHUB; then
 			install_rpackage_github "$1"
 		else
 			install_rpackage "$1"
 		fi
 		;;
 	rdep)
-		if $GITHUB
-		then
-				install_rpackage_github cran/getopt
-				install_rpackage_github cran/optparse
-#				install_rpackage_github cran/numbers
-				install_rpackage_github cran/yaml
+		if $GITHUB; then
+			install_rpackage_github cran/getopt
+			install_rpackage_github cran/optparse
+			#				install_rpackage_github cran/numbers
+			install_rpackage_github cran/yaml
 		else
-				install_rpackage optparse
-#				install_rpackage numbers
-				install_rpackage yaml
+			install_rpackage optparse
+			#				install_rpackage numbers
+			install_rpackage yaml
 		fi
 		install_rpackage_github llaniewski/rtemplate
 		install_rpackage_github llaniewski/gvector
@@ -367,8 +355,7 @@ do
 		install_rpackage reticulate
 		;;
 	rinside)
-		if $GITHUB
-		then
+		if $GITHUB; then
 			install_rpackage_github eddelbuettel/rinside
 		else
 			install_rpackage RInside
@@ -384,8 +371,7 @@ do
 		case "$PMS" in
 		apt-get)
 			OS=ubuntu1204
-			if test "$(lsb_release -si)" == "Ubuntu"
-			then
+			if test "$(lsb_release -si)" == "Ubuntu"; then
 				OS="ubuntu$(lsb_release -sr | sed 's/[.]//g')"
 			fi
 			KEYRINGVER='1.0-1'
@@ -397,16 +383,16 @@ do
 			update_apt
 			CUDA_APT=${CUDA%-*}
 			CUDA_APT=${CUDA_APT/./-}
-			if $SMALL
-			then
+			if $SMALL; then
 				install_apt "Installing CUDA form APT" cuda-nvcc-${CUDA_APT}
 			else
 				install_apt "Installing CUDA form APT" cuda-compiler-${CUDA_APT} cuda-libraries-${CUDA_APT} cuda-libraries-dev-${CUDA_APT}
 			fi
-#			try "Clean APT" $SUDO apt-get clean
+			#			try "Clean APT" $SUDO apt-get clean
 			;;
 		*)
-			pms_error CUDA ;;
+			pms_error CUDA
+			;;
 		esac
 		;;
 	hip)
@@ -415,13 +401,12 @@ do
 		HIP=$1
 		shift
 		echo "#### Installing HIP library ####"
-		IFS=. read V1 V2 V3 <<< $HIP
+		IFS=. read V1 V2 V3 <<<$HIP
 		echo "Installing version: $HIP ($V1|$V2|$V3)"
 		case "$PMS" in
 		apt-get)
 			OS=xenial
-			if test "$(lsb_release -si)" == "Ubuntu"
-			then
+			if test "$(lsb_release -si)" == "Ubuntu"; then
 				OS="$(lsb_release -sc)"
 			fi
 			echo "OS codename: $OS"
@@ -429,8 +414,7 @@ do
 			try "De-armoring the key" gpg --output rocm.gpg --dearmor rocm.gpg.key
 			try "Create keyrings dir" $SUDO mkdir --parents --mode=0755 /etc/apt/keyrings
 			try "Planting ROCM key" $SUDO mv rocm.gpg /etc/apt/keyrings/rocm.gpg
-			if ! $SMALL
-			then
+			if ! $SMALL; then
 				echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/amdgpu/$HIP/ubuntu $OS main" >amdgpu.list
 				try "Planting the APT source" $SUDO mv amdgpu.list /etc/apt/sources.list.d/amdgpu.list
 			fi
@@ -439,8 +423,7 @@ do
 			echo -e 'Package: *\nPin: release o=repo.radeon.com\nPin-Priority: 600' >rocm-pin-600
 			try "Planting PIN" $SUDO mv rocm-pin-600 /etc/apt/preferences.d/rocm-pin-600
 			update_apt
-			if $SMALL
-			then
+			if $SMALL; then
 				install_apt "Installing ROCm" rocm-hip-runtime-dev
 			else
 				install_apt "Installing ROCm" rocm-hip-sdk amdgpu-dkms
@@ -448,7 +431,8 @@ do
 			install_apt "Install missing package for HIP" libstdc++-12-dev
 			;;
 		*)
-			pms_error HIP ;;
+			pms_error HIP
+			;;
 		esac
 		;;
 	openmpi)
@@ -456,19 +440,20 @@ do
 		yum)
 			try "Installing openmpi from yum" $SUDO yum install -y openmpi
 			try "Installing openmpi-devel from yum" $SUDO yum install -y openmpi-devel
-#			try "Clean yum" $SUDO yum clean packages
+			#			try "Clean yum" $SUDO yum clean packages
 			echo "Don't forget to load mpi module before compilation."
 			;;
 		apt-get)
 			update_apt
 			install_apt "Installing OpenMPI from APT" openmpi-bin libopenmpi-dev
-#			try "Clean APT" $SUDO apt-get clean
+			#			try "Clean APT" $SUDO apt-get clean
 			;;
 		brew)
 			try "Installing OpenMPI from brew" brew install openmpi
 			;;
 		*)
-			pms_error OpenMPI ;;
+			pms_error OpenMPI
+			;;
 		esac
 		;;
 	lcov)
@@ -478,28 +463,26 @@ do
 			install_apt "Installing lcov and time" time lcov
 			;;
 		*)
-			pms_error lcov ;;
+			pms_error lcov
+			;;
 		esac
 		;;
 	submodules)
-		if test -f "../tests/README.md"
-		then
+		if test -f "../tests/README.md"; then
 			echo "\"tests\" already cloned"
 			exit 0
 		fi
-#		try "Saving gitmodules" cp ../.gitmodules gitmodules
-#		try "Changing URLs of submodules" sed -i 's/git@github.com:/https:\/\/github.com\//' ../.gitmodules
+		#		try "Saving gitmodules" cp ../.gitmodules gitmodules
+		#		try "Changing URLs of submodules" sed -i 's/git@github.com:/https:\/\/github.com\//' ../.gitmodules
 		try "Updating \"tests\" submodule" git submodule update --init ../tests
-#		try "Loading gitmodules" mv gitmodules ../.gitmodules
+		#		try "Loading gitmodules" mv gitmodules ../.gitmodules
 		;;
 	gitdep)
-		if ! test -f "../.gitdeps"
-		then
+		if ! test -f "../.gitdeps"; then
 			echo no .gitdeps file
-			exit 0;
+			exit 0
 		fi
-		while read line
-		do
+		while read line; do
 			gitdep $line
 		done <../.gitdeps
 		;;
@@ -518,7 +501,8 @@ do
 			try "Installing Python from brew (this should install headers as well)" brew install python
 			;;
 		*)
-			pms_error python-dev ;;
+			pms_error python-dev
+			;;
 		esac
 		;;
 	module)
@@ -528,7 +512,8 @@ do
 			try "Installing dependencies: tcl-devel" $SUDO yum -y install tcl-devel
 			;;
 		*)
-			pms_error ;;
+			pms_error
+			;;
 		esac
 		try "Downloading module" wget https://github.com/cea-hpc/modules/releases/download/v4.1.0/modules-4.1.0.tar.bz2
 		try "Unpacking archive" tar -xjf modules-4.1.0.tar.bz2 -C .
@@ -540,42 +525,47 @@ do
 		try "Remember to restart terminal" . ~/.bashrc
 		;;
 	tapenade)
-		if echo "$2" | grep -Eq '^[0-9]*[.][0-9]*$'
-		then
+		if echo "$2" | grep -Eq '^[0-9]*[.][0-9]*$'; then
 			shift
 			VER="$1"
 		else
 			VER="3.16"
 		fi
-		if test -d ../tapenade
-		then
-			echo "Looks like tapenade already is installed at '$(cd ../tapenade; pwd))'"
+		if test -d ../tapenade; then
+			echo "Looks like tapenade already is installed at '$(
+				cd ../tapenade
+				pwd
+			))'"
 			exit -1
 		fi
 		try "Downloading Tapenade ($VER)" wget $WGETOPT http://www-sop.inria.fr/ecuador/tapenade/distrib/tapenade_$VER.tar
 		try "Unpacking Tapenade" tar xf tapenade_$VER.tar
-		if test -d tapenade_$VER
-		then
+		if test -d tapenade_$VER; then
 			mv tapenade_$VER ../tapenade
-			echo "Installed Tapenade at '$(cd ../tapenade; pwd)'"
+			echo "Installed Tapenade at '$(
+				cd ../tapenade
+				pwd
+			)'"
 		else
 			echo "Tapenade installation failed"
 		fi
 		;;
 	-*)
-		echo "Unknown option $1" ; usage ;;
+		echo "Unknown option $1"
+		usage
+		;;
 	*)
-		echo "Unknown installation '$1'"; usage ;;
+		echo "Unknown installation '$1'"
+		usage
+		;;
 	esac
 	shift
 done
 
-if $CLEAN
-then
-	if $CLEAN_APT
-	then
+if $CLEAN; then
+	if $CLEAN_APT; then
 		try "Cleaning apt" $SUDO apt-get -y clean
 	fi
 fi
 
-exit 0;
+exit 0

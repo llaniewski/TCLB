@@ -2,14 +2,13 @@
 #define CONCONTROLPARAMETER_H
 
 #include "../CommonHandler.h"
-
-#include "vHandler.h"
 #include "Action.h"
+#include "vHandler.h"
 
-class  conControlParameter  : public  Action  {
-	public:
-	static std::string xmlname;
-int Init ();
+class conControlParameter : public Action {
+public:
+    static std::string xmlname;
+    int Init();
 };
 
-#endif // CONCONTROLPARAMETER_H
+#endif  // CONCONTROLPARAMETER_H

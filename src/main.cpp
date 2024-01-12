@@ -2,9 +2,6 @@
 /*     Here we have all the initialization and the main loop   */
 /*-------------------------------------------------------------*/
 
-#include "Consts.h"
-
-
 #include <assert.h>
 #include <mpi.h>
 
@@ -17,6 +14,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "Consts.h"
 #include "GetThreads.h"
 #include "Global.h"
 #include "Solver.h"
@@ -30,7 +28,7 @@
 CudaEvent_t start, stop;  // CUDA events to measure time
 
 class MainCallback {
-   public:
+public:
     MainCallback(Solver* solver_) : solver(solver_) {}
     int operator()(int seg, int tot) {
         int begin = tot == 0;
@@ -57,35 +55,38 @@ class MainCallback {
                 eTime = elapsedTime;
                 all_iter = iter;
             }
-            int ups = (float)(1000. * all_iter) / eTime;  // Steps made per second
-            const double lbups = static_cast<double>(solver->getGlobalLatticeSize() * iter / elapsedTime);
-            int desired_steps = ups / desired_fps;  // Desired steps per frame (so that on next frame fps = desired_fps)
+            int ups = (float)(1000.*all_iter)/eTime;  // Steps made per second
+            const double lbups = static_cast<double>(solver->getGlobalLatticeSize()*iter/elapsedTime);
+            int desired_steps = ups/desired_fps;  // Desired steps per frame (so that on next frame fps = desired_fps)
             char per[1000];
             char buf[1000];
             char left[1000];
-            // int left_s = (cum_time * (seg - tot)) / ((tot+1) * 1000);
-            int left_s = cum_time / 1000;
+            // int left_s = (cum_time*(seg - tot))/((tot+1)*1000);
+            int left_s = cum_time/1000;
             if (left_s < 60) {
                 sprintf(left, "%2ds", left_s);
             } else {
-                int left_m = left_s / 60;
-                left_s = left_s - left_m * 60;
+                int left_m = left_s/60;
+                left_s = left_s - left_m*60;
                 if (left_m < 60) {
                     sprintf(left, "%2dm %2ds", left_m, left_s);
                 } else {
-                    int left_h = left_m / 60;
-                    left_m = left_m - left_h * 60;
+                    int left_h = left_m/60;
+                    left_m = left_m - left_h*60;
                     sprintf(left, "%dh %2dm", left_h, left_m);
                 }
             }
-            sprintf(buf, "%8.1f MLBUps   %7.2f GB/s", lbups / 1000., (lbups * (2. * solver->lattice->model->fields.size() * sizeof(real_t) + sizeof(flag_t))) / 1e6);
+            sprintf(buf,
+                    "%8.1f MLBUps   %7.2f GB/s",
+                    lbups/1000.,
+                    (lbups*(2.*solver->lattice->model->fields.size()*sizeof(real_t) + sizeof(flag_t)))/1e6);
             int per_len = 20;
             {
                 int i = 0;
                 per[i] = '[';
                 i++;
                 for (; i <= per_len; i++)
-                    if (i * seg <= tot * per_len) per[i] = '=';
+                    if (i*seg <= tot*per_len) per[i] = '=';
                     else
                         per[i] = ' ';
                 per[i] = ']';
@@ -115,7 +116,7 @@ class MainCallback {
         return steps;
     }
 
-   private:
+private:
     Solver* solver;
     int iter = 0;
     int last_tot = 0;
@@ -206,13 +207,15 @@ int selectDevice(pugi::xml_node config) {
 }
 
 std::array<int, 3> readLatticeDims(const UnitEnv& units, pugi::xml_node geom) {
-    return {myround(units.alt(geom.attribute("nx").value(), 1)), myround(units.alt(geom.attribute("ny").value(), 1)), myround(units.alt(geom.attribute("nz").value(), 1))};
+    return {myround(units.alt(geom.attribute("nx").value(), 1)),
+            myround(units.alt(geom.attribute("ny").value(), 1)),
+            myround(units.alt(geom.attribute("nz").value(), 1))};
 }
 
 class SolverBuilder {
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
 
-   public:
+public:
     std::unique_ptr<Solver> build() {
         solver->setOutput("");
         return std::exchange(solver, {});
@@ -249,7 +252,9 @@ class SolverBuilder {
     void setSnaps() {
         int num_snaps = 2;
         // Finding the adjoint element
-        pugi::xml_node adj = solver->configfile.find_node([](pugi::xml_node node) { return std::string_view(node.name()) == "Adjoint" ? (std::string_view(node.attribute("type").value()) != "steady") : false; });
+        pugi::xml_node adj = solver->configfile.find_node([](pugi::xml_node node) {
+            return std::string_view(node.name()) == "Adjoint" ? (std::string_view(node.attribute("type").value()) != "steady") : false;
+        });
         if (adj) {
             const auto attr = adj.attribute("NumberOfSnaps");
             num_snaps = attr ? std::max(attr.as_int(), 2) : 10;
@@ -268,7 +273,7 @@ class SolverBuilder {
     int setArbitrary(pugi::xml_node arb_node) { return solver->initArbLattice(arb_node); }
     void setCallback() { solver->lattice->setCallback(MainCallback(solver.get())); }
 
-   private:
+private:
     int readUnits(pugi::xml_node config) {
         pugi::xml_node set = config.child("Units");
         if (!set) {
@@ -358,7 +363,11 @@ int main(int argc, char* argv[]) {
     MPI_Barrier(MPMD.local);
     DEBUG_M;
 
-    DEBUG0(debug0("0 level debug"); debug1("1 level debug"); debug2("2 level debug"); output("normal output"); notice("notice"); NOTICE("important notice"); warning("warning"); WARNING("important warning"); error("error"); ERROR("fatal error");)
+    DEBUG0(debug0("0 level debug"); debug1("1 level debug"); debug2("2 level debug"); output("normal output"); notice("notice"); NOTICE("important notice");
+           warning("warning");
+           WARNING("important warning");
+           error("error");
+           ERROR("fatal error");)
 
     // Read arguments, at least 1 is required
     if (argc < 2) {
@@ -479,7 +488,7 @@ int main(int argc, char* argv[]) {
 
         if (solver->mpi_rank == 0) {
             double duration = get_walltime();
-            output("Total duration: %lf s = %lf min = %lf h\n", duration, duration / 60, duration / 60 / 60);
+            output("Total duration: %lf s = %lf min = %lf h\n", duration, duration/60, duration/60/60);
         }
     }
 

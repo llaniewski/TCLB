@@ -73,15 +73,14 @@
 
 #define pi 3.141592653589793116
 #define w0 0x0
-#define w1 0x01 // hex for 0000 0001
-#define w2 0x02 // hex for 0000 0010
-#define w3 0x04 // hex for 0000 0100
-#define w4 0x08 // hex for 0000 1000
-#define w5 0x10 // hex for 0001 0000
-#define w6 0x20 // hex for 0010 0000
-#define w7 0x40 // hex for 0100 0000
-#define w8 0x80 // hex for 1000 0000
- 
+#define w1 0x01  // hex for 0000 0001
+#define w2 0x02  // hex for 0000 0010
+#define w3 0x04  // hex for 0000 0100
+#define w4 0x08  // hex for 0000 1000
+#define w5 0x10  // hex for 0001 0000
+#define w6 0x20  // hex for 0010 0000
+#define w7 0x40  // hex for 0100 0000
+#define w8 0x80  // hex for 1000 0000
 
 #define s0 0
 #define s1 0
@@ -101,213 +100,181 @@ bool near_wall;
 
 #define buffSize 4
 
-    
-void matPrint( const real_t AA[buffSize][buffSize]){
-
-    for (int i=0; i <buffSize; i++){
+void matPrint(const real_t AA[buffSize][buffSize]) {
+    for (int i=0; i<buffSize; i++) {
         printf("[ ");
-        for (int j=0; j < buffSize; j++){
-            printf("%.5f, ", AA[i][j]);
-        }        
+        for (int j=0; j<buffSize; j++) { printf("%.5f, ", AA[i][j]); }
         printf("]\n");
     }
     printf("\nXXXXXXXXXXXXXXXXXX\n\n");
-
 }
 
-void vecPrint( const real_t AA[buffSize]){
-
+void vecPrint(const real_t AA[buffSize]) {
     printf("[ ");
-    
-    for (int i=0; i <buffSize; i++){
-        printf("%.5f, ", AA[i]);
-    }
-    
+
+    for (int i=0; i<buffSize; i++) { printf("%.5f, ", AA[i]); }
+
     printf("]\n");
-    
+
     printf("\nXXXXXXXXXXXXXXXXXX\n\n");
-
 }
-CudaDeviceFunction void  InitPhisStencil(){
-
-    if(IamWall){
-	    gradient.x = 0;
-    	gradient.y = 0;
-	    curvature = 0;
+CudaDeviceFunction void InitPhisStencil() {
+    if (IamWall) {
+        gradient.x = 0;
+        gradient.y = 0;
+        curvature = 0;
     } else {
+        debug.x = 0;
+        debug.y = 0;
+        debug.z = 0;
+        // calculate phi
+        //
+        CalcPhi();
 
-    debug.x = 0;
-    debug.y = 0;
-    debug.z = 0;
-    //calculate phi
-    //
-    CalcPhi();
-    
-    
+        // calculate gradient and normal
+        vector_t n, nw;  // = getGradientPhi();
+        n.x = 0;
+        n.y = 0;
+        nw.x = 0;
+        nw.y = 0;
+        int inwall = 0;
 
+        real_t ctg_alpha = 0;
+        unsigned int wall_pattern = 0x0;
 
-    //calculate gradient and normal
-    vector_t n, nw;// = getGradientPhi();
-    n.x = 0;
-    n.y = 0;
-    nw.x = 0;
-    nw.y = 0;
-    int inwall = 0;
+        switch (NodeType & NODE_BOUNDARY) {
+            case NODE_SSymmetry:
+                <?R j = 2 ?>
+                n.x = n.x + <?R C(phis[j]*wi[j]*U[j,1]) ?>;
 
-    real_t ctg_alpha = 0;
-    unsigned int wall_pattern = 0x0;
+                <?R j = 4 ?>
+                n.x = n.x + <?R C(phis[j]*wi[j]*U[j,1]) ?>;
 
-    switch (NodeType & NODE_BOUNDARY) {
-    case NODE_SSymmetry:
-            <?R j = 2 ?>     
-            n.x = n.x + <?R C(phis[j]*wi[j]*U[j,1]) ?>;
+                <?R j = 6 ?>
+                n.x = n.x + <?R C(2*phis[j]*wi[j]*U[j,1]) ?>;
 
-            <?R j = 4 ?>     
-            n.x = n.x + <?R C(phis[j]*wi[j]*U[j,1]) ?>;
-                 
-            <?R j = 6 ?>
-            n.x = n.x + <?R C(2*phis[j]*wi[j]*U[j,1]) ?>;
+                <?R j = 7 ?>
+                n.x = n.x + <?R C(2*phis[j]*wi[j]*U[j,1]) ?>;
 
-            <?R j = 7 ?>
-            n.x = n.x + <?R C(2*phis[j]*wi[j]*U[j,1]) ?>;
+                <?R j = 3 ?>
+                n.x = n.x + <?R C(2*phis[j]*wi[j]*U[j,1]) ?>;
 
-            <?R j = 3 ?>
-            n.x = n.x + <?R C(2*phis[j]*wi[j]*U[j,1]) ?>;
+                break;
+            case NODE_NSymmetry:
+                <?R j = 2 ?>
+                n.x = n.x + <?R C(phis[j]*wi[j]*U[j,1]) ?>;
 
-        break;
-    case NODE_NSymmetry:
-            <?R j = 2 ?>     
-            n.x = n.x + <?R C(phis[j]*wi[j]*U[j,1]) ?>;
+                <?R j = 4 ?>
+                n.x = n.x + <?R C(phis[j]*wi[j]*U[j,1]) ?>;
 
-            <?R j = 4 ?>     
-            n.x = n.x + <?R C(phis[j]*wi[j]*U[j,1]) ?>;
-                 
-            <?R j = 9 ?>
-            n.x = n.x + <?R C(2*phis[j]*wi[j]*U[j,1]) ?>;
+                <?R j = 9 ?>
+                n.x = n.x + <?R C(2*phis[j]*wi[j]*U[j,1]) ?>;
 
-            <?R j = 8 ?>
-            n.x = n.x + <?R C(2*phis[j]*wi[j]*U[j,1]) ?>;
+                <?R j = 8 ?>
+                n.x = n.x + <?R C(2*phis[j]*wi[j]*U[j,1]) ?>;
 
-            <?R j = 5 ?>
-            n.x = n.x + <?R C(2*phis[j]*wi[j]*U[j,1]) ?>;
-        break;
-    default:
-       <?R
+                <?R j = 5 ?>
+                n.x = n.x + <?R C(2*phis[j]*wi[j]*U[j,1]) ?>;
+                break;
+            default:
+                <?R
         for (j in 1:9) {
-        ?> 
-            if (<?R C(phis[j]) ?>  != -999) {
-                n.x = n.x + <?R C(phis[j]*U[j,1]*wi[j]) ?>;
-                n.y = n.y + <?R C( phis[j]*U[j,2]*wi[j]) ?>;
+        ?>
+                if (<?R C(phis[j]) ?> != -999) {
+                    n.x = n.x + <?R C(phis[j]*U[j,1]*wi[j]) ?>;
+                    n.y = n.y + <?R C( phis[j]*U[j,2]*wi[j]) ?>;
+                } else {
+                    wall_pattern = wall_pattern + w<?%s j-1 ?>;
+                }
+                <?R } ?>
+                break;
+        }
+
+        // gradient.x = n.x*3.;
+        // gradient.y = n.y*3.;
+        // gradient.z = 0;
+
+        real_t ln = sqrt(n.x*n.x + n.y*n.y);
+        if (ln == 0.) {
+            n.x = 0.;
+            n.y = 0.;
+        } else {
+            n.x /= ln;
+            n.y /= ln;
+        }
+
+        //    normal = n;
+        near_wall = !(wall_pattern == 0);
+
+        real_t t1, t2;
+        real_t my = 0;
+        real_t mx = 0;
+        real_t mxy = 0;
+
+        if (near_wall && (wall_pattern != 255)) {
+            nw.x = nw_x(0, 0);
+            nw.y = nw_y(0, 0);
+            nw_x = nw_x(0, 0);
+            nw_y = nw_y(0, 0);
+
+            real_t ln = sqrt(nw.x*nw.x + nw.y*nw.y);
+            if (ln == 0.) {
+                nw.x = 0.;
+                nw.y = 0.;
             } else {
-                wall_pattern = wall_pattern + w<?%s j-1 ?>;
+                nw.x /= -ln;
+                nw.y /= -ln;
             }
-        <?R } ?>
-        break;
-    }
 
+            vector_t temp, temp1;
+            real_t ca = cos(WettingAngle);
+            real_t sa = sin(WettingAngle);
+            temp.x = ca*nw.x + sa*nw.y - n.x;
+            temp.y = -sa*nw.x + ca*nw.y - n.y;
+            real_t l1 = sqrt(temp.x*temp.x + temp.y*temp.y);
 
-    //gradient.x = n.x*3.;
-    //gradient.y = n.y*3.;
-    //gradient.z = 0;
+            sa = -sa;  // oposite rotation
+            temp1.x = ca*nw.x + sa*nw.y - n.x;
+            temp1.y = -sa*nw.x + ca*nw.y - n.y;
+            real_t l2 = sqrt(temp1.x*temp1.x + temp1.y*temp1.y);
 
-    real_t ln = sqrt(n.x*n.x + n.y*n.y);    
-    if(ln == 0.){
-        n.x = 0.;
-        n.y = 0.;
-    } else {
-        n.x /= ln;
-        n.y /= ln;
-    }
+            real_t wa = 0;
+            if (l2 < l1) {
+                wa = -WettingAngle;
+            } else {
+                wa = WettingAngle;
+            }
 
-//    normal = n;
-    near_wall = !(wall_pattern == 0);
-
-    real_t t1,t2;
-    real_t my = 0;
-    real_t mx = 0;
-    real_t mxy = 0;
-    
-    if (near_wall && (wall_pattern != 255)){
-
-        nw.x = nw_x(0,0);
-        nw.y = nw_y(0,0);
-        nw_x = nw_x(0,0);
-        nw_y = nw_y(0,0);
-        
-        real_t ln = sqrt(nw.x*nw.x + nw.y*nw.y);    
-        if(ln == 0.){
-            nw.x = 0.;
-            nw.y = 0.;
-        } else {
-            nw.x /= -ln;
-            nw.y /= -ln;
+            ctg_alpha = tan(wa + pi/2.);
+            unsigned btype = 0x0;
         }
+        //*******
+        // NEXTGEN STARS HERE ;)
+        //**/
 
-        vector_t temp, temp1;
-        real_t ca = cos(WettingAngle);
-        real_t sa = sin(WettingAngle);
-        temp.x = ca * nw.x + sa * nw.y - n.x;
-        temp.y = -sa * nw.x + ca * nw.y - n.y;
-        real_t l1 = sqrt(temp.x * temp.x + temp.y * temp.y);
+        const int aj = buffSize;
+        int ajj = 0;
+        const int ai = buffSize;
+        real_t A[buffSize][buffSize];
+        real_t B[buffSize][buffSize];
+        real_t y[buffSize];
+        int iwrite = 0;
+        real_t wx, wy, wc;
+        real_t temp[buffSize];
+        gradient.x = 0;
+        gradient.y = 0;
+        gradient.z = 0;
+        curvature = 0;
+        wx = 0;
+        wy = 0;
+        wc = 0;
 
-        
-        sa = -sa; //oposite rotation
-        temp1.x = ca * nw.x + sa * nw.y - n.x;
-        temp1.y = -sa * nw.x + ca * nw.y - n.y;
-        real_t l2 = sqrt(temp1.x * temp1.x + temp1.y * temp1.y);
-    
-        real_t wa = 0;
-        if ( l2 < l1 ) {
-            wa = -WettingAngle;
-        } else {
-            wa = WettingAngle;
-        }
-          
-    
+        const real_t A0_BC[4] = {0, ctg_alpha*nw.y - nw.x, -ctg_alpha*nw.x - nw.y, 0};
+        bool pid_cond;
 
-        ctg_alpha = tan(wa+pi/2.);
-        unsigned btype = 0x0;
+        const real_t A0[16] = {1, 1, 1, 1, -1, 1, 1, -1, -1, -1, 1, 1, 1, -1, 1, -1};
 
- 
-    }
-//*******
-//NEXTGEN STARS HERE ;)
-//**/
-
-    const int aj = buffSize;
-    int ajj = 0;
-    const int ai = buffSize;
-    real_t A[buffSize][buffSize];
-    real_t B[buffSize][buffSize];
-    real_t y[buffSize];
-    int iwrite = 0;  
-    real_t wx,wy,wc;
-    real_t temp[buffSize];
-    gradient.x = 0;
-    gradient.y = 0;
-    gradient.z = 0;
-    curvature = 0;
-    wx = 0;
-    wy = 0;
-    wc = 0;
-
-
-	const real_t A0_BC[4] = {
-            0,
-            ctg_alpha*nw.y - nw.x,
-            -ctg_alpha*nw.x - nw.y,
-            0  
-	};
-    bool pid_cond;
-
-	const real_t A0[16] = {
-		 1, 1, 1, 1,
-		-1, 1, 1,-1,
-		-1,-1, 1, 1,
-		 1,-1, 1,-1
-	};
-
- <?R 
+        <?R 
     boxes = array(c(
         c(0,1,5,2),
         c(3,0,2,6),
@@ -347,266 +314,224 @@ CudaDeviceFunction void  InitPhisStencil(){
     for (box_i in c(1:4)){
         ?>
         ajj = 0;
-        for(int i = 0; i < buffSize; i++){
-           for(int j = 0; j < buffSize; j++){
-              A[i][j] = 0;  
-              B[i][j] = 0;
-           }
-           y[i] = 0;
-           temp[i] = 0;
+        for (int i=0; i<buffSize; i++) {
+            for (int j=0; j<buffSize; j++) {
+                A[i][j] = 0;
+                B[i][j] = 0;
+            }
+            y[i] = 0;
+            temp[i] = 0;
         }
 
-
-
-    switch (NodeType & NODE_BOUNDARY) {
-        case NODE_SSymmetry:
-         <?R
+        switch (NodeType & NODE_BOUNDARY) {
+            case NODE_SSymmetry:
+                <?R
         box = boxes_SS[,box_i]
         box_phis = phis[box+1]     
         ?>
-        <?R for (pid in c(1:4)){ ?>
-            pid_cond =  (wall_pattern >> s<?%s box[pid]?> & 0x1 ) ; 
-            <?R for (fid in c(1:4)){  ?>
+                <?R for (pid in c(1:4)){ ?>
+                pid_cond = (wall_pattern >> s<?%s box[pid]?> & 0x1);
+                <?R for (fid in c(1:4)){  ?>
                 A[<?%s fid-1 ?>][<?%s pid-1 ?>] = pid_cond ? A0_BC[<?%s fid-1 ?>] : <?%s A0[pid,fid] ?>;
-            <?R } ?>
-    		y[<?%s pid-1 ?>] = pid_cond ? 0 : <?R C(box_phis[pid]) ?> ;
-            ajj += pid_cond ? 0 : 1;
+                <?R } ?>
+                y[<?%s pid-1 ?>] = pid_cond ? 0 : <?R C(box_phis[pid]) ?>;
+                ajj += pid_cond ? 0 : 1;
 
-        <?R } ?>
-            break;
-        case NODE_NSymmetry:
-        <?R
+                <?R } ?>
+                break;
+            case NODE_NSymmetry:
+                <?R
         box = boxes_NS[,box_i]
         box_phis = phis[box+1]     
         ?>
-        <?R for (pid in c(1:4)){ ?>
-            pid_cond =  (wall_pattern >> s<?%s box[pid]?> & 0x1 ) ; 
-            <?R for (fid in c(1:4)){  ?>
+                <?R for (pid in c(1:4)){ ?>
+                pid_cond = (wall_pattern >> s<?%s box[pid]?> & 0x1);
+                <?R for (fid in c(1:4)){  ?>
                 A[<?%s fid-1 ?>][<?%s pid-1 ?>] = pid_cond ? A0_BC[<?%s fid-1 ?>] : <?%s A0[pid,fid] ?>;
-            <?R } ?>
-    		y[<?%s pid-1 ?>] = pid_cond ? 0 : <?R C(box_phis[pid]) ?> ;
-            ajj += pid_cond ? 0 : 1;
+                <?R } ?>
+                y[<?%s pid-1 ?>] = pid_cond ? 0 : <?R C(box_phis[pid]) ?>;
+                ajj += pid_cond ? 0 : 1;
 
-        <?R } ?>
+                <?R } ?>
 
-            break;
-            
-        default:
-        <?R
+                break;
+
+            default:
+                <?R
         box = boxes[,box_i]
         box_phis = phis[box+1]     
         ?>
-        <?R for (pid in c(1:4)){ ?>
-            pid_cond =  (wall_pattern >> s<?%s box[pid]?> & 0x1 ) ; 
-            <?R for (fid in c(1:4)){  ?>
+                <?R for (pid in c(1:4)){ ?>
+                pid_cond = (wall_pattern >> s<?%s box[pid]?> & 0x1);
+                <?R for (fid in c(1:4)){  ?>
                 A[<?%s fid-1 ?>][<?%s pid-1 ?>] = pid_cond ? A0_BC[<?%s fid-1 ?>] : <?%s A0[pid,fid] ?>;
-            <?R } ?>
-    		y[<?%s pid-1 ?>] = pid_cond ? 0 : <?R C(box_phis[pid]) ?> ;
-            ajj += pid_cond ? 0 : 1;
+                <?R } ?>
+                y[<?%s pid-1 ?>] = pid_cond ? 0 : <?R C(box_phis[pid]) ?>;
+                ajj += pid_cond ? 0 : 1;
 
-        <?R } ?>
-    }
-    
-
-
+                <?R } ?>
+        }
 
         // orthogonalize
-        
+
         iwrite = 0;
-        for (int iread=0; iread<buffSize; iread++){
-            
-            for(int j = 0; j < aj; j++){
-                temp[j] = A[iread][j];   
-            }
-            
-            for (int i=0; i<iread; i++){
+        for (int iread=0; iread<buffSize; iread++) {
+            for (int j=0; j<aj; j++) { temp[j] = A[iread][j]; }
+
+            for (int i=0; i<iread; i++) {
                 t1 = 0;
-                for(int j = 0; j < aj; j++){
-                    t1 = t1 + A[i][j]*temp[j];   
-                }          
-                
-                for(int j = 0; j < aj; j++){
-                    temp[j] = temp[j] - t1*A[i][j];   
-                }                                     
+                for (int j=0; j<aj; j++) { t1 = t1 + A[i][j]*temp[j]; }
+
+                for (int j=0; j<aj; j++) { temp[j] = temp[j] - t1*A[i][j]; }
                 B[iwrite][i] = t1;
             }
-           
-            t1 = 0;
-            for(int i = 0; i < ai; i++){
-                t1 = t1 + temp[i]*temp[i];
-            }     
-            
 
-            if (t1*t1 > 1E-16){
+            t1 = 0;
+            for (int i=0; i<ai; i++) { t1 = t1 + temp[i]*temp[i]; }
+
+            if (t1*t1 > 1E-16) {
                 t1 = sqrt(t1);
-            
-                for(int i = 0; i < ai; i++){
-                    temp[i] /= t1;
-                }         
+
+                for (int i=0; i<ai; i++) { temp[i] /= t1; }
 
                 t1 = 0;
-                
-                for(int j = 0; j < aj; j++){
-                    t1 = t1 + A[iread][j]*temp[j];   
-                }          
-                
+
+                for (int j=0; j<aj; j++) { t1 = t1 + A[iread][j]*temp[j]; }
+
                 B[iwrite][iwrite] = t1;
-                
-                for(int j = 0; j < aj; j++){
-                    A[iwrite][j] = temp[j];   
-                }
+
+                for (int j=0; j<aj; j++) { A[iwrite][j] = temp[j]; }
 
             } else {
-                for(int j = 0; j < buffSize; j++){
-                    A[iwrite][j] = 0;   
-                }
+                for (int j=0; j<buffSize; j++) { A[iwrite][j] = 0; }
                 B[iwrite][iwrite] = 1;
-           
-            } 
+            }
 
             iwrite++;
         }
 
-        
-
-
         //////////////////////////////
         // Solve the system
 
-        for (int i=0; i < buffSize; i++){
+        for (int i=0; i<buffSize; i++) {
             temp[i] = 0;
-            for (int j = 0; j< buffSize; j++){
-                temp[i] = temp[i] + y[j] * A[i][j];
-            }        
+            for (int j=0; j<buffSize; j++) { temp[i] = temp[i] + y[j]*A[i][j]; }
         }
 
-        for (int i=ai-1; i >= 0; i--){
-            y[i] = temp[i]; 
-            for (int j = i+1; j < aj ; ++j){
-                y[i] = y[i] - y[j] * B[j][i];
-            }        
-            y[i] = y[i] / B[i][i];
+        for (int i = ai - 1; i >= 0; i--) {
+            y[i] = temp[i];
+            for (int j = i + 1; j < aj; ++j) { y[i] = y[i] - y[j]*B[j][i]; }
+            y[i] = y[i]/B[i][i];
         }
 
-
-        mx = y[1] / 2.;
-        my = y[2] / 2.;
+        mx = y[1]/2.;
+        my = y[2]/2.;
         t1 = sqrt(mx*mx + my*my) + 1E-18;
-        curvature +=  ( ( <?%s signs[2,box_i]  ?> )*mx + ( <?%s signs[1,box_i]  ?> )*my ) / t1;
+        curvature += ((<?%s signs[2,box_i]  ?>)*mx + (<?%s signs[1,box_i]  ?>)*my)/t1;
 
-<?R if (Options$weno) { ?>
-        
-        t1 = (1E-12 + y[0]*y[0] + y[2]*y[2]*0.0833333 +  y[1]*y[1]*0.0833333 +  y[3]*y[3]*0.0902777); 
-	    t1 = 1./(t1*t1);
+        <?R if (Options$weno) { ?>
+
+        t1 = (1E-12 + y[0]*y[0] + y[2]*y[2]*0.0833333 + y[1]*y[1]*0.0833333 + y[3]*y[3]*0.0902777);
+        t1 = 1./(t1*t1);
 
         wx = wx + t1;
-        gradient.x = gradient.x + t1 * y[1] ;
+        gradient.x = gradient.x + t1*y[1];
 
-	    t1 = (1E-12 + y[0]*y[0] + y[2]*y[2]*0.0833333 +  y[1]*y[1]*0.0833333 +  y[3]*y[3]*0.0902777); 	
-    	t1 = 1./(t1*t1);
+        t1 = (1E-12 + y[0]*y[0] + y[2]*y[2]*0.0833333 + y[1]*y[1]*0.0833333 + y[3]*y[3]*0.0902777);
+        t1 = 1./(t1*t1);
 
-        wy = wy + t1; 
-        gradient.y = gradient.y + t1 * y[2] ;
+        wy = wy + t1;
+        gradient.y = gradient.y + t1*y[2];
 
-<?R } else {  ?> //noweno
-        gradient.y = gradient.y + y[2] / 2.;
-        gradient.x = gradient.x + y[1] / 2.;
-<?R } ?> //weno
+        <?R } else {  ?>  // noweno
+            gradient.y = gradient.y + y[2]/2.;
+        gradient.x = gradient.x + y[1]/2.;
+        <?R } ?>  // weno
 
+            <?R }  ?>
 
-<?R }  ?>
+                <?R if (Options$weno) { ?> gradient.x = gradient.x/wx*2.;
+        gradient.y = gradient.y/wy*2.;
+        <?R }  ?>
 
+        gradient.z = 0;
 
-<?R if (Options$weno) { ?>
-    gradient.x = gradient.x / wx * 2.;
-    gradient.y = gradient.y / wy * 2.; 
-<?R }  ?> 
+        curvature = -0.5*curvature;
 
-gradient.z = 0;
+        normal.x = nw.x;
+        normal.y = nw.y;
+        normal.z = 0;
 
-curvature = -0.5 * curvature;
-
-normal.x = nw.x;
-normal.y = nw.y;
-normal.z = 0;
-
-debug.x = gradient.x;
-debug.y = gradient.y;
-    } //end IaAmWall-Else
-////END
+        debug.x = gradient.x;
+        debug.y = gradient.y;
+    }  // end IaAmWall-Else
+    ////END
 }
 
+CudaDeviceFunction real_t getH_Z() {
+    return h_Z;
+}
 
-CudaDeviceFunction real_t getH_Z(){
-	return h_Z ;
-}   
-
-
-CudaDeviceFunction real_t getRho(){
+CudaDeviceFunction real_t getRho() {
     if (NodeType & NODE_BOUNDARY) {
-        return 1+Pressure*3;
+        return 1 + Pressure*3;
     } else {
-    	return <?R C(sum(f)) ?> ;
+        return <?R C(sum(f)) ?>;
     }
 }
 
-CudaDeviceFunction vector_t getU(){
-	real_t d = getRho();
+CudaDeviceFunction vector_t getU() {
+    real_t d = getRho();
     vector_t u;
-<?R 
+    <?R 
     C(PV(c("u.x","u.y")) , f %*% U)
 
 ?>
-<?R if (!Options$noflow ) { ?>
-	vector_t F;
-	F = getF();
+    <?R if (!Options$noflow ) { ?>
+    vector_t F;
+    F = getF();
 
-    real_t pf = <?R C(sum(h)) ?> ;
+    real_t pf = <?R C(sum(h)) ?>;
 
- 	
-    real_t gamma  = 1-( omega_l + (pf - 0.5)/(-1)*(omega - omega_l));
-    
+    real_t gamma = 1 - (omega_l + (pf - 0.5)/(-1)*(omega - omega_l));
+
     u.x += 0.5*F.x;
     u.y += 0.5*F.y;
 
+    real_t nu = -(gamma + 1)/(6*gamma - 6);
+    real_t K = d*12.*nu*h_Z*h_Z;
 
-    real_t nu = -(gamma + 1)/(6*gamma - 6) ;
-    real_t K = d * 12. * nu * h_Z * h_Z;
-    
-    u.x = (u.x)/(1. + 0.5 * K) / d;
-    u.y = (u.y)/(1. + 0.5 * K) / d;   
-<?R } ?>
-	u.z = 0.0;
-	return u;
+    u.x = (u.x)/(1. + 0.5*K)/d;
+    u.y = (u.y)/(1. + 0.5*K)/d;
+    <?R } ?>
+    u.z = 0.0;
+    return u;
 }
 
-//only for paraview: do not use, inefficient!!
-CudaDeviceFunction real_t getPhaseField(){
-        InitPhisStencil();
-        if (IamWall){
-            return 0;
-        }
-    	return phi ;
+// only for paraview: do not use, inefficient!!
+CudaDeviceFunction real_t getPhaseField() {
+    InitPhisStencil();
+    if (IamWall) { return 0; }
+    return phi;
 }
-    
-//only for paraview: do not use, inefficient!!
-CudaDeviceFunction vector_t getNormal(){
+
+// only for paraview: do not use, inefficient!!
+CudaDeviceFunction vector_t getNormal() {
     InitPhisStencil();
     return normal;
-
 }
 
-//only for paraview: do not use, inefficient!!
-CudaDeviceFunction vector_t getWallNormal(){
+// only for paraview: do not use, inefficient!!
+CudaDeviceFunction vector_t getWallNormal() {
     vector_t nw;
     nw.x = 0;
     nw.y = 0;
     nw.z = 0;
     if (!IamWall) {
-        nw.x = nw_x(0,0);
-        nw.y = nw_y(0,0);
-        real_t ln = sqrt(nw.x*nw.x + nw.y*nw.y);    
-        if(ln == 0.){
+        nw.x = nw_x(0, 0);
+        nw.y = nw_y(0, 0);
+        real_t ln = sqrt(nw.x*nw.x + nw.y*nw.y);
+        if (ln == 0.) {
             nw.x = 0.;
             nw.y = 0.;
         } else {
@@ -615,176 +540,151 @@ CudaDeviceFunction vector_t getWallNormal(){
         }
     }
     return nw;
-
 }
 
-
-//only for paraview: do not use, inefficient!!
-CudaDeviceFunction real_t getCurvature(){
+// only for paraview: do not use, inefficient!!
+CudaDeviceFunction real_t getCurvature() {
     InitPhisStencil();
     return curvature;
-
 }
-//only for paraview: do not use, inefficient!!
-CudaDeviceFunction vector_t getDEBUG(){
+// only for paraview: do not use, inefficient!!
+CudaDeviceFunction vector_t getDEBUG() {
     InitPhisStencil();
     <?R if (Options$bc) { ?>
     debug.x = BC[0];
     debug.y = BC[1];
     <?R } ?>
     return debug;
-
 }
 
-
-CudaDeviceFunction void CalcNormal(){
-
-
+CudaDeviceFunction void CalcNormal() {
     CalcPhi();
 
-
-    //calculate gradient and normal
+    // calculate gradient and normal
     vector_t nw;
     nw.x = 0;
     nw.y = 0;
     nw.z = 0;
 
-/**    real_t magic = 0.12;
-   <?R
+    /**    real_t magic = 0.12;
+       <?R
     for (j in 1:9) {
     ?>
-        if (<?R C(phis[j]) ?>  == -999) {
-            nw.x = nw.x + (1-magic) * <?R C(U[j,1]) ?>;
-            nw.y = nw.y + (1-magic) * <?R C(U[j,2]) ?>;
-        }
+            if (<?R C(phis[j]) ?>  == -999) {
+                nw.x = nw.x + (1-magic)*<?R C(U[j,1]) ?>;
+                nw.y = nw.y + (1-magic)*<?R C(U[j,2]) ?>;
+            }
 
-        nw.x = nw.x + magic * nw_x(  <?R C(U[j,1]) ?>,   <?R C(U[j,2]) ?> );
-        nw.y = nw.y + magic * nw_y(  <?R C(U[j,1]) ?>,   <?R C(U[j,2]) ?> );
-    <?R } ?>
+            nw.x = nw.x + magic*nw_x(  <?R C(U[j,1]) ?>,   <?R C(U[j,2]) ?> );
+            nw.y = nw.y + magic*nw_y(  <?R C(U[j,1]) ?>,   <?R C(U[j,2]) ?> );
+        <?R } ?>
 
-   // real_t ln = sqrt(nw.x*nw.x + nw.y*nw.y) + 1E-8;
-   // nw.x /= ln;
-   // nw.y /= ln;
-**/
-
+       // real_t ln = sqrt(nw.x*nw.x + nw.y*nw.y) + 1E-8;
+       // nw.x /= ln;
+       // nw.y /= ln;
+    **/
 
     real_t magic = WallSmoothingMagic;
     bool has_normal = false;
-   <?R
+    <?R
     for (j in 1:9) {
     ?>
-        if (<?R C(phis[j]) ?>  == -999) {
-            nw.x = nw.x + (1-magic) * <?R C(U[j,1]) ?>;
-            nw.y = nw.y + (1-magic) * <?R C(U[j,2]) ?>;
-            has_normal = true;
-        }
+    if (<?R C(phis[j]) ?> == -999) {
+        nw.x = nw.x + (1 - magic)*<?R C(U[j,1]) ?>;
+        nw.y = nw.y + (1 - magic)*<?R C(U[j,2]) ?>;
+        has_normal = true;
+    }
 
-        nw.x = nw.x + magic * nw_x(  <?R C(U[j,1]) ?>,   <?R C(U[j,2]) ?> );
-        nw.y = nw.y + magic * nw_y(  <?R C(U[j,1]) ?>,   <?R C(U[j,2]) ?> );
+    nw.x = nw.x + magic*nw_x(<?R C(U[j,1]) ?>, <?R C(U[j,2]) ?>);
+    nw.y = nw.y + magic*nw_y(<?R C(U[j,1]) ?>, <?R C(U[j,2]) ?>);
     <?R } ?>
 
     real_t ln = sqrt(nw.x*nw.x + nw.y*nw.y) + 1E-8;
     nw.x /= ln;
     nw.y /= ln;
 
-    if (IamWall || !has_normal){
+    if (IamWall || !has_normal) {
         nw.x = 0;
         nw.y = 0;
     }
     nw_x = nw.x;
     nw_y = nw.y;
-    
-
-
 }
 
 CudaDeviceFunction vector_t getF() {
     real_t rho = getRho();
-    real_t pf = <?R C(sum(h)) ?> ;
+    real_t pf = <?R C(sum(h)) ?>;
     vector_t Force = real_getInterfaceForce(SurfaceTensionRate);
 
-    //bouncy
+    // bouncy
     Force.x += GravitationX_l + (pf - 0.5)/(-1)*(GravitationX - GravitationX_l);
     Force.y += GravitationY_l + (pf - 0.5)/(-1)*(GravitationY - GravitationY_l);
 
-    
     <?R if ( Options$bc ) { ?>
-     if (!IamBOUNDARY) {   
+    if (!IamBOUNDARY) {
         Force.x += BC[0]*0.5;
         Force.y += BC[1]*0.5;
-    }    
-    <?R } ?>   
-    
-    
-    return Force;
+    }
+    <?R } ?>
 
+    return Force;
 }
 
-CudaDeviceFunction vector_t getInterfaceForce(){
+CudaDeviceFunction vector_t getInterfaceForce() {
     InitPhisStencil();
     return real_getInterfaceForce(1);
 }
 
 CudaDeviceFunction vector_t real_getInterfaceForce(const real_t ST) {
-	vector_t F = gradient;
+    vector_t F = gradient;
     real_t curv = curvature;
-    real_t phi_l = phi ;
-    if (phi_l * phi_l < SurfaceTensionDecay){
-  
-       
-    if (near_wall){
-        F.x = F.x * WallAdhesionDecay;
-        F.y = F.y * WallAdhesionDecay;
-    }
+    real_t phi_l = phi;
+    if (phi_l*phi_l < SurfaceTensionDecay) {
+        if (near_wall) {
+            F.x = F.x*WallAdhesionDecay;
+            F.y = F.y*WallAdhesionDecay;
+        }
 
-    F.z = 0;
-    const real_t s = sin(0.5*pi - WettingAngle);
-    F.x =  ST * (curv + 2*h_Z*s)  *  F.x; // exp(- SurfaceTensionDecay * phi_l*phi_l);
-    F.y =  ST * (curv + 2*h_Z*s)  *  F.y;// exp(- SurfaceTensionDecay * phi_l*phi_l);
-
-
+        F.z = 0;
+        const real_t s = sin(0.5*pi - WettingAngle);
+        F.x = ST*(curv + 2*h_Z*s)*F.x;  // exp(- SurfaceTensionDecay*phi_l*phi_l);
+        F.y = ST*(curv + 2*h_Z*s)*F.y;  // exp(- SurfaceTensionDecay*phi_l*phi_l);
 
     } else {
         F.x = 0;
         F.y = 0;
         F.z = 0;
     }
-	return F;
+    return F;
 }
-
-
 
 CudaDeviceFunction float2 Color() {
-        float2 ret;
-        vector_t u = getU();
-        ret.x = sqrt(u.x*u.x + u.y*u.y);
-        if (NodeType == NODE_Solid){
-                ret.y = 0;
-        } else {
-                ret.y = 1;
-        }
-        return ret;
+    float2 ret;
+    vector_t u = getU();
+    ret.x = sqrt(u.x*u.x + u.y*u.y);
+    if (NodeType == NODE_Solid) {
+        ret.y = 0;
+    } else {
+        ret.y = 1;
+    }
+    return ret;
 }
 
-CudaDeviceFunction void SetEquilibrum(real_t rho, real_t Jx, real_t Jy, real_t pf)
-{
-<?R
+CudaDeviceFunction void SetEquilibrum(real_t rho, real_t Jx, real_t Jy, real_t pf){<?R
 	feq = EQ$Req %*% solve(EQ$mat)
 	C( f, feq)
     u = PV(c('Jx/rho', 'Jy/rho'))
     C( h,  wi*((u %*% t(U))*( 1/ c_sq) + ((u %*% t(U)) * (u %*% t(U)))*(1/(c_sq*c_sq*2)) - sum(u*u)*(1/(c_sq*2)) + 1)*pf  )
-?>
-}
+?>}
 
 CudaDeviceFunction void Init() {
-	real_t rho, ux, uy, C;
-	rho = (1+Pressure*3);
+    real_t rho, ux, uy, C;
+    rho = (1 + Pressure*3);
 
-	ux = 0;
+    ux = 0;
     uy = 0;
-    
 
-	<?R
+    <?R
 
     if ( Options$bcinit ) { 
     	C(PV('C'), PV('BC[0]')) 
@@ -794,21 +694,15 @@ CudaDeviceFunction void Init() {
         C(c(PV('ux'),PV('uy')), BC_Velocity) 
 	}
 	?>
-	SetEquilibrum(
-		rho,
-		ux*rho,
-		uy*rho,
-        C
-	);
+    SetEquilibrum(rho, ux*rho, uy*rho, C);
 
     h_Z = BrinkmanHeightInv;
-
 }
 
 CudaDeviceFunction void CalcPhi() {
-    if ( (NodeType & NODE_BOUNDARY) == NODE_NSymmetry ){
-       real_t ret = 0;
-       <?R 
+    if ((NodeType & NODE_BOUNDARY) == NODE_NSymmetry) {
+        real_t ret = 0;
+        <?R 
         ret = PV("ret")
         for (j in (1:9)[ U[,2] > 0 ]) {
             op_i = (1:9)[U[,2]+U[j,2] == 0 & U[,1]-U[j,1] == 0] 
@@ -817,11 +711,10 @@ CudaDeviceFunction void CalcPhi() {
         sel = (1:9)[U[,2]<=0]
         C(ret , ret + h[sel])            
        ?>
-       phi =  ret;
+        phi = ret;
+    }
 
-   }
-
-   if ( (NodeType & NODE_BOUNDARY) == NODE_SSymmetry ){
+    if ((NodeType & NODE_BOUNDARY) == NODE_SSymmetry) {
         real_t ret = 0;
         <?R 
         ret = PV("ret")
@@ -833,196 +726,134 @@ CudaDeviceFunction void CalcPhi() {
         sel = (1:9)[U[,2]>=0]
         C(ret , ret + h[sel])     
         ?>
-        phi =  ret;
+        phi = ret;
+    }
 
-   }
-
-
-   if ((NodeType & NODE_BOUNDARY) == NODE_Wall) {
-        phi =  -999;
-   } else {
-    	phi =  <?R C(sum(h)) ?> ;
-   }  
-    
-    
+    if ((NodeType & NODE_BOUNDARY) == NODE_Wall) {
+        phi = -999;
+    } else {
+        phi = <?R C(sum(h)) ?>;
+    }
 }
 
 CudaDeviceFunction void Run() {
-
-
     switch (NodeType & NODE_BOUNDARY) {
-	case NODE_Solid:
-	case NODE_Wall:
-		BounceBack();
-		break;
+        case NODE_Solid:
+        case NODE_Wall:
+            BounceBack();
+            break;
 
-	<?R
+            <?R
         if ( Options$noflow ) {
     ?>
-	    case NODE_EVelocity:
-    	case NODE_WVelocity:
-	    case NODE_SVelocity:
-    	case NODE_NVelocity:
+        case NODE_EVelocity:
+        case NODE_WVelocity:
+        case NODE_SVelocity:
+        case NODE_NVelocity:
 
+            SetEquilibrum(1., <?R C(BC_Velocity[1]) ?>, <?R C(BC_Velocity[2]) ?>, PhaseField);
+            InitPhisStencil();
+            break;
+            <?R } else { ?>
 
-        
-        SetEquilibrum(
-		    1.,
-    		<?R C(BC_Velocity[1]) ?>,
-            <?R C(BC_Velocity[2]) ?>,
-            PhaseField
-    	);
-   		InitPhisStencil(); 
-        break;
-    <?R } else { ?>
-	
-    case NODE_EVelocity:
-        InitPhisStencil();
-		EVelocity();
-		break;
-	case NODE_WPressure:
-        InitPhisStencil(); 
-        WPressure();
-		break;
-	case NODE_WVelocity:
-		InitPhisStencil(); 
-        WVelocity();
-		break;
-	case NODE_EPressure:
-		InitPhisStencil(); 
-        EPressure();
-		break;
-	case NODE_SVelocity:
-		InitPhisStencil(); 
-        SVelocity();
-		break;
-	case NODE_NVelocity:
-		InitPhisStencil(); 
-        NVelocity();
-		break;
+        case NODE_EVelocity:
+            InitPhisStencil();
+            EVelocity();
+            break;
+        case NODE_WPressure:
+            InitPhisStencil();
+            WPressure();
+            break;
+        case NODE_WVelocity:
+            InitPhisStencil();
+            WVelocity();
+            break;
+        case NODE_EPressure:
+            InitPhisStencil();
+            EPressure();
+            break;
+        case NODE_SVelocity:
+            InitPhisStencil();
+            SVelocity();
+            break;
+        case NODE_NVelocity:
+            InitPhisStencil();
+            NVelocity();
+            break;
 
-    
-    <?R }?>
-        
-    case NODE_NSymmetry:
-           <?R Symmetry(2,-1) ?>
-           InitPhisStencil(); 
-           break;
-    case NODE_SSymmetry:
-        <?R Symmetry(2,1) ?>
-        InitPhisStencil(); 
-        break;
-    default:
-        InitPhisStencil(); 
+            <?R }?>
 
-
+        case NODE_NSymmetry:
+            <?R Symmetry(2,-1) ?>
+            InitPhisStencil();
+            break;
+        case NODE_SSymmetry:
+            <?R Symmetry(2,1) ?>
+            InitPhisStencil();
+            break;
+        default:
+            InitPhisStencil();
     }
-    if (NodeType & NODE_MRT)
-    {
+    if (NodeType & NODE_MRT) {
         <?R if (Options$cumulant ){ ?>
- 	 	    CollisionCumulant();
+        CollisionCumulant();
         <?R } else {?>
-    		CollisionMRT();
+        CollisionMRT();
         <?R }?>
     }
 }
 
-CudaDeviceFunction void BounceBack()
-{
-<?R FullBounceBack() ?>
-}
+CudaDeviceFunction void BounceBack(){<?R FullBounceBack() ?>}
 
-CudaDeviceFunction void NVelocity()
-{
-    {
-<?R 
+CudaDeviceFunction void NVelocity() {
+    {<?R 
     ZouHeRewrite(EQ,   f, c(0,1), type="velocity", BC_Velocity)
-?>
-    }
-    {
-<?R
+?>} { <?R
     ZouHeRewrite(EQ_h, h, c(0,1), type="pressure", rhs=PV('PhaseField'))
-?>
-    }
+?> }
 }
-CudaDeviceFunction void SVelocity()
-{
-    {
-<?R 
+CudaDeviceFunction void SVelocity() {
+    {<?R 
     ZouHeRewrite(EQ,   f, c(0,-1), type="velocity", BC_Velocity)
-?>
-    }
-    {
-<?R
+?>} { <?R
     ZouHeRewrite(EQ_h, h, c(0,-1), type="pressure", rhs=PV('PhaseField'))
-?>
-    }
+?> }
 }
-CudaDeviceFunction void EVelocity()
-{
-    {
-<?R 
+CudaDeviceFunction void EVelocity() {
+    {<?R 
     ZouHeRewrite(EQ,   f, c(1,0), type="velocity", BC_Velocity)
-?>
-    }
-    {
-<?R
+?>} { <?R
     ZouHeRewrite(EQ_h, h, c(1,0), type="pressure", rhs=PV('PhaseField'))
-?>
-    }
+?> }
 }
-CudaDeviceFunction void EPressure()
-{
-   {
-<?R 
+CudaDeviceFunction void EPressure() {
+    {<?R 
     ZouHeRewrite(EQ,   f, c(1,0), type="pressure")
-?>
-    }
-    {
-<?R
+?>} { <?R
     ZouHeRewrite(EQ_h, h, c(1,0), type="pressure", rhs=PV('PhaseField'))
-?>
-    }
+?> }
 }
 
-
-
-CudaDeviceFunction void WPressure()
-{
-   {
-<?R 
+CudaDeviceFunction void WPressure() {
+    {<?R 
     ZouHeRewrite(EQ,   f, c(-1,0), type="pressure")
-?>
-    }
-    {
-<?R
+?>} { <?R
     ZouHeRewrite(EQ_h, h, c(-1,0), type="pressure", rhs=PV('PhaseField'))
-?>
-    }
+?> }
 }
 
-CudaDeviceFunction void WVelocity()
-{
-   {
-<?R 
+CudaDeviceFunction void WVelocity() {
+    {<?R 
     ZouHeRewrite(EQ,   f, c(-1,0), type="velocity", BC_Velocity)
-?>
-    }
-    {
-<?R
+?>} { <?R
     ZouHeRewrite(EQ_h, h, c(-1,0), type="pressure", rhs=PV('PhaseField'))
-?>
-    }
+?> }
 }
 
-
-
-
-CudaDeviceFunction void CollisionMRT()
-{
-    real_t pf = <?R C(sum(h)) ?> ;
-    real_t Usq=0;
-<?R
+CudaDeviceFunction void CollisionMRT() {
+    real_t pf = <?R C(sum(h)) ?>;
+    real_t Usq = 0;
+    <?R
 	MI = solve(EQ$mat)
 	P = MI %*% diag(1/wi) %*% t(MI)
 
@@ -1030,17 +861,17 @@ CudaDeviceFunction void CollisionMRT()
 	selR = EQ$order > 1
 	R[!selR] = EQ$Req[!selR]
 ?>
-	real_t <?R C(R,sep=",") ?>;
+    real_t <?R C(R,sep=",") ?>;
 
     <?R if (Options$viscstep) { ?>
-        const real_t tl = tanh(-0.5/ViscosityStepWidth);
-        const real_t th = tanh( 0.5/ViscosityStepWidth);
-        real_t gamma =  1 - (omega + (omega_l - omega)*(-tl+tanh(pf/ViscosityStepWidth))/(th-tl));
+    const real_t tl = tanh(-0.5/ViscosityStepWidth);
+    const real_t th = tanh(0.5/ViscosityStepWidth);
+    real_t gamma = 1 - (omega + (omega_l - omega)*(-tl + tanh(pf/ViscosityStepWidth))/(th - tl));
     <?R } else { ?>
-	    real_t gamma  = 1 - ( omega_l + (pf - 0.5)/(-1)*(omega - omega_l));
+    real_t gamma = 1 - (omega_l + (pf - 0.5)/(-1)*(omega - omega_l));
     <?R } ?>
 
-<?R
+    <?R
 	S = PV("S",1:nrow(U)-1);
     S = PV("S",1:nrow(U)-1);
 	S[EQ$order == 2] = PV("gamma")
@@ -1060,48 +891,40 @@ CudaDeviceFunction void CollisionMRT()
 	    C( R[selR], (R * S)[selR]);
 
 ?>
-   
-        //pressure loss
-        
+
+    // pressure loss
 
     switch (NodeType & NODE_OBJECTIVE) {
         case NODE_Outlet:
-<?R 
+            <?R 
             Usq=PV('Usq')
             C(Usq,sum(J%*%J) * rho ^-2)
 
 ?>
             AddToOutletFlux(Jx/rho/rho);
-            AddToPressureLoss(-(Jx/rho)/rho*((rho-1.)/3. + Usq/rho/2.));
-        break;
+            AddToPressureLoss(-(Jx/rho)/rho*((rho - 1.)/3. + Usq/rho/2.));
+            break;
         case NODE_Inlet:
-<?R
+            <?R
             Usq=PV('Usq')
             C(Usq,sum(J%*%J) * rho ^-2)
 ?>
-           AddToInletFlux(Jx/rho/rho);
-           AddToPressureLoss((Jx/rho)/rho*((rho-1.)/3. + Usq/rho/2.));
-       break;
+            AddToInletFlux(Jx/rho/rho);
+            AddToPressureLoss((Jx/rho)/rho*((rho - 1.)/3. + Usq/rho/2.));
+            break;
     }
 
+    // end pressure loss
 
+    vector_t F = getF();
 
-        //end pressure loss
+    real_t nu = -(gamma + 1)/(6*gamma - 6);
+    real_t K = rho*12.*nu*h_Z*h_Z;
 
+    Jx = Jx + F.x - K*(Jx + F.x*0.5)/(1. + 0.5*K)/rho;
+    Jy = Jy + F.y - K*(Jy + F.y*0.5)/(1. + 0.5*K)/rho;
 
-
-        vector_t F = getF();
- 
-    
-        real_t nu = -(gamma + 1)/(6*gamma - 6) ;
-        real_t K = rho * 12. * nu * h_Z * h_Z;
-   
-        
-    
-        Jx = Jx + F.x - K*(Jx+F.x*0.5)/(1. + 0.5 * K) / rho;
-        Jy = Jy + F.y - K*(Jy+F.y*0.5)/(1. + 0.5 * K) / rho;   
-
-        <?R
+    <?R
 
 
  
@@ -1118,33 +941,29 @@ CudaDeviceFunction void CollisionMRT()
     # part related to h
 ?>
 
-
-
     vector_t u = getU();
-    if ( PF_Advection_Switch == 0 ){
+    if (PF_Advection_Switch == 0) {
         u.x = 0;
         u.y = 0;
     }
 
-    real_t omega_ph =  1./( 3 * Mobility + 0.5); 
+    real_t omega_ph = 1./(3*Mobility + 0.5);
     real_t Bh;
 
     vector_t n = gradient;
 
-    real_t l = sqrt( n.x * n.x + n.y * n.y);
-    
-    l = sqrt( n.x * n.x + n.y * n.y );
-    if (l != 0){
-      n.x = n.x / l ;
-      n.y = n.y / l ;
+    real_t l = sqrt(n.x*n.x + n.y*n.y);
+
+    l = sqrt(n.x*n.x + n.y*n.y);
+    if (l != 0) {
+        n.x = n.x/l;
+        n.y = n.y/l;
     } else {
-      n.x = 0;
-      n.y = 0;
+        n.x = 0;
+        n.y = 0;
     }
 
-
-
-<?R
+    <?R
 #u = PV(c('u.x', 'u.y'))
 #   n = PV(c('n.x', 'n.y'))
 #    mob = PV("M")
@@ -1166,203 +985,177 @@ CudaDeviceFunction void CollisionMRT()
     RelaxationRate_ph= PV('omega_ph') 
     C( h, h - RelaxationRate_ph * ( h - EQ_h$feq ) )
 ?>
-
-    
 }
 
-
-
-
-CudaDeviceFunction void CollisionCumulant()
-{
-    real_t pf = <?R C(sum(h)) ?> ;
-
+CudaDeviceFunction void CollisionCumulant() {
+    real_t pf = <?R C(sum(h)) ?>;
 
     <?R if (Options$viscstep) { ?>
-        const real_t tl = tanh(-0.5/ViscosityStepWidth);
-        const real_t th = tanh( 0.5/ViscosityStepWidth);
-        real_t gamma =   (omega + (omega_l - omega)*(-tl+tanh(pf/ViscosityStepWidth))/(th-tl));
+    const real_t tl = tanh(-0.5/ViscosityStepWidth);
+    const real_t th = tanh(0.5/ViscosityStepWidth);
+    real_t gamma = (omega + (omega_l - omega)*(-tl + tanh(pf/ViscosityStepWidth))/(th - tl));
     <?R } else { ?>
-	    real_t gamma  =  ( omega_l + (pf - 0.5)/(-1)*(omega - omega_l));
+    real_t gamma = (omega_l + (pf - 0.5)/(-1)*(omega - omega_l));
     <?R } ?>
-//momentum collision
+    // momentum collision
 
-
-
- real_t c[9],d;
- <?R C(PV('d'), sum(f)) ?>
- real_t  w[5] = {gamma,1.,1.,1.,1.0};  // defining relaxation rate for first cummulants
- if ((NodeType & NODE_BOUNDARY) != 0) {
-    if ( ( (NodeType & NODE_BOUNDARY) != NODE_NSymmetry ) && ( (NodeType & NODE_BOUNDARY) != NODE_SSymmetry ) ) {
-        w[0] = 1.0/(3*nubuffer+0.5);
+    real_t c[9], d;
+    <?R C(PV('d'), sum(f)) ?>
+    real_t w[5] = {gamma, 1., 1., 1., 1.0};  // defining relaxation rate for first cummulants
+    if ((NodeType & NODE_BOUNDARY) != 0) {
+        if (((NodeType & NODE_BOUNDARY) != NODE_NSymmetry) && ((NodeType & NODE_BOUNDARY) != NODE_SSymmetry)) { w[0] = 1.0/(3*nubuffer + 0.5); }
     }
- }
 
-//First determing moments from density-probability function
-  
-  f[0] = f[3] + f[1] + f[0]; 
-  f[1] = -f[3] + f[1];
-  f[3] = f[1] + f[3]*2.; 
-  f[2] = f[6] + f[5] + f[2];
-  f[5] = -f[6] + f[5];
-  f[6] = f[5] + f[6]*2.; 
-  f[4] = f[7] + f[8] + f[4];
-  f[8] = -f[7] + f[8];
-  f[7] = f[8] + f[7]*2.; 
-  f[0] = f[4] + f[2] + f[0];
-  f[2] = -f[4] + f[2];
-  f[4] = f[2] + f[4]*2.; 
-  f[1] = f[8] + f[5] + f[1];
-  f[5] = -f[8] + f[5];
-  f[8] = f[5] + f[8]*2.; 
-  f[3] = f[7] + f[6] + f[3];
-  f[6] = -f[7] + f[6];
-  f[7] = f[6] + f[7]*2.; 
-  
-//Cumulant calculation from moments
-  c[0] = f[0];
-  c[1] = f[1]/f[0];
-  c[3] = ( -c[1]*f[1] + f[3] )/f[0];
-  c[2] = f[2]/f[0];
-  c[5] = ( -c[1]*f[2] + f[5] )/f[0];
-  c[6] = ( -c[5]*f[1] - c[3]*f[2] - c[1]*f[5] + f[6] )/f[0];
-  c[4] = ( -c[2]*f[2] + f[4] )/f[0];
-  c[8] = ( -c[1]*f[4] + f[8] - c[5]*f[2]*2. )/f[0];
-  c[7] = ( -c[8]*f[1] - c[3]*f[4] - c[1]*f[8] + f[7] + ( -c[6]*f[2] - c[5]*f[5] )*2. )/f[0];
-//Cumulant relaxation:
- const real_t  a = (c[3] + c[4]);
- const real_t  b = (c[3] - c[4]);
- const real_t rho = c[0];
- real_t Usq = 0;
-        //pressure loss
-        
-<?R 
+    // First determing moments from density-probability function
+
+    f[0] = f[3] + f[1] + f[0];
+    f[1] = -f[3] + f[1];
+    f[3] = f[1] + f[3]*2.;
+    f[2] = f[6] + f[5] + f[2];
+    f[5] = -f[6] + f[5];
+    f[6] = f[5] + f[6]*2.;
+    f[4] = f[7] + f[8] + f[4];
+    f[8] = -f[7] + f[8];
+    f[7] = f[8] + f[7]*2.;
+    f[0] = f[4] + f[2] + f[0];
+    f[2] = -f[4] + f[2];
+    f[4] = f[2] + f[4]*2.;
+    f[1] = f[8] + f[5] + f[1];
+    f[5] = -f[8] + f[5];
+    f[8] = f[5] + f[8]*2.;
+    f[3] = f[7] + f[6] + f[3];
+    f[6] = -f[7] + f[6];
+    f[7] = f[6] + f[7]*2.;
+
+    // Cumulant calculation from moments
+    c[0] = f[0];
+    c[1] = f[1]/f[0];
+    c[3] = (-c[1]*f[1] + f[3])/f[0];
+    c[2] = f[2]/f[0];
+    c[5] = (-c[1]*f[2] + f[5])/f[0];
+    c[6] = (-c[5]*f[1] - c[3]*f[2] - c[1]*f[5] + f[6])/f[0];
+    c[4] = (-c[2]*f[2] + f[4])/f[0];
+    c[8] = (-c[1]*f[4] + f[8] - c[5]*f[2]*2.)/f[0];
+    c[7] = (-c[8]*f[1] - c[3]*f[4] - c[1]*f[8] + f[7] + (-c[6]*f[2] - c[5]*f[5])*2.)/f[0];
+    // Cumulant relaxation:
+    const real_t a = (c[3] + c[4]);
+    const real_t b = (c[3] - c[4]);
+    const real_t rho = c[0];
+    real_t Usq = 0;
+    // pressure loss
+
+    <?R 
 Jc=c(PV("c[1]"),PV("c[2]"))    
 
 ?>
     switch (NodeType & NODE_OBJECTIVE) {
         case NODE_Outlet:
-<?R 
+            <?R 
             Usq=PV('Usq')
             C(Usq,sum(Jc%*%Jc) * rho ^-2)
 
 ?>
             AddToOutletFlux(c[1]/rho/rho);
-            AddToPressureLoss(-(c[1]/rho)/rho*((rho-1.)/3. + Usq/rho/2.));
-        break;
+            AddToPressureLoss(-(c[1]/rho)/rho*((rho - 1.)/3. + Usq/rho/2.));
+            break;
         case NODE_Inlet:
-<?R
+            <?R
             Usq=PV('Usq')
             C(Usq,sum(Jc%*%Jc) * rho ^-2)
 ?>
-           AddToInletFlux(c[1]/rho/rho);
-           AddToPressureLoss((c[1]/rho)/rho*((rho-1.)/3. + Usq/rho/2.));
-       break;
+            AddToInletFlux(c[1]/rho/rho);
+            AddToPressureLoss((c[1]/rho)/rho*((rho - 1.)/3. + Usq/rho/2.));
+            break;
     }
 
+    // end pressure loss
 
+    vector_t F = getF();
 
-        //end pressure loss
+    real_t nu = -(1 - gamma + 1)/(6*(1 - gamma) - 6);
+    real_t K = d*12.*nu*h_Z*h_Z;
 
+    c[1] = c[1] + F.x - K*(c[1] + F.x*0.5)/(1. + 0.5*K)/d;
+    c[2] = c[2] + F.y - K*(c[2] + F.y*0.5)/(1. + 0.5*K)/d;
 
+    // Forcing
+    //   c[1] = c[1] + ForceX;
+    //   c[2] = c[2] + ForceY;
+    // END Forcing
 
+    // real_t Dxu = - w[0]*(2*c[3] - c[4])/(2.*d) - w[1]*(c[3] + c[4])/d;
+    // real_t Dyv =  - w[0]*(2*c[4] - c[3])/(2.*d) - w[1]*(c[3] + c[4])/d;
+    // c[1] = -c[1];
+    // c[3] = (1 - w[0])*c[3] + w[0]*1./3;
+    c[3] = ((1 - w[1])*a + w[1]*2./3. + (1 - w[0])*b)/2.;
+    // c[2] =-c[2];
+    // c[4] = (1 - w[0])*c[4] + w[0]*1./3;
+    c[4] = ((1 - w[1])*a + w[1]*2./3. - (1 - w[0])*b)/2.;
+    c[5] = (1 - w[0])*c[5];
+    c[6] = (1 - w[2])*c[6];
+    c[7] = (1 - w[3])*c[7];
+    c[8] = (1 - w[2])*c[8];
 
- vector_t F = getF();
- 
- real_t nu = -(1-gamma + 1)/(6*(1-gamma) - 6) ;
- real_t K = d * 12. * nu * h_Z * h_Z;
-    
- c[1] = c[1] + F.x - K*(c[1]+F.x*0.5)/(1. + 0.5 * K) / d;
- c[2] = c[2] + F.y - K*(c[2]+F.y*0.5)/(1. + 0.5 * K) / d;   
+    // Moment calculation from cummulants
 
+    f[0] = f[0];
+    f[1] = c[1]*f[0];
+    f[3] = c[3]*f[0] + c[1]*f[1];
+    f[2] = c[2]*f[0];
+    f[5] = c[5]*f[0] + c[1]*f[2];
+    f[6] = c[6]*f[0] + c[5]*f[1] + c[3]*f[2] + c[1]*f[5];
+    f[4] = c[4]*f[0] + c[2]*f[2];
+    f[8] = c[8]*f[0] + c[1]*f[4] + c[5]*f[2]*2.;
+    f[7] = c[7]*f[0] + c[8]*f[1] + c[3]*f[4] + c[1]*f[8] + (c[6]*f[2] + c[5]*f[5])*2.;
 
-//Forcing
-//  c[1] = c[1] + ForceX;
-//  c[2] = c[2] + ForceY;
-//END Forcing
- 
- //real_t Dxu = - w[0]*(2*c[3] - c[4])/(2.*d) - w[1]*(c[3] + c[4])/d;
- //real_t Dyv =  - w[0]*(2*c[4] - c[3])/(2.*d) - w[1]*(c[3] + c[4])/d;
-// c[1] = -c[1];
-  // c[3] = (1 - w[0])*c[3] + w[0]*1./3;
-  c[3] = ((1 - w[1])*a + w[1]*2./3. + (1 - w[0])*b)/2.;
-// c[2] =-c[2];
-  // c[4] = (1 - w[0])*c[4] + w[0]*1./3;
-  c[4] = ((1 - w[1])*a + w[1]*2./3. - (1 - w[0])*b)/2.;
-  c[5] =  (1- w[0])*c[5];
-  c[6] =  (1 - w[2])*c[6];
-  c[7] =  (1 - w[3])*c[7];
-  c[8] = (1 - w[2])*c[8]; 
+    // Transformation from moment to density distribution function
 
+    f[0] = -f[3] + f[0];
+    f[1] = (f[3] + f[1])/2.;
+    f[3] = f[3] - f[1];
+    f[2] = -f[6] + f[2];
+    f[5] = (f[6] + f[5])/2.;
+    f[6] = f[6] - f[5];
+    f[4] = -f[7] + f[4];
+    f[8] = (f[7] + f[8])/2.;
+    f[7] = f[7] - f[8];
+    f[0] = -f[4] + f[0];
+    f[2] = (f[4] + f[2])/2.;
+    f[4] = f[4] - f[2];
+    f[1] = -f[8] + f[1];
+    f[5] = (f[8] + f[5])/2.;
+    f[8] = f[8] - f[5];
+    f[3] = -f[7] + f[3];
+    f[6] = (f[7] + f[6])/2.;
+    f[7] = f[7] - f[6];
 
-// Moment calculation from cummulants
-
-  f[0] = f[0];
-  f[1] = c[1]*f[0];
-  f[3] = c[3]*f[0] + c[1]*f[1];
-  f[2] = c[2]*f[0];
-  f[5] = c[5]*f[0] + c[1]*f[2];
-  f[6] = c[6]*f[0] + c[5]*f[1] + c[3]*f[2] + c[1]*f[5];
-  f[4] = c[4]*f[0] + c[2]*f[2];
-  f[8] = c[8]*f[0] + c[1]*f[4] + c[5]*f[2]*2.;
-  f[7] = c[7]*f[0] + c[8]*f[1] + c[3]*f[4] + c[1]*f[8] + ( c[6]*f[2] + c[5]*f[5] )*2.;
- 
- //Transformation from moment to density distribution function
-
-  f[0] = -f[3] + f[0];
-  f[1] = ( f[3] + f[1] )/2.;
-  f[3] = f[3] - f[1]; 
-  f[2] = -f[6] + f[2];
-  f[5] = ( f[6] + f[5] )/2.;
-  f[6] = f[6] - f[5]; 
-  f[4] = -f[7] + f[4];
-  f[8] = ( f[7] + f[8] )/2.;
-  f[7] = f[7] - f[8]; 
-  f[0] = -f[4] + f[0];
-  f[2] = ( f[4] + f[2] )/2.;
-  f[4] = f[4] - f[2]; 
-  f[1] = -f[8] + f[1];
-  f[5] = ( f[8] + f[5] )/2.;
-  f[8] = f[8] - f[5]; 
-  f[3] = -f[7] + f[3];
-  f[6] = ( f[7] + f[6] )/2.;
-  f[7] = f[7] - f[6]; 
-
-
-//part related to h
-
-
-
+    // part related to h
 
     vector_t u = getU();
-    if ( PF_Advection_Switch == 0 ){
+    if (PF_Advection_Switch == 0) {
         u.x = 0;
         u.y = 0;
     }
 
-    real_t omega_ph =  1./( 3 * Mobility + 0.5); 
+    real_t omega_ph = 1./(3*Mobility + 0.5);
     real_t Bh;
 
     vector_t n = gradient;
 
-    real_t l = sqrt( n.x * n.x + n.y * n.y);
-    
-    l = sqrt( n.x * n.x + n.y * n.y );
-    if (l != 0){
-      n.x = n.x / l ;
-      n.y = n.y / l ;
+    real_t l = sqrt(n.x*n.x + n.y*n.y);
+
+    l = sqrt(n.x*n.x + n.y*n.y);
+    if (l != 0) {
+        n.x = n.x/l;
+        n.y = n.y/l;
     } else {
-      n.x = 0;
-      n.y = 0;
+        n.x = 0;
+        n.y = 0;
     }
 
-
-
-<?R
+    <?R
     omega_ph=PV("omega_ph")
     RelaxationRate_ph= PV('omega_ph') 
     C( h, h - RelaxationRate_ph * ( h - EQ_h$feq ) )
 ?>
-
-    
 }

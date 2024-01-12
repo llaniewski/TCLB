@@ -7,8 +7,9 @@
 #include "utils.h"
 
 // order of % arguments: width height width height
-// const char * vtk_header       = "<?xml version=\"1.0\"?>\n<VTKFile type=\"ImageData\" version=\"0.1\" byte_order=\"LittleEndian\">\n<ImageData WholeExtent=\"0 %d 0 %d 0 %d\" Origin=\"0 0 0\" Spacing=\"0.005 0.005 0.005\">\n<Piece Extent=\"0 %d 0 %d 0 %d\">\n<PointData %s>\n";
-// order of % arguments: datatype fieldname
+// const char*vtk_header       = "<?xml version=\"1.0\"?>\n<VTKFile type=\"ImageData\" version=\"0.1\" byte_order=\"LittleEndian\">\n<ImageData
+// WholeExtent=\"0 %d 0 %d 0 %d\" Origin=\"0 0 0\" Spacing=\"0.005 0.005 0.005\">\n<Piece Extent=\"0 %d 0 %d 0 %d\">\n<PointData %s>\n"; order of % arguments:
+// datatype fieldname
 const char* vtk_field_header = "<DataArray type=\"%s\" Name=\"%s\" format=\"binary\" encoding=\"base64\" NumberOfComponents=\"%d\">\n";
 const char* vtk_field_footer = "</DataArray>\n";
 const char* vtk_field_parallel = "<PDataArray type=\"%s\" Name=\"%s\" format=\"binary\" encoding=\"base64\" NumberOfComponents=\"%d\"/>\n";
@@ -77,23 +78,52 @@ void vtkFileOut::Init(lbRegion regiontot, lbRegion region, char* selection, doub
     FERR;
     size = region.size();
     fprintf(f, "<?xml version=\"1.0\"?>\n<VTKFile type=\"ImageData\" version=\"0.1\" byte_order=\"LittleEndian\">\n");
-    fprintf(f, "<ImageData WholeExtent=\"%d %d %d %d %d %d\" Origin=\"%lg %lg %lg\" Spacing=\"%lg %lg %lg\">\n", region.dx, region.dx + region.nx, region.dy, region.dy + region.ny, region.dz, region.dz + region.nz, px, py, pz, spacing, spacing, spacing);
+    fprintf(f,
+            "<ImageData WholeExtent=\"%d %d %d %d %d %d\" Origin=\"%lg %lg %lg\" Spacing=\"%lg %lg %lg\">\n",
+            region.dx,
+            region.dx + region.nx,
+            region.dy,
+            region.dy + region.ny,
+            region.dz,
+            region.dz + region.nz,
+            px,
+            py,
+            pz,
+            spacing,
+            spacing,
+            spacing);
     fprintf(f, "<Piece Extent=\"%d %d %d %d %d %d\">\n", region.dx, region.dx + region.nx, region.dy, region.dy + region.ny, region.dz, region.dz + region.nz);
     fprintf(f, "<CellData %s>\n", selection);
     if (fp != NULL) {
         fprintf(fp, "<?xml version=\"1.0\"?>\n<VTKFile type=\"PImageData\" version=\"0.1\" byte_order=\"LittleEndian\">\n");
-        fprintf(fp, "<PImageData WholeExtent=\"%d %d %d %d %d %d\" Origin=\"%lg %lg %lg\" Spacing=\"%lg %lg %lg\">\n", regiontot.dx, regiontot.dx + regiontot.nx, regiontot.dy, regiontot.dy + regiontot.ny, regiontot.dz, regiontot.dz + regiontot.nz, px, py, pz, spacing, spacing, spacing);
+        fprintf(fp,
+                "<PImageData WholeExtent=\"%d %d %d %d %d %d\" Origin=\"%lg %lg %lg\" Spacing=\"%lg %lg %lg\">\n",
+                regiontot.dx,
+                regiontot.dx + regiontot.nx,
+                regiontot.dy,
+                regiontot.dy + regiontot.ny,
+                regiontot.dz,
+                regiontot.dz + regiontot.nz,
+                px,
+                py,
+                pz,
+                spacing,
+                spacing,
+                spacing);
     }
     int size;
     lbRegion reg;
     MPI_Comm_size(comm, &size);
     char* buf = new char[name_size];
-    for (int i = 0; i < size; i++) {
+    for (int i=0; i<size; i++) {
         reg = region;
         MPI_Bcast(&reg, 6, MPI_INT, i, comm);
         strcpy(buf, name);
         MPI_Bcast(buf, name_size, MPI_CHAR, i, comm);
-        if (fp != NULL) { fprintf(fp, "<Piece Extent=\"%d %d %d %d %d %d\" Source=\"%s\"/>\n", reg.dx, reg.dx + reg.nx, reg.dy, reg.dy + reg.ny, reg.dz, reg.dz + reg.nz, buf); }
+        if (fp != NULL) {
+            fprintf(
+                fp, "<Piece Extent=\"%d %d %d %d %d %d\" Source=\"%s\"/>\n", reg.dx, reg.dx + reg.nx, reg.dy, reg.dy + reg.ny, reg.dz, reg.dz + reg.nz, buf);
+        }
     }
     delete[] buf;
     if (fp != NULL) { fprintf(fp, "<PCellData %s>\n", selection); }
@@ -105,10 +135,10 @@ void vtkFileOut::Init(int width, int height) {
 
 void vtkFileOut::WriteField(const char* name, void* data, int elem, const char* tp, int components) {
     FERR;
-    int len = size * elem;
+    int len = size*elem;
     fprintf(f, vtk_field_header, tp, name, components);
     WriteB64(&len, sizeof(int));
-    WriteB64(data, size * elem);
+    WriteB64(data, size*elem);
     fprintf(f, "\n");
     fprintf(f, "%s", vtk_field_footer);
     if (fp != NULL) { fprintf(fp, vtk_field_parallel, tp, name, components); }
@@ -130,7 +160,7 @@ void vtkFileOut::Close() {
 
 // int main () {
 //	double p [4000];
-//	for (int i = 0; i< 4000; i++) p[i] = i;
+//	for (int i=0; i<4000; i++) p[i] = i;
 //	//fprintB64(stdout, p, 4000*sizeof(int));
 //	vtkFileOut f;
 //	f.Open("output/vtk1.vti");

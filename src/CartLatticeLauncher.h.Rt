@@ -3,25 +3,25 @@
 c_header();
 ?>
 /** \file CartLatticeLauncher.h
-*/
+ */
 
 #ifndef CARTLATTICEEXECUTOR_H
 #define CARTLATTICEEXECUTOR_H
 
 #include "CartLatticeContainer.h"
-#include "Region.h"
 #include "LatticeData.hpp"
+#include "Region.h"
 
 struct CartLatticeLauncher {
-  CartLatticeContainer container;
+    CartLatticeContainer container;
 
-  template < eOperationType I, eCalculateGlobals G, eStage S >
-  void RunBorder(CudaStream_t stream, const LatticeData& data) const;
-  template < eOperationType I, eCalculateGlobals G, eStage S >
-  void RunInterior(CudaStream_t stream, const LatticeData& data) const;
-  void Color(uchar4 *out_ptr, const LatticeData& data) const;
+    template <eOperationType I, eCalculateGlobals G, eStage S>
+    void RunBorder(CudaStream_t stream, const LatticeData& data) const;
+    template <eOperationType I, eCalculateGlobals G, eStage S>
+    void RunInterior(CudaStream_t stream, const LatticeData& data) const;
+    void Color(uchar4* out_ptr, const LatticeData& data) const;
 
-<?R
+    <?R
 for (q in rows(Quantities)) { ifdef(q$adjoint);
         if (q$adjoint) {
           node = "Node_Adj"
@@ -29,11 +29,11 @@ for (q in rows(Quantities)) { ifdef(q$adjoint);
           node = "Node"
         }
 ?>
-  void GetQuantity<?%s q$name ?>(lbRegion r, <?%s q$type ?>* tab, real_t scale, const LatticeData& data) const;
-  void SampleQuantity<?%s q$name ?>(lbRegion r, <?%s q$type ?>* tab, real_t scale, const LatticeData& data) const;
-<?R
+    void GetQuantity<?%s q$name ?>(lbRegion r, <?%s q$type ?>* tab, real_t scale, const LatticeData& data) const;
+    void SampleQuantity<?%s q$name ?>(lbRegion r, <?%s q$type ?>* tab, real_t scale, const LatticeData& data) const;
+    <?R
 }
 ifdef() ?>
 };
 
-#endif // CARTLATTICEEXECUTOR_H
+#endif  // CARTLATTICEEXECUTOR_H

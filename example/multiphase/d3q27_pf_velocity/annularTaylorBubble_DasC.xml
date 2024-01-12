@@ -12,13 +12,13 @@
           ~13GB of output files
 -->
 <Geometry nx="1280.000000" ny="130.000000" nz="130.000000">
-    <MRT><Box /></MRT>
-    <Smoothing><Box /></Smoothing>
+    <MRT><Box/></MRT>
+    <Smoothing><Box/></Smoothing>
     <Wall mask="ALL">
-        <Pipe  dx="1" dy="1" dz="1" nx="1280.000000" ny="128.000000" nz="128.000000" />
-        <Box   nx="1"  />
-        <Box   dx="-1" />
-        <XPipe y="65.000000" z="65.000000" R="32.000000" />
+        <Pipe dx="1" dy="1" dz="1" nx="1280.000000" ny="128.000000" nz="128.000000"/>
+        <Box nx="1"/>
+        <Box dx="-1"/>
+        <XPipe y="65.000000" z="65.000000" R="32.000000"/>
     </Wall>
     <Centerline>
     <Box dy="16.000000" dz="16.000000" ny="1" nz="1"/>
@@ -32,10 +32,10 @@
     <Param name="GravitationX" value="-0.00000044"/>
 
     <Param name="PhaseField_h" value="1"/>
-    <Param name="PhaseField_l" value="0" />
+    <Param name="PhaseField_l" value="0"/>
     <Param name="PhaseField" value="1"/>
-    <Param name="M" value="0.1"   />
-    <Param name="IntWidth" value="5"    />
+    <Param name="M" value="0.1"/>
+    <Param name="IntWidth" value="5"/>
     <Param name="sigma" value="0.00008400"/>
     <Param name="radAngle" value="22d"/>
     
@@ -50,15 +50,15 @@
 <Solve Iterations="10"/>
 <Geometry>
     <None mask="ADDITIONALS">
-        <Box />
+        <Box/>
     </None>
     <Centerline>
 	<Box dy="16.000000" dz="16.000000" ny="1" nz="1"/>
     </Centerline>
 </Geometry>
-<Solve      Iterations="180000">
-    <Failcheck  Iterations="1000"/>
-    <VTK        Iterations="18000"  what="PhaseField,U,P,BOUNDARY,ADDITIONALS"/>
-    <Log        Iterations="1000"/>
+<Solve Iterations="180000">
+    <Failcheck Iterations="1000"/>
+    <VTK Iterations="18000" what="PhaseField,U,P,BOUNDARY,ADDITIONALS"/>
+    <Log Iterations="1000"/>
 </Solve>
 </CLBConfig>

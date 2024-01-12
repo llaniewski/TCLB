@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!-- To be used with d2q9q9_cm_cht_OutFlowNeumann_AVG_IBB -->
 <CLBConfig version="2.0" output="output/d2q9q9_HotKarman_Re100_Pr5/">
-    <Geometry nx="512" ny="100" > 
+    <Geometry nx="512" ny="100"> 
       <!-- <CM_HIGHER> <Box/> </CM_HIGHER>   -->
       <Cumulants> <Box/> </Cumulants> 
       <!-- <CM_HIGHER_PROB> <Box/> </CM_HIGHER_PROB>  -->
@@ -16,23 +16,11 @@
 Second Order BC on cylinder  
 -->
         <HydroIBB>
-            <STL file="example/heat/cylinder_XYplane_D10_Z9.stl" 
-              scale="3.0" 
-              Xrot="0d" 
-              x="135.000000" 
-              y="50.000000" 
-              z="0" 
-              side="surface"/>
+            <STL file="example/heat/cylinder_XYplane_D10_Z9.stl" scale="3.0" Xrot="0d" x="135.000000" y="50.000000" z="0" side="surface"/>
         </HydroIBB>
         <HeaterDirichletTemperatureIABB name="BC_heat_cylinder"> 
-            <STL file="example/heat/cylinder_XYplane_D10_Z9.stl" 
-              scale="3.0" 
-              Xrot="0d" 
-              x="135.000000" 
-              y="50.000000" 
-              z="0" 
-              side="surface"/>
-        </HeaterDirichletTemperatureIABB > 
+            <STL file="example/heat/cylinder_XYplane_D10_Z9.stl" scale="3.0" Xrot="0d" x="135.000000" y="50.000000" z="0" side="surface"/>
+        </HeaterDirichletTemperatureIABB> 
 
 
 <!-- First order BC on cylinder: 
@@ -100,7 +88,7 @@ draw cylinder using primitive functions
       <Param name="cp" value="1."/>
       <Param name="material_density" value="1."/>
 
-      <Param name="VelocityX" value="0.025" />
+      <Param name="VelocityX" value="0.025"/>
 
       <!-- CylinderCenter is used only for heat flux bc 
       <Params CylinderCenterX="135.0" />
@@ -110,7 +98,7 @@ draw cylinder using primitive functions
     </Model>
    
     <Solve Iterations="3"> <VTK Iterations="1"/> </Solve> 
-    <Failcheck Iterations="100" nx="512" ny="100" />
+    <Failcheck Iterations="100" nx="512" ny="100"/>
 
     <Solve Iterations="30000"> 
       <VTK Iterations="1000" what="H,T,U,Rho"/> 

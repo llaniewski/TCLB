@@ -46,7 +46,7 @@ typedef unsigned short int cut_t;
 
 #define NO_CUT 65535
 #define CUT_MAX 65000
-#define CUT_LEN(x__) (0.005f * (x__))
+#define CUT_LEN(x__) (0.005f*(x__))
 
 typedef char tr_flag_t;
 typedef int tr_addr_t;

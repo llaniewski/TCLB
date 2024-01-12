@@ -18,13 +18,14 @@
     in the lattice. It stores the internal part of the fields
     and margins.
 */
-struct FTabs { <?R
+struct FTabs {
+    <?R
 for (m in NonEmptyMargin) { ?>
-  storage_t* <?%s m$name ?>; ///< Data on [<?%2d m$dx ?>,<?%2d m$dy?>,<?%2d m$dz?>] margin<?R
+    storage_t* <?%s m$name ?>;  ///< Data on [<?%2d m$dx ?>,<?%2d m$dy?>,<?%2d m$dz?>] margin<?R
 } ?>
-  void Clear(int,int,int);
-  void PreAlloc(int,int,int);
-  void Free();
+    void Clear(int, int, int);
+    void PreAlloc(int, int, int);
+    void Free();
 };
 
 /// Container class used for storing all the data needed on GPU
@@ -36,18 +37,18 @@ for (m in NonEmptyMargin) { ?>
 */
 class CartLatticeContainer {
 public:
-  FTabs in; ///< Main FTabs used for Primal iteration as input
-  FTabs out; ///< Main FTabs used for Primal iteration as output
+    FTabs in;   ///< Main FTabs used for Primal iteration as input
+    FTabs out;  ///< Main FTabs used for Primal iteration as output
 #ifdef ADJOINT
-  FTabs adjout; ///< FTabs used for Adjoint iteration as output
-  FTabs adjin; ///< FTabs used for Adjoint iteration as input
+    FTabs adjout;  ///< FTabs used for Adjoint iteration as output
+    FTabs adjin;   ///< FTabs used for Adjoint iteration as input
 #endif
-  flag_t * NodeType; ///< Table of flags/NodeTypes of all the nodes
-  cut_t* Q; 
-  int nx, ny, nz; ///< Size of the Lattice region
-  real_t px,py,pz;
+    flag_t* NodeType;  ///< Table of flags/NodeTypes of all the nodes
+    cut_t* Q;
+    int nx, ny, nz;  ///< Size of the Lattice region
+    real_t px, py, pz;
 };
 
 static_assert(std::is_trivially_copyable<CartLatticeContainer>::value, "CartLatticeContainer must be trivially copyable");
 
-#endif // LATTICECONTAINER_H
+#endif  // LATTICECONTAINER_H

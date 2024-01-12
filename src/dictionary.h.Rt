@@ -19,4 +19,4 @@
   }
   settings = unique(settings)
 ?>
-const char * SettingsDict[] = {<?%s paste("\"",settings,"\"", sep="", collapse=" , ")?>};
+const char* SettingsDict[] = {<?%s paste("\"",settings,"\"", sep="", collapse=" , ")?>};

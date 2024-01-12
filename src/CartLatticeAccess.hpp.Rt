@@ -3,17 +3,18 @@
         c_header()
 ?>
 /** \file CartLatticeAccess.hpp
-*/
+ */
 
 #ifndef LATTICEACCESS_HPP
 #define LATTICEACCESS_HPP
 
+#include <mpi.h>
+
+#include "CartLatticeContainer.h"
 #include "Consts.h"
 #include "Global.h"
-#include <mpi.h>
-#include "range_int.hpp"
-#include "CartLatticeContainer.h"
 #include "StorageConversions.h"
+#include "range_int.hpp"
 
 /// Push all densities
 
@@ -28,7 +29,8 @@
     if (missing(buf)) stop("No Buffer provided");
     if (pocket) {
       MContext$Pocket = "pocket" ?>
-      FTabs <?%s MContext$Pocket ?> = <?%s buf ?>; <?R
+FTabs <?%s MContext$Pocket ?> = <?%s buf ?>;
+<?R
       MContext$PocketMove = TRUE
     } else {
       MContext$Pocket = buf
@@ -41,7 +43,8 @@
       off = MContext$Offset[[i]]
       v = offset - off;
       if (!is.zero(v)) { ?>
-        <?%s MContext$Pocket?>.<?%s Margin[[i]]$name ?> += <?R C(v,float=FALSE) ?>; <?R
+<?%s MContext$Pocket?>.<?%s Margin[[i]]$name ?> += <?R C(v,float=FALSE) ?>;
+<?R
       }
       MContext$Offset[[i]] = offset;
       MContext
@@ -67,17 +70,20 @@
         sel2 = v == -1
         sel3 = v == 0
         if (any(sel1)) { ?>
-                 if (ensure_range_int(<?R C(conditions[l],float=FALSE,wrap.const=range_int) ?>) < <?%s range_int(0) ?>) { <?R
+if (ensure_range_int(<?R C(conditions[l],float=FALSE,wrap.const=range_int) ?>) < <?%s range_int(0) ?>) {
+    <?R
           req(j[sel1],l+1);
           if (any(sel2)) {?>
-                 } else { <?R
+} else {
+    <?R
             req(j[sel2],l+1);
           } ?>
-                 } <?R
+}
+<?R
         } else if (any(sel2)) { ?>
-                 if (ensure_range_int(<?R C(conditions[l],float=FALSE,wrap.const=range_int) ?>) >= <?%s range_int(0) ?>) { <?R
-          req(j[sel2],l+1); ?>
-                 } <?R
+if (ensure_range_int(<?R C(conditions[l],float=FALSE,wrap.const=range_int) ?>) >= <?%s range_int(0) ?>) { <?R
+          req(j[sel2],l+1); ?> }
+<?R
         }
         if (any(sel3)) {
           req(j[sel3],l+1);
@@ -92,15 +98,20 @@
 
   field.access.one = function(d,m,off,access) {
           if (access == "get") {  ?>
-        <?%s d ?> = <?%s m ?>[<?R C(off,float=FALSE) ?>]; <?R
+<?%s d ?> = <?%s m ?>[<?R C(off,float=FALSE) ?>];
+<?R
    } else if (access == "getsum") {  ?>
-        <?%s d ?> += <?%s m ?>[<?R C(off,float=FALSE) ?>]; <?R
+<?%s d ?> += <?%s m ?>[<?R C(off,float=FALSE) ?>];
+<?R
    } else if (access == "set") { ?>
-        <?%s m ?>[<?R C(off,float=FALSE) ?>] = <?%s d ?>; <?R
+<?%s m ?>[<?R C(off,float=FALSE) ?>] = <?%s d ?>;
+<?R
    } else if (access == "add") { ?>
-        <?%s m ?>[<?R C(off,float=FALSE) ?>] += <?%s d ?>; <?R
+<?%s m ?>[<?R C(off,float=FALSE) ?>] += <?%s d ?>;
+<?R
    } else if (access == "atomicadd") { ?>
-        CudaAtomicAdd(&( <?%s m ?>[<?R C(off,float=FALSE) ?>] ),<?%s d ?>); <?R
+CudaAtomicAdd(&(<?%s m ?>[<?R C(off,float=FALSE) ?>]), <?%s d ?>);
+<?R
    } else stop("Unknown access type in field.access.one");
   }
 
@@ -125,7 +136,8 @@
       }
     }
     if (access == "getsum" ) { ?>
-      <?%s d ?> = 0.0f; <?R
+<?%s d ?> = 0.0f;
+<?R
     }
 
 #print(ret)
@@ -210,18 +222,18 @@ resolve.symmetries = function(D) {
     s = names(symmetries)[i]
     ch = c("X","Y","Z")[i]
     if (any(plus | minus)) { ?>
-  switch (node.NodeType & NODE_SYM<?%s ch ?>) {
-<?R if (any(plus)) { ?>
-  case NODE_Symmetry<?%s ch ?>_plus:
-<?R C(PV("node.",D[plus, "name"]), PV("node.",D[plus, s])) ?>
-  break;
-<?R }
+switch (node.NodeType& NODE_SYM<?%s ch ?>) {
+    <?R if (any(plus)) { ?>
+    case NODE_Symmetry<?%s ch ?>_plus:
+        <?R C(PV("node.",D[plus, "name"]), PV("node.",D[plus, s])) ?>
+        break;
+        <?R }
     if (any(minus)) { ?>
-  case NODE_Symmetry<?%s ch ?>_minus:
-<?R C(PV("node.",D[minus, "name"]), PV("node.",D[minus, s])) ?>
-    break;
-<?R } ?>
-  }
+    case NODE_Symmetry<?%s ch ?>_minus:
+        <?R C(PV("node.",D[minus, "name"]), PV("node.",D[minus, s])) ?>
+        break;
+        <?R } ?>
+}
 <?R }
   }
 }
@@ -229,56 +241,57 @@ resolve.symmetries = function(D) {
 ?>
 
 CudaDeviceFunction flag_t fetchNodeType(const CartLatticeContainer& container, int x, int y, int z) {
-  return container.NodeType[(x + container.nx*(y + container.ny*z))];
+    return container.NodeType[(x + container.nx*(y + container.ny*z))];
 }
 
-template < class x_t, class y_t, class z_t >
+template <class x_t, class y_t, class z_t>
 class CartLatticeAccess {
-  private:
-  const x_t x;
-  const y_t y;
-  const z_t z;
-  const flag_t nt;
-  const range_int<0,1,0,1> nx, ny, nz;
-  const CartLatticeContainer* container;
-  public:
-  CudaDeviceFunction CartLatticeAccess(const int& x_, const int& y_, const int& z_, const CartLatticeContainer& container_) :
-    x(x_),y(y_),z(z_),
-    nt(fetchNodeType(container_, x, y, z)),
-    nx(container_.nx),ny(container_.ny),nz(container_.nz),
-    container(&container_)
-    { }
-  CudaDeviceFunction real_t getX() const { return container->px + x; }
-  CudaDeviceFunction real_t getY() const { return container->py + y; }
-  CudaDeviceFunction real_t getZ() const { return container->pz + z; }
-  CudaDeviceFunction flag_t getNodeType() const { return nt; }
+private:
+    const x_t x;
+    const y_t y;
+    const z_t z;
+    const flag_t nt;
+    const range_int<0, 1, 0, 1> nx, ny, nz;
+    const CartLatticeContainer* container;
 
-  CudaDeviceFunction cut_t getQ(int d) const  {
-    if (!container->Q) return NO_CUT;
-    size_t i = ((((size_t)d)*nz+z)*ny+y)*nx+x;
-    return container->Q[i];
-  }
+public:
+    CudaDeviceFunction CartLatticeAccess(const int& x_, const int& y_, const int& z_, const CartLatticeContainer& container_)
+        : x(x_), y(y_), z(z_), nt(fetchNodeType(container_, x, y, z)), nx(container_.nx), ny(container_.ny), nz(container_.nz), container(&container_) {}
+    CudaDeviceFunction real_t getX() const { return container->px + x; }
+    CudaDeviceFunction real_t getY() const { return container->py + y; }
+    CudaDeviceFunction real_t getZ() const { return container->pz + z; }
+    CudaDeviceFunction flag_t getNodeType() const { return nt; }
 
-<?R for (f in rows(Fields)) { ?>
-  template <class dx_t, class dy_t, class dz_t>
-  CudaDeviceFunction real_t load_<?%s f$nicename ?> (const dx_t & dx, const dy_t & dy, const dz_t & dz) const;
-<?R } ?>
-<?R for (s in rows(all_stages)) { ?>
-  template<class N>  CudaDeviceFunction void push<?%s s$suffix ?>(N & f) const;
-  template<class N>  CudaDeviceFunction void pop<?%s s$suffix ?>(N & f) const;
+    CudaDeviceFunction cut_t getQ(int d) const {
+        if (!container->Q) return NO_CUT;
+        size_t i = ((((size_t)d)*nz + z)*ny + y)*nx + x;
+        return container->Q[i];
+    }
+
+    <?R for (f in rows(Fields)) { ?>
+    template <class dx_t, class dy_t, class dz_t>
+    CudaDeviceFunction real_t load_<?%s f$nicename ?>(const dx_t& dx, const dy_t& dy, const dz_t& dz) const;
+    <?R } ?>
+    <?R for (s in rows(all_stages)) { ?>
+    template <class N>
+    CudaDeviceFunction void push<?%s s$suffix ?>(N& f) const;
+    template <class N>
+    CudaDeviceFunction void pop<?%s s$suffix ?>(N& f) const;
 #ifdef ADJOINT
-  template<class N>  CudaDeviceFunction void push<?%s s$suffix ?>_adj(N & f) const;
-  template<class N>  CudaDeviceFunction void pop<?%s s$suffix ?>_adj(N & f) const;
+    template <class N>
+    CudaDeviceFunction void push<?%s s$suffix ?>_adj(N& f) const;
+    template <class N>
+    CudaDeviceFunction void pop<?%s s$suffix ?>_adj(N& f) const;
 #endif
-<?R } ?>
+    <?R } ?>
 };
 
 <?R for (f in rows(Fields)) { ?>
-template < class x_t, class y_t, class z_t >
+template <class x_t, class y_t, class z_t>
 template <class dx_t, class dy_t, class dz_t>
-CudaDeviceFunction real_t CartLatticeAccess< x_t, y_t, z_t >::load_<?%s f$nicename ?> (const dx_t & dx, const dy_t & dy, const dz_t & dz) const
-{
-  storage_t ret; <?R
+CudaDeviceFunction real_t CartLatticeAccess<x_t, y_t, z_t>::load_<?%s f$nicename ?>(const dx_t& dx, const dy_t& dy, const dz_t& dz) const {
+    storage_t ret;
+    <?R
   con = make.context("container->in");
   p = PV(c("x","y","z"));
   dp = PV(c("dx","dy","dz"));
@@ -286,18 +299,18 @@ CudaDeviceFunction real_t CartLatticeAccess< x_t, y_t, z_t >::load_<?%s f$nicena
   if (f$miny == f$maxy) dp[2] = f$miny
   if (f$minz == f$maxz) dp[3] = f$minz
   con=load.field("ret", f, p, dp, con) ?>
-  return <?%s storage_to_real("ret",f)?>;
+    return <?%s storage_to_real("ret",f)?>;
 }
 <?R } ?>
 
 <?R
   p = PV(c("x","y","z"));
 for (s in rows(all_stages)) { ?>
-template < class x_t, class y_t, class z_t >
+template <class x_t, class y_t, class z_t>
 template <class N>
-CudaDeviceFunction void CartLatticeAccess< x_t, y_t, z_t >::pop<?%s s$suffix ?>(N & node) const
-{
-	storage_t val; <?R
+CudaDeviceFunction void CartLatticeAccess<x_t, y_t, z_t>::pop<?%s s$suffix ?>(N& node) const {
+    storage_t val;
+    <?R
   con = make.context("container->in",pocket=TRUE);
   dens = Density;
   dens$load = s$load.densities;
@@ -305,29 +318,32 @@ CudaDeviceFunction void CartLatticeAccess< x_t, y_t, z_t >::pop<?%s s$suffix ?>(
     f = rows(Fields)[[match(d$field, Fields$name)]]
     dp = c(-d$dx, -d$dy, -d$dz)
     con=load.field("val", f, p, dp,con) ?>
-	<?%s paste("node",d$name,sep=".") ?> = <?%s storage_to_real("val",f)?>; <?R
+    <?%s paste("node",d$name,sep=".") ?> = <?%s storage_to_real("val",f)?>;
+    <?R
   } else if (!is.na(d$default)) { ?>
-  <?%s paste("node",d$name,sep=".") ?> = <?%f d$default ?>; <?R
+    <?%s paste("node",d$name,sep=".") ?> = <?%f d$default ?>;
+    <?R
   } ?>
 }
 
-template < class x_t, class y_t, class z_t >
+template <class x_t, class y_t, class z_t>
 template <class N>
-CudaDeviceFunction void CartLatticeAccess< x_t, y_t, z_t >::push<?%s s$suffix ?>(N & node) const
-{
-  storage_t val; <?R
+CudaDeviceFunction void CartLatticeAccess<x_t, y_t, z_t>::push<?%s s$suffix ?>(N& node) const {
+    storage_t val;
+    <?R
   con = make.context("container->out",pocket=TRUE);
   for (f in rows(Fields)[s$save.fields]) { ?>
-  val = <?%s real_to_storage(paste("node",f$name,sep="."),f) ?>; <?R
+    val = <?%s real_to_storage(paste("node",f$name,sep="."),f) ?>;
+    <?R
     con=save.field("val", f, p, con)
   } ?>
 }
 
 <?R if (ADJOINT) { ?>
-template < class x_t, class y_t, class z_t >
+template <class x_t, class y_t, class z_t>
 template <class N>
-CudaDeviceFunction void CartLatticeAccess< x_t, y_t, z_t >::push<?%s s$suffix ?>_adj(N & node) const
-{ <?R
+CudaDeviceFunction void CartLatticeAccess<x_t, y_t, z_t>::push<?%s s$suffix ?>_adj(N& node) const {
+    <?R
   con = make.context("container->adjout",pocket=TRUE);
   for (d in rows(Density)[s$load.densities]) {
     f = rows(Fields)[[match(d$field, Fields$name)]]
@@ -337,41 +353,40 @@ CudaDeviceFunction void CartLatticeAccess< x_t, y_t, z_t >::push<?%s s$suffix ?>
   } ?>
 }
 
-template < class x_t, class y_t, class z_t >
+template <class x_t, class y_t, class z_t>
 template <class N>
-CudaDeviceFunction void CartLatticeAccess< x_t, y_t, z_t >::pop<?%s s$suffix ?>_adj(N & node) const
-{ <?R
+CudaDeviceFunction void CartLatticeAccess<x_t, y_t, z_t>::pop<?%s s$suffix ?>_adj(N& node) const {<?R
   con = make.context("container->adjin",pocket=TRUE);
   for (f in rows(Fields)[s$save.fields]) {
     val = paste("node",f$adjoint_name,sep=".")
     con = field.access( d=val, f, p, pattern="put", access="getsum", MContext=con)
-  } ?>
-}
-<?R } } ?>
+  } ?>} <?R } } ?>
 
+    <?R if (Options$autosym) { ?>  //-------------- autosym
 
-<?R if (Options$autosym) { ?> //-------------- autosym
+    template <class PARENT>
+    class SymmetryAccess : public PARENT {
+    typedef PARENT parent;
 
-template < class PARENT >
-class SymmetryAccess : public PARENT {
-  typedef PARENT parent;
-  public:
-  template <typename... Args>
-  CudaDeviceFunction SymmetryAccess(Args&&... args) : parent(std::forward<Args>(args)...) { }
-
-<?R for (f in rows(Fields)) { ?>
-private:
-  template <class dx_t, class dy_t, class dz_t>
-  CudaDeviceFunction real_t loadX_<?%s f$nicename ?> (const dx_t & dx, const dy_t & dy, const dz_t & dz) const;
-  template <class dx_t, class dy_t, class dz_t>
-  CudaDeviceFunction real_t loadY_<?%s f$nicename ?> (const dx_t & dx, const dy_t & dy, const dz_t & dz) const;
 public:
-  template <class dx_t, class dy_t, class dz_t>
-  CudaDeviceFunction real_t load_<?%s f$nicename ?> (const dx_t & dx, const dy_t & dy, const dz_t & dz) const;
-<?R } ?>
-<?R for (s in rows(all_stages)) { ?>
-  template<class N>  CudaDeviceFunction void pop<?%s s$suffix ?>(N & f) const;
-<?R } ?>
+    template <typename... Args>
+    CudaDeviceFunction SymmetryAccess(Args&&... args) : parent(std::forward<Args>(args)...) {}
+
+    <?R for (f in rows(Fields)) { ?>
+private:
+    template <class dx_t, class dy_t, class dz_t>
+    CudaDeviceFunction real_t loadX_<?%s f$nicename ?>(const dx_t& dx, const dy_t& dy, const dz_t& dz) const;
+    template <class dx_t, class dy_t, class dz_t>
+    CudaDeviceFunction real_t loadY_<?%s f$nicename ?>(const dx_t& dx, const dy_t& dy, const dz_t& dz) const;
+
+public:
+    template <class dx_t, class dy_t, class dz_t>
+    CudaDeviceFunction real_t load_<?%s f$nicename ?>(const dx_t& dx, const dy_t& dy, const dz_t& dz) const;
+    <?R } ?>
+    <?R for (s in rows(all_stages)) { ?>
+    template <class N>
+    CudaDeviceFunction void pop<?%s s$suffix ?>(N& f) const;
+    <?R } ?>
 };
 
 <?R for (f in rows(Fields)) { ?>
@@ -401,57 +416,50 @@ public:
     sd = d
     sd[i] = sd[i]*(-1)
 ?>
-template < class PARENT >
+template <class PARENT>
 template <class dx_t, class dy_t, class dz_t>
-CudaDeviceFunction real_t SymmetryAccess< PARENT >::<?%s paste0(this_fun, f$nicename) ?> (const dx_t & dx, const dy_t & dy, const dz_t & dz) const
-{
-  <?R if (paste0("SYM",ch[i]) %in% NodeTypes$group) { ?>
-  if (<?R C(d[i]) ?> > range_int<0>()) {
-    if ((this->NodeType() & NODE_SYM<?%s ch[i] ?>) == NODE_Symmetry<?%s ch[i] ?>_plus) {
-      return <?%s paste0(sig, next_fun, sf$nicename) ?>(<?R C(sd,sep=", ") ?>);
+CudaDeviceFunction real_t SymmetryAccess<PARENT>::<?%s paste0(this_fun, f$nicename) ?>(const dx_t& dx, const dy_t& dy, const dz_t& dz) const {
+    <?R if (paste0("SYM",ch[i]) %in% NodeTypes$group) { ?>
+    if (<?R C(d[i]) ?> > range_int<0>()) {
+        if ((this->NodeType() & NODE_SYM<?%s ch[i] ?>) == NODE_Symmetry<?%s ch[i] ?>_plus) { return <?%s paste0(sig, next_fun, sf$nicename) ?>(<?R C(sd,sep=", ") ?>); }
+    } else if (<?R C(d[i]) ?> < range_int<0>()) {
+        if ((this->NodeType() & NODE_SYM<?%s ch[i] ?>) == NODE_Symmetry<?%s ch[i] ?>_minus) { return <?%s paste0(sig, next_fun, sf$nicename) ?>(<?R C(sd,sep=", ") ?>); }
     }
-  } else if (<?R C(d[i]) ?> < range_int<0>()) {
-    if ((this->NodeType() & NODE_SYM<?%s ch[i] ?>) == NODE_Symmetry<?%s ch[i] ?>_minus) {
-      return <?%s paste0(sig, next_fun, sf$nicename) ?>(<?R C(sd,sep=", ") ?>);
-    }
-  }
-  <?R } ?>
-  return <?%s paste0(next_fun, f$nicename) ?>(<?R C(d,sep=", ") ?>);
+    <?R } ?>
+    return <?%s paste0(next_fun, f$nicename) ?>(<?R C(d,sep=", ") ?>);
 }
 <?R } ?>
 <?R } ?>
 
 <?R for (s in rows(all_stages)) { ?>
-template < class PARENT >
+template <class PARENT>
 template <class N>
-CudaDeviceFunction void SymmetryAccess< PARENT >::pop<?%s s$suffix ?>(N & node) const
-{
-  parent::pop<?%s s$suffix ?>(node);
-  <?R resolve.symmetries(Density[s$load.densities,,drop=FALSE]) ?>
+CudaDeviceFunction void SymmetryAccess<PARENT>::pop<?%s s$suffix ?>(N& node) const {
+    parent::pop<?%s s$suffix ?>(node);
+    <?R resolve.symmetries(Density[s$load.densities,,drop=FALSE]) ?>
 }
 <?R } } ?>
 
-template < class PARENT >
+template <class PARENT>
 class DynamicAccess : public PARENT {
-  typedef PARENT parent;
-  public:
-  template <typename... Args>
-  CudaDeviceFunction DynamicAccess(Args&&... args) : parent(std::forward<Args>(args)...) { }
-<?R for (f in rows(Fields)) { ?>
+    typedef PARENT parent;
+
 public:
-  template <class dx_t, class dy_t, class dz_t=range_int<0> >
-  CudaDeviceFunction inline real_t load_<?%s f$nicename ?> (const dx_t & dx, const dy_t & dy, const dz_t & dz = range_int<0>()) const {
-    return parent::load_<?%s f$nicename ?>(
-      range_int< <?%d f$minx ?>, 0, <?%d f$maxx ?>, 0 >::ensure(dx),
-      range_int< <?%d f$miny ?>, 0, <?%d f$maxy ?>, 0 >::ensure(dy),
-      range_int< <?%d f$minz ?>, 0, <?%d f$maxz ?>, 0 >::ensure(dz)
-    );
-  }
-  template <int dx, int dy, int dz=0>
-  CudaDeviceFunction inline real_t load_<?%s f$nicename ?> () const {
-    return parent::load_<?%s f$nicename ?>(range_int< dx >(),range_int< dy >(),range_int< dz >());
-  }
-<?R } ?>
+    template <typename... Args>
+    CudaDeviceFunction DynamicAccess(Args&&... args) : parent(std::forward<Args>(args)...) {}
+    <?R for (f in rows(Fields)) { ?>
+public:
+    template <class dx_t, class dy_t, class dz_t = range_int<0> >
+    CudaDeviceFunction inline real_t load_<?%s f$nicename ?>(const dx_t& dx, const dy_t& dy, const dz_t& dz = range_int<0>()) const {
+        return parent::load_<?%s f$nicename ?>(range_int<<?%d f$minx ?>, 0, <?%d f$maxx ?>, 0>::ensure(dx),
+                                           range_int<<?%d f$miny ?>, 0, <?%d f$maxy ?>, 0>::ensure(dy),
+                                           range_int<<?%d f$minz ?>, 0, <?%d f$maxz ?>, 0>::ensure(dz));
+    }
+    template <int dx, int dy, int dz = 0>
+    CudaDeviceFunction inline real_t load_<?%s f$nicename ?>() const {
+        return parent::load_<?%s f$nicename ?>(range_int<dx>(), range_int<dy>(), range_int<dz>());
+    }
+    <?R } ?>
 };
 
 <?R
@@ -460,7 +468,7 @@ public:
   str = "ACC"
   for (i in rev(composite)) str = paste0(i,"< ",str, " >")
 ?>
-template < class ACC >
+template <class ACC>
 using AccessComposite = <?%s str ?>;
 
-#endif // LATTICEACCESS_HPP
+#endif  // LATTICEACCESS_HPP

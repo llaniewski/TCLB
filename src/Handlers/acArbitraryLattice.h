@@ -8,7 +8,7 @@
 #include "vHandler.h"
 
 class acArbitraryLattice : public Action {
-   public:
+public:
     static std::string xmlname;
     int Init();
 };

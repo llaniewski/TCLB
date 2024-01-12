@@ -34,7 +34,7 @@
 class LatticeBase {
     using setting_record_t = std::vector<std::pair<int, std::pair<int, std::pair<real_t, real_t> > > >;
 
-   public:
+public:
     LatticeBase(int zonesettings, int zones, int num_snaps_, const UnitEnv& units_);
     LatticeBase(const LatticeBase&) = delete;
     LatticeBase(LatticeBase&&) = delete;
@@ -67,7 +67,7 @@ class LatticeBase {
     SyntheticTurbulence ST;                   ///<
     std::string snapFileName;
 
-   protected:
+protected:
     static constexpr int maxSnaps = 33;
 
     const UnitEnv* units;
@@ -80,7 +80,7 @@ class LatticeBase {
     void InitialIteration(int segiter);
     int getSnap(int i) const;
 
-   private:
+private:
     virtual int loadPrimal(const std::string& filename, int snap_ind) = 0;
     virtual void savePrimal(const std::string& filename, int snap_ind) const = 0;
 #ifdef ADJOINT
@@ -89,7 +89,7 @@ class LatticeBase {
 #endif
     virtual void clearAdjoint() = 0;
 
-   public:
+public:
     virtual size_t getLocalSize() const = 0;
     virtual size_t getGlobalSize() const = 0;
     void initLattice();  /// Called by handlers
@@ -104,7 +104,6 @@ class LatticeBase {
     void SetSetting(const Model::Setting& set, real_t val);
     void push_setting(int, real_t, real_t);  ///< Set the setting (and push to settings_record if recording)
     void pop_settings();                     ///< Pop the setting from settings_record
-
 
     virtual std::vector<int> shape() const = 0;
     virtual std::vector<real_t> getQuantity(const Model::Quantity& q, real_t scale = 1) = 0;
@@ -138,18 +137,30 @@ class LatticeBase {
     void Iterate(int num_iters, int iter_type);
     void IterateTill(int it, int iter_type);
     void IterateAction(int action, int niter, int iter_type);
-    void Iterate() { IterateT(ITER_NORM); }
-    void IterateG() { IterateT(ITER_GLOBS); }
-    void Stream() { IterateT(ITER_STREAM); }
-    void IterateT(int iter_type) { Iterate(1, iter_type); }
+    void Iterate() {
+        IterateT(ITER_NORM);
+    }
+    void IterateG() {
+        IterateT(ITER_GLOBS);
+    }
+    void Stream() {
+        IterateT(ITER_STREAM);
+    }
+    void IterateT(int iter_type) {
+        Iterate(1, iter_type);
+    }
 
     virtual void IterationPrimal(int, int, int) = 0;
     virtual void IterationAdjoint(int, int, int, int, int) = 0;
     virtual void IterationOptimization(int, int, int, int, int) = 0;
     virtual void RunAction(int, int, int, int) = 0;
-    void RunAction(int action, int iter_type) { RunAction(action, Snap, (Snap + 1) % 2, iter_type); }
+    void RunAction(int action, int iter_type) {
+        RunAction(action, Snap, (Snap + 1) % 2, iter_type);
+    }
 
-    virtual int EventLoop() { return 0; }  // Event loop does nothing by default
+    virtual int EventLoop() {
+        return 0;
+    }  // Event loop does nothing by default
 };
 
 #endif  // LATTICEBASE_HPP

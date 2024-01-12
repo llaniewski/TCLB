@@ -2,18 +2,18 @@
 #define CBLOG_H
 
 #include "../CommonHandler.h"
-
-#include "vHandler.h"
 #include "Callback.h"
+#include "vHandler.h"
 
-class  cbLog  : public  Callback  {
-	std::string filename;
-	int old_iter_type;
-	public:
-	static std::string xmlname;
-int Init ();
-int DoIt ();
-int Finish ();
+class cbLog : public Callback {
+    std::string filename;
+    int old_iter_type;
+
+public:
+    static std::string xmlname;
+    int Init();
+    int DoIt();
+    int Finish();
 };
 
-#endif // CBLOG_H
+#endif  // CBLOG_H

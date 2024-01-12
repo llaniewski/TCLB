@@ -2,7 +2,9 @@
 
 #include "mpitools.hpp"
 
-VtkFileOut::VtkFileOut(std::string name_, size_t num_cells_, size_t num_points_, const double* coords, const unsigned* verts, MPI_Comm comm_, bool has_scalars, bool has_vectors) : name(std::move(name_)), comm(comm_), num_cells(num_cells_), num_points(num_points_) {
+VtkFileOut::VtkFileOut(
+    std::string name_, size_t num_cells_, size_t num_points_, const double* coords, const unsigned* verts, MPI_Comm comm_, bool has_scalars, bool has_vectors)
+    : name(std::move(name_)), comm(comm_), num_cells(num_cells_), num_points(num_points_) {
     init();
     writeHeaders(coords, verts, has_scalars, has_vectors);
 }
@@ -19,11 +21,16 @@ void VtkFileOut::init() {
 }
 
 void VtkFileOut::writeHeaders(const double* coords, const unsigned* verts, bool has_scalars, bool has_vectors) const {
-    fprintf(f.get(), "<?xml version=\"1.0\"?>\n<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n<UnstructuredGrid>\n");
+    fprintf(f.get(),
+            "<?xml version=\"1.0\"?>\n<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\" "
+            "header_type=\"UInt64\">\n<UnstructuredGrid>\n");
     fprintf(f.get(), "<Piece NumberOfPoints=\"%lu\" NumberOfCells=\"%lu\">\n", num_points, num_cells);
     fprintf(f.get(), "<PointData>\n</PointData>\n");
 
-    if (fp) fprintf(fp.get(), "<?xml version=\"1.0\"?>\n<VTKFile type=\"PUnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\">\n<PUnstructuredGrid>\n<PPointData>\n</PPointData>\n");
+    if (fp)
+        fprintf(fp.get(),
+                "<?xml version=\"1.0\"?>\n<VTKFile type=\"PUnstructuredGrid\" version=\"0.1\" "
+                "byte_order=\"LittleEndian\">\n<PUnstructuredGrid>\n<PPointData>\n</PPointData>\n");
     writePieceInfo();
     writeGeomInfo(coords, verts);
 
@@ -49,7 +56,8 @@ void VtkFileOut::writePieceInfo() const {
     auto name_offsets = name_sizes;
     std::exclusive_scan(name_sizes.cbegin(), name_sizes.cend(), name_offsets.begin(), 0);
     std::vector<char> names(am0 ? name_offsets.back() + name_sizes.back() : 0);
-    MPI_Gatherv(name.data(), name_sz, mpitools::getMPIType<char>(), names.data(), name_sizes.data(), name_offsets.data(), mpitools::getMPIType<char>(), 0, comm);
+    MPI_Gatherv(
+        name.data(), name_sz, mpitools::getMPIType<char>(), names.data(), name_sizes.data(), name_offsets.data(), mpitools::getMPIType<char>(), 0, comm);
     if (am0)
         for (int i = 0; i != mpitools::MPI_Size(comm); ++i) {
             const std::string_view piece_name(std::next(names.data(), name_offsets[i]), name_sizes[i]);
@@ -62,7 +70,7 @@ void VtkFileOut::writeGeomInfo(const double* coords, const unsigned* verts) cons
     // Points
     fprintf(f.get(), "<Points>\n");
     if (fp) fprintf(fp.get(), "<PPoints>\n");
-    writeFieldImpl("Position", coords, num_points * 3 * sizeof(double), "Float64", 3);
+    writeFieldImpl("Position", coords, num_points*3*sizeof(double), "Float64", 3);
     fprintf(f.get(), "</Points>\n");
     if (fp) fprintf(fp.get(), "</PPoints>\n");
 
@@ -77,7 +85,7 @@ void VtkFileOut::writeGeomInfo(const double* coords, const unsigned* verts) cons
     }
     fprintf(f.get(), "<Cells>\n");
     if (fp) fprintf(fp.get(), "<PCells>\n");
-    writeFieldImpl("connectivity", verts, num_cells * sizeof(unsigned) * 8, "UInt32", 1);
+    writeFieldImpl("connectivity", verts, num_cells*sizeof(unsigned)*8, "UInt32", 1);
     writeField("offsets", cell_offsets.data());
     writeField("types", cell_types.data());
     fprintf(f.get(), "</Cells>\n");
@@ -90,9 +98,18 @@ void VtkFileOut::writeFooters() const {
 }
 
 void VtkFileOut::writeFieldImpl(const std::string& name, const void* data, size_t size, std::string_view vtk_type_name, int components) const {
-    fprintf(f.get(), "<DataArray type=\"%s\" Name=\"%s\" format=\"binary\" encoding=\"base64\" NumberOfComponents=\"%d\">\n", vtk_type_name.data(), name.c_str(), components);
+    fprintf(f.get(),
+            "<DataArray type=\"%s\" Name=\"%s\" format=\"binary\" encoding=\"base64\" NumberOfComponents=\"%d\">\n",
+            vtk_type_name.data(),
+            name.c_str(),
+            components);
     fprintB64(f.get(), &size, sizeof(size_t));
     fprintB64(f.get(), data, size);
     fprintf(f.get(), "\n</DataArray>\n");
-    if (fp) fprintf(fp.get(), "<PDataArray type=\"%s\" Name=\"%s\" format=\"binary\" encoding=\"base64\" NumberOfComponents=\"%d\" />\n", vtk_type_name.data(), name.c_str(), components);
+    if (fp)
+        fprintf(fp.get(),
+                "<PDataArray type=\"%s\" Name=\"%s\" format=\"binary\" encoding=\"base64\" NumberOfComponents=\"%d\" />\n",
+                vtk_type_name.data(),
+                name.c_str(),
+                components);
 }

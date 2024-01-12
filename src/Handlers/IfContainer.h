@@ -2,16 +2,15 @@
 #define IFCONTAINER_H
 
 #include "../CommonHandler.h"
-
-#include "vHandler.h"
 #include "Action.h"
 #include "GenericAction.h"
+#include "vHandler.h"
 
-class  IfContainer  : public  GenericAction  {
-	public:
-	static std::string xmlname;
-int Init ();
-int Finish ();
+class IfContainer : public GenericAction {
+public:
+    static std::string xmlname;
+    int Init();
+    int Finish();
 };
 
-#endif // IFCONTAINER_H
+#endif  // IFCONTAINER_H

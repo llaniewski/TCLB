@@ -16,9 +16,7 @@ struct DeduceMPITypeHelper {};
 #define SPECIALIZE_MPI_DEDUCTION_HELPER(c_type, mpi_type) \
     template <>                                           \
     struct DeduceMPITypeHelper<c_type> {                  \
-        static MPI_Datatype get() {                       \
-            return mpi_type;                              \
-        }                                                 \
+        static MPI_Datatype get() { return mpi_type; }    \
     };
 
 SPECIALIZE_MPI_DEDUCTION_HELPER(char, MPI_CHAR)

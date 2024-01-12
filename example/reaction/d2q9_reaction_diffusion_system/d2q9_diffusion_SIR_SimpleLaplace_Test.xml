@@ -21,8 +21,8 @@
 
         	 
 
-		<Param name="Init_DRE_1" value="0.8" />		<!-- S -->
-		<Param name="Init_DRE_2" value="0.1" />		<!-- I -->
+		<Param name="Init_DRE_1" value="0.8"/>		<!-- S -->
+		<Param name="Init_DRE_2" value="0.1"/>		<!-- I -->
         <Param name="Init_DRE_3" value="0.1"/>		<!-- R -->
 
         <Param name="Init_DRE_1" value="0.5" zone="city"/><!-- S -->

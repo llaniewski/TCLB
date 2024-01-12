@@ -3,107 +3,103 @@
 	c_header();
 ?>
 /** \file LatticeData.hpp
-*/
+ */
 
 #ifndef LATTICEDATA_HPP
 #define LATTICEDATA_HPP
 
-#include "SyntheticTurbulence.h"
-#include "SolidContainer.h"
-#include "Consts.h"
-#include "cross.h"
-
 #include <array>
 
-inline CudaDeviceFunction vector_t calcST(const STWaveSet &ST, real_t x, real_t y, real_t z) {
-  vector_t ret;
-  ret.x=0;ret.y=0;ret.z=0;
-  for (int i=0; i<ST.nmodes; i++) {
-    real_t x1 = ST.data[i*ST_DATA+ST_WAVE_X];
-    real_t y1 = ST.data[i*ST_DATA+ST_WAVE_Y];
-    real_t z1 = ST.data[i*ST_DATA+ST_WAVE_Z];
-    real_t x2 = ST.data[i*ST_DATA+ST_SINE_X];
-    real_t y2 = ST.data[i*ST_DATA+ST_SINE_Y];
-    real_t z2 = ST.data[i*ST_DATA+ST_SINE_Z];
-    real_t w = ST.data[i*ST_DATA+ST_WAVE_L];
-    w = (x1*x + y1*y + z1*z) * w;
-    real_t sw = sin(w), cw = cos(w);
-    ret.x += sw*x2 + cw*(y1*z2-z1*y2);
-    ret.y += sw*y2 + cw*(z1*x2-x1*z2);
-    ret.z += sw*z2 + cw*(x1*y2-y1*x2);
-  }
-  return ret;
+#include "Consts.h"
+#include "SolidContainer.h"
+#include "SyntheticTurbulence.h"
+#include "cross.h"
+
+inline CudaDeviceFunction vector_t calcST(const STWaveSet& ST, real_t x, real_t y, real_t z) {
+    vector_t ret;
+    ret.x = 0;
+    ret.y = 0;
+    ret.z = 0;
+    for (int i = 0; i < ST.nmodes; i++) {
+        real_t x1 = ST.data[i*ST_DATA + ST_WAVE_X];
+        real_t y1 = ST.data[i*ST_DATA + ST_WAVE_Y];
+        real_t z1 = ST.data[i*ST_DATA + ST_WAVE_Z];
+        real_t x2 = ST.data[i*ST_DATA + ST_SINE_X];
+        real_t y2 = ST.data[i*ST_DATA + ST_SINE_Y];
+        real_t z2 = ST.data[i*ST_DATA + ST_SINE_Z];
+        real_t w = ST.data[i*ST_DATA + ST_WAVE_L];
+        w = (x1*x + y1*y + z1*z)*w;
+        real_t sw = sin(w), cw = cos(w);
+        ret.x += sw*x2 + cw*(y1*z2 - z1*y2);
+        ret.y += sw*y2 + cw*(z1*x2 - x1*z2);
+        ret.z += sw*z2 + cw*(x1*y2 - y1*x2);
+    }
+    return ret;
 }
 
 struct LatticeData {
     size_t particle_data_size;
-    real_t *particle_data;
+    real_t* particle_data;
     solidcontainer_t::finder_t solidfinder;
-    real_t *Globals; ///< Pointer to the GPU table to store the calculated values of Globals
+    real_t* Globals;  ///< Pointer to the GPU table to store the calculated values of Globals
     int iter = 0;
-    int reset_iter = 0; ///< number of last average reset, for dynamics
+    int reset_iter = 0;  ///< number of last average reset, for dynamics
     int ZoneIndex = 0;
     int MaxZones;
-    real_t **ZoneSettings;
-    real_t *ConstZoneSettings;
+    real_t** ZoneSettings;
+    real_t* ConstZoneSettings;
     STWaveSet ST;
-    real_t settings[SETTINGS]; ///< settings initialized to zero
+    real_t settings[SETTINGS];  ///< settings initialized to zero
 
-    CudaDeviceFunction real_t ZoneSetting(const int &s, const int &z) const {
-        const int i = s + ZONESETTINGS * z;
+    CudaDeviceFunction real_t ZoneSetting(const int& s, const int& z) const {
+        const int i = s + ZONESETTINGS*z;
         const real_t* w = ZoneSettings[i];
         return w ? w[ZoneIndex] : ConstZoneSettings[i];
     }
 
-    CudaDeviceFunction real_t ZoneSetting_DT(const int &s, const int &z) const {
-        const int i = s + ZONESETTINGS * z;
-        const real_t *w = ZoneSettings[i + DT_OFFSET];
+    CudaDeviceFunction real_t ZoneSetting_DT(const int& s, const int& z) const {
+        const int i = s + ZONESETTINGS*z;
+        const real_t* w = ZoneSettings[i + DT_OFFSET];
         return w ? w[ZoneIndex] : 0.;
     }
 
-    CudaDeviceFunction real_t *ZoneSettingGrad(const int &s, const int &z) const {
-        const int i = s + ZONESETTINGS * z;
-        real_t *w = ZoneSettings[i + GRAD_OFFSET];
+    CudaDeviceFunction real_t* ZoneSettingGrad(const int& s, const int& z) const {
+        const int i = s + ZONESETTINGS*z;
+        real_t* w = ZoneSettings[i + GRAD_OFFSET];
         return w ? &w[ZoneIndex] : &ConstZoneSettings[i + GRAD_OFFSET];
     }
 
-    CudaDeviceFunction vector_t getST(real_t x, real_t y, real_t z) const {
-        return calcST(ST, x, y, z);
-    }
+    CudaDeviceFunction vector_t getST(real_t x, real_t y, real_t z) const { return calcST(ST, x, y, z); }
 
-    void clearGlobals() {
-        CudaMemset(Globals, 0, GLOBALS * sizeof(real_t));
-    }
+    void clearGlobals() { CudaMemset(Globals, 0, GLOBALS*sizeof(real_t)); }
 
     void Alloc() {
         iter = 0;
         particle_data_size = 0;
         particle_data = nullptr;
 
-        char *tmp{};
-        const size_t size = GLOBALS * sizeof(real_t);
+        char* tmp{};
+        const size_t size = GLOBALS*sizeof(real_t);
         debug2("Allocating: %ld b\n", size);
-        CudaMalloc((void **) &tmp, size);
-        debug1("got address: (%p - %p)\n", tmp, (unsigned char *) tmp + size);
+        CudaMalloc((void**)&tmp, size);
+        debug1("got address: (%p - %p)\n", tmp, (unsigned char*)tmp + size);
         CudaMemset(tmp, 0, size);
-        Globals = (real_t *) tmp;
+        Globals = (real_t*)tmp;
         ST.setsize(0, ST_GPU);
     }
 
-<?R for (v in rows(Globals)) { ?>
+    <?R for (v in rows(Globals)) { ?>
     /// Get [<?%s v$comment ?>] from GPU memory
-    real_t get<?%s v$name ?>(){
+    real_t get<?%s v$name ?>() {
         real_t ret;
-        CudaMemcpy(&ret, &Globals[<?%s v$Index ?>],sizeof(real_t),CudaMemcpyDeviceToHost);
+        CudaMemcpy(&ret, &Globals[<?%s v$Index ?>], sizeof(real_t), CudaMemcpyDeviceToHost);
         return ret;
     }
-<?R } ?>
+    <?R } ?>
     /// Get all the globals from GPU memory
-	void getGlobals(real_t * tab) {
-        CudaMemcpy(tab, Globals, GLOBALS * sizeof(real_t), CudaMemcpyDeviceToHost);
-	}
+    void getGlobals(real_t* tab) { CudaMemcpy(tab, Globals, GLOBALS*sizeof(real_t), CudaMemcpyDeviceToHost); }
 };
 
 static_assert(std::is_trivially_copyable<LatticeData>::value, "LatticeData must be trivially copyable");
 
-#endif // LATTICEDATA_HPP
+#endif  // LATTICEDATA_HPP

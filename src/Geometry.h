@@ -4,10 +4,10 @@
 #include <map>
 #include <string>
 
-#include "pugixml.hpp"
-#include "unit.h"
 #include "Lists.h"
 #include "Region.h"
+#include "pugixml.hpp"
+#include "unit.h"
 
 /// STL triangle structure
 #ifdef _WIN32
@@ -26,21 +26,22 @@ enum draw_mode { MODE_OVERWRITE, MODE_FILL, MODE_CHANGE };
 
 /// Class responsible for constructing the table of flags/NodeTypes
 class Geometry {
-    const Model * model;
+    const Model* model;
+
 public:
-    std::vector<big_flag_t> geom; ///< Main table of flags/NodeType's
+    std::vector<big_flag_t> geom;  ///< Main table of flags/NodeType's
     cut_t* Q;
     lbRegion region;       ///< Lattice region
     lbRegion totalregion;  ///< Global Lattice region
     UnitEnv units;         ///< Units object for unit calculations
-    Geometry(const lbRegion& r, const lbRegion& tr, const UnitEnv& units_, const Model * model_);
+    Geometry(const lbRegion& r, const lbRegion& tr, const UnitEnv& units_, const Model* model_);
     ~Geometry();
     int load(pugi::xml_node& geometry_node, const std::map<std::string, int>& zone_map);
     void writeVTI(const char* filename);
 
 private:
-    big_flag_t fg;              ///< Foreground flag used for filling
-    big_flag_t fg_mask;         ///< Foreground flag mask used for filling
+    big_flag_t fg;          ///< Foreground flag used for filling
+    big_flag_t fg_mask;     ///< Foreground flag mask used for filling
     draw_mode fg_mode;      ///< Foreground flag drawing mode
     pugi::xml_node fg_xml;  ///< Foreground flag XML element
     int setFlag(const pugi::char_t* name);

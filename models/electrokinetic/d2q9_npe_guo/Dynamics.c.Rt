@@ -104,34 +104,31 @@
 
 ?>
 
-CudaDeviceFunction real_t getPsi(){
+CudaDeviceFunction real_t getPsi() {
     const real_t wp0 = <?R C(wp0) ?>;
-	return ( <?R C( sum( g[2:9] ))  ?> ) / (1. - wp0);
+    return (<?R C( sum( g[2:9] ))  ?>)/(1. - wp0);
 }
 
-CudaDeviceFunction real_t getrho_e(){
-    return el*(ez*getn0() - ez* getn1());	
+CudaDeviceFunction real_t getrho_e() {
+    return el*(ez*getn0() - ez*getn1());
 }
 
-CudaDeviceFunction void BounceBack()
-{
+CudaDeviceFunction void BounceBack() {
+    <?R C(PV('real_t temp'), sum(f)) ?>
 
-  <?R C(PV('real_t temp'), sum(f)) ?>
-
-  if ( temp !=  1 ) {
-   <?R if ( any( DensityAll$group=="BC" ) ) {
+    if (temp != 1) {
+        <?R if ( any( DensityAll$group=="BC" ) ) {
     C(PV(c('BC[0]', 'BC[1]')), 2.* f %*% U);
    } ?>
-  } else {
-   <?R C(PV(c('BC[0]', 'BC[1]')), c(0,0) ); ?>
-  }
+    } else {
+        <?R C(PV(c('BC[0]', 'BC[1]')), c(0,0) ); ?>
+    }
 
-
-// *******************
-// Bounce back f and phi
-// *******************    
-     real_t uf;
-<?R
+    // *******************
+    // Bounce back f and phi
+    // *******************
+    real_t uf;
+    <?R
   V = cbind(1:9, bounce+1)
   sel = V[,1] > V[,2]
   V = V[sel,]
@@ -147,19 +144,19 @@ CudaDeviceFunction void BounceBack()
 	
    }
 ?>
-// ********************
-// Dirichlet for others
-// ********************
+    // ********************
+    // Dirichlet for others
+    // ********************
 
-<?R
+    <?R
 #    psi_shifted = PV(paste("psi(",-U[,1],",",-U[,2],")"))
     psi_bc=PV("psi_bc")
 ?>
-    real_t h0bc =  exp(-ez * psi_bc * el_kbT);
+    real_t h0bc = exp(-ez*psi_bc*el_kbT);
 
-    real_t h1bc =  exp(ez * psi_bc * el_kbT);
+    real_t h1bc = exp(ez*psi_bc*el_kbT);
 
-<?R
+    <?R
     h0bc = PV("h0bc");    
     h1bc = PV("h1bc");
 # actual, proper bc, g should be from diferent node, as psi_shifted, unable to imlement
@@ -170,13 +167,12 @@ CudaDeviceFunction void BounceBack()
 
     ?>
 }
-CudaDeviceFunction void SymmetryBottom()
-{
-// *******************
-// Symmetry BC for BOTTOM WALL
-// *******************    
-     real_t uf;
-<?R
+CudaDeviceFunction void SymmetryBottom() {
+    // *******************
+    // Symmetry BC for BOTTOM WALL
+    // *******************
+    real_t uf;
+    <?R
   reflect_from = c(4,7,8) + 1;
   reflect_to = c(2,6,5) + 1;
   for (i in 1:3)
@@ -189,13 +185,12 @@ CudaDeviceFunction void SymmetryBottom()
   }
 ?>
 }
-CudaDeviceFunction void SymmetryTop()
-{
-// *******************
-// Symmetry BC for BOTTOM WALL
-// *******************    
-     real_t uf;
-<?R
+CudaDeviceFunction void SymmetryTop() {
+    // *******************
+    // Symmetry BC for BOTTOM WALL
+    // *******************
+    real_t uf;
+    <?R
   reflect_to =  c(4,7,8) + 1;
   reflect_from = c(2,6,5) + 1;
   for (i in 1:3)
@@ -210,75 +205,66 @@ CudaDeviceFunction void SymmetryTop()
 }
 CudaDeviceFunction float2 Color() {
     float2 ret;
-	ret.x = 0;
-	ret.y = 0;
+    ret.x = 0;
+    ret.y = 0;
     return ret;
 }
 
-
 CudaDeviceFunction void Run() {
-
     switch (NodeType & NODE_BOUNDARY) {
-	case NODE_Solid:
-	case NODE_Wall:
-		BounceBack();
-		break;
-//	case NODE_EVelocity:
-//		EVelocity();
-//		break;
-	case NODE_WPressure:
-		WPressure();
-		break;
-//	case NODE_WVelocity:
-//		WVelocity();
-//		break;
-	case NODE_EPressure:
-		EPressure();
-		break;
-    case NODE_SSymmetry:
-        SymmetryBottom();
-        break;
-    case NODE_NSymmetry:
-        SymmetryTop();
-        break;
+        case NODE_Solid:
+        case NODE_Wall:
+            BounceBack();
+            break;
+            //	case NODE_EVelocity:
+            //		EVelocity();
+            //		break;
+        case NODE_WPressure:
+            WPressure();
+            break;
+            //	case NODE_WVelocity:
+            //		WVelocity();
+            //		break;
+        case NODE_EPressure:
+            EPressure();
+            break;
+        case NODE_SSymmetry:
+            SymmetryBottom();
+            break;
+        case NODE_NSymmetry:
+            SymmetryTop();
+            break;
 
-
-	case NODE_EVelocity:
-		EVelocity();
-		break;
-	case NODE_WVelocity:
-		WVelocity();
-		break;
-	case NODE_NVelocity:
-		NVelocity();
-		break;
-	case NODE_SVelocity:
-		SVelocity();
-		break;
-        
+        case NODE_EVelocity:
+            EVelocity();
+            break;
+        case NODE_WVelocity:
+            WVelocity();
+            break;
+        case NODE_NVelocity:
+            NVelocity();
+            break;
+        case NODE_SVelocity:
+            SVelocity();
+            break;
     }
 
-
-    if ((NodeType & NODE_MRT))
-    {
-//		if (fi_s < 1) {
-			CollisionBGK();
-//		} else {
-//			BounceBack();
-//		}
+    if ((NodeType & NODE_MRT)) {
+        //		if (fi_s < 1) {
+        CollisionBGK();
+        //		} else {
+        //			BounceBack();
+        //		}
     }
-
-
 }
 
 CudaDeviceFunction void Init() {
-	
-    vector_t ulb = {0.,0.}, u={0,0};
+    vector_t ulb = {0., 0.}, u = {0, 0};
     real_t rho = 1.;
-    real_t Jx = u.x / rho;
-    real_t Jy = u.y / rho;
+    real_t Jx = u.x/rho;
+    real_t Jy = u.y/rho;
 
-<?R
+    <?R
     Psi0=PV("Psi0");
     Phi0=PV("Phi0");
 
@@ -290,46 +276,43 @@ CudaDeviceFunction void Init() {
     C(phi, wp0 * Phi0);
 ?>
 
-<?R if ( any( DensityAll$group=="BC" ) ) { ?>
-   if ( IamBOUNDARY && !IamWall ) {
-       BC[0] = u.x;
-       BC[1] = u.y;
-   } else {
-       BC[0] = 0;
-       BC[1] = 0;
-   }
-<?R } ?>
-
+    <?R if ( any( DensityAll$group=="BC" ) ) { ?>
+    if (IamBOUNDARY && !IamWall) {
+        BC[0] = u.x;
+        BC[1] = u.y;
+    } else {
+        BC[0] = 0;
+        BC[1] = 0;
+    }
+    <?R } ?>
 }
 
-
-CudaDeviceFunction void CollisionBGK()
-{
-	real_t M[9];
-	real_t psi, rho_e, rho, n0, n1;
-    real_t BK, Jx,Jy;
+CudaDeviceFunction void CollisionBGK() {
+    real_t M[9];
+    real_t psi, rho_e, rho, n0, n1;
+    real_t BK, Jx, Jy;
     vector_t u, Force, ulb;
 
-	rho_e = getrho_e();
+    rho_e = getrho_e();
     psi = getPsi();
     rho = getRho();
     real_t Phi = getPhi();
 
     u = getU();
 
-  //  AddToTotalMomentum( rho*(u.x*u.x+u.y*u.y) );
+    //  AddToTotalMomentum( rho*(u.x*u.x+u.y*u.y) );
 
-   // ulb = u;
+    // ulb = u;
     n0 = getn0();
     n1 = getn1();
 
     const vector_t gradPsi = getGradPsi();
-//    subiter = getSubiter();
+    //    subiter = getSubiter();
 
     Force = getF();
-    
+
     const real_t omega = 1.0/(3.*nu + 0.5);
-<?R
+    <?R
         cs2 = 1./3.
         C(PV("const real_t tau_D"), D * dt_D^-1 * cs2^-1  + 1./2.)
         tau_D = PV("tau_D")
@@ -375,22 +358,19 @@ CudaDeviceFunction void CollisionBGK()
    
         C(f, f + EQ$feq)
     ?>
-      
-//    }
 
+    //    }
 }
 
-//CudaDeviceFunction void CalcSubiter()
+// CudaDeviceFunction void CalcSubiter()
 //{
-//    if (subiter > 10) {
-//        subiter = 0;
-//    }
-//    subiter = subiter + 1;
-//}
+//     if (subiter > 10) {
+//         subiter = 0;
+//     }
+//     subiter = subiter + 1;
+// }
 
-
-CudaDeviceFunction vector_t getGradPsi(){
-
+CudaDeviceFunction vector_t getGradPsi() {
     vector_t grad;
 
     <?R 
@@ -399,14 +379,9 @@ CudaDeviceFunction vector_t getGradPsi(){
         
     ?>
     return grad;
-
 }
 
-
-
-
-CudaDeviceFunction vector_t getGradPhi(){
-
+CudaDeviceFunction vector_t getGradPhi() {
     vector_t grad;
 
     <?R 
@@ -415,68 +390,62 @@ CudaDeviceFunction vector_t getGradPhi(){
         
     ?>
     return grad;
-
 }
 
-
-
-CudaDeviceFunction real_t getn0(){
+CudaDeviceFunction real_t getn0() {
     return <?R C(sum(h_0)) ?>;
 }
 
-CudaDeviceFunction real_t getn1(){
+CudaDeviceFunction real_t getn1() {
     return <?R C(sum(h_1)) ?>;
-
 }
 
-CudaDeviceFunction real_t getPhi(){
+CudaDeviceFunction real_t getPhi() {
     const real_t wp0 = <?R C(wp0) ?>;
-	return ( <?R C( sum( phi[2:9] ))  ?> ) / (1. - wp0);
+    return (<?R C( sum( phi[2:9] ))  ?>)/(1. - wp0);
 }
 
-CudaDeviceFunction real_t getRho(){
+CudaDeviceFunction real_t getRho() {
     return <?R C(sum(f)) ?>;
 }
 
-CudaDeviceFunction vector_t getU(){
-	real_t d = getRho();
-	vector_t u;
+CudaDeviceFunction vector_t getU() {
+    real_t d = getRho();
+    vector_t u;
     <?R C(PV(c("u.x","u.y")) , f %*% U) ?>
-	vector_t F;
-	F = getF();
-    u.x = u.x/d+F.x*0.5;
-    u.y = u.y/d+F.y*0.5;
-//	u.x /= d;
-//	u.y /= d;
-	u.z = 0;
-	return u;
+    vector_t F;
+    F = getF();
+    u.x = u.x/d + F.x*0.5;
+    u.y = u.y/d + F.y*0.5;
+    //	u.x /= d;
+    //	u.y /= d;
+    u.z = 0;
+    return u;
 }
-CudaDeviceFunction vector_t getF(){
+CudaDeviceFunction vector_t getF() {
     const vector_t gradPsi = getGradPsi();
     const vector_t gradPhi = getGradPhi();
 
     const real_t rho_e = getrho_e();
     const real_t rho = getRho();
     vector_t F;
-//    F.x = -(gradPhi.x+gradPsi.x)*rho_e/rho *t_to_s*t_to_s;
-//    F.y = -(gradPhi.y+gradPsi.y)*rho_e/rho *t_to_s*t_to_s;
-    F.x = -(gradPhi.x)*rho_e/rho *t_to_s*t_to_s;
-    F.y = -(gradPhi.y)*rho_e/rho *t_to_s*t_to_s;
-
-
+    //    F.x = -(gradPhi.x+gradPsi.x)*rho_e/rho *t_to_s*t_to_s;
+    //    F.y = -(gradPhi.y+gradPsi.y)*rho_e/rho *t_to_s*t_to_s;
+    F.x = -(gradPhi.x)*rho_e/rho*t_to_s*t_to_s;
+    F.y = -(gradPhi.y)*rho_e/rho*t_to_s*t_to_s;
 
     return F;
 }
 
 <?R
 pressureBC = function(n) {
-     ?> { <?R
+     ?>{<?R
         ZouHeRewrite(EQ, f, n, "pressure", c(PV('rho_bc')) ) 
-     ?> } <?R
+     ?>} <?R
 
-     ?> { <?R
+     ?>{<?R
         FullBounceBack(group="g") 
-     ?> } <?R
+     ?>} <?R
    
         u = BC_Velocity 
         cu = (u[1] * U[,1] + u[2] * U[,2]) 
@@ -484,41 +453,34 @@ pressureBC = function(n) {
         EQ_h$feq =  wi * n1 * (1. - cu * cs2^-1)
         EQ_h$Req = EQ_h$feq %*% EQ_h$mat  
         
-     ?> { <?R  
+     ?>{<?R  
         ZouHeRewrite(EQ_h, h_0, n, "pressure", n_inf_0)
-     ?> } <?R
+     ?>} <?R
       
-     ?> { <?R
+     ?>{<?R
         ZouHeRewrite(EQ_h, h_1, n, "pressure", n_inf_1)
-     ?> } <?R
+     ?>} <?R
 
-     ?> { <?R
+     ?>{
+    <?R
         C(phi, wp*phi_bc)
-     ?> } <?R
+     ?>} <?R
 }
 
-?>
-CudaDeviceFunction void WPressure()
-{
- <?R pressureBC(c(-1,0)) ?>
-}
+?> CudaDeviceFunction void
+WPressure(){<?R pressureBC(c(-1,0)) ?>}
 
-CudaDeviceFunction void EPressure()
-{
- <?R pressureBC(c(1,0)) ?>
-}
-
-
+CudaDeviceFunction void EPressure(){<?R pressureBC(c(1,0)) ?>}
 
 <?R
 velocityBC = function(n) {
-     ?> { <?R
+     ?>{<?R
         ZouHeRewrite(EQ, f, n, "velocity", BC_Velocity) 
-     ?> } <?R
+     ?>} <?R
 
-     ?> { <?R
+     ?>{<?R
         FullBounceBack(group="g") 
-     ?> } <?R
+     ?>} <?R
    
         u = BC_Velocity 
         cu = (u[1] * U[,1] + u[2] * U[,2]) 
@@ -526,57 +488,48 @@ velocityBC = function(n) {
         EQ_h$feq =  wi * n1 * (1. - cu * cs2^-1)
         EQ_h$Req = EQ_h$feq %*% EQ_h$mat  
         
-     ?> { <?R  
+     ?>{<?R  
         ZouHeRewrite(EQ_h, h_0, n, "pressure", n_inf_0)
-     ?> } <?R
+     ?>} <?R
       
-     ?> { <?R
+     ?>{<?R
         ZouHeRewrite(EQ_h, h_1, n, "pressure", n_inf_1)
-     ?> } <?R
+     ?>} <?R
      
 }
 
 
 ?>
 
-CudaDeviceFunction void EVelocity()
-{
-   <?R velocityBC(c(1,0)) ?>
-   { <?R
+    CudaDeviceFunction void EVelocity() {
+    <?R velocityBC(c(1,0)) ?> {
+        <?R
         C(phi, wp*phi_bc)
-   ?> } 
-
-      
+   ?>
+    }
 }
 
-CudaDeviceFunction void WVelocity()
-{
-   <?R velocityBC(c(-1,0)) ?>
-   { <?R
+CudaDeviceFunction void WVelocity() {
+    <?R velocityBC(c(-1,0)) ?> {
+        <?R
         C(phi, wp*phi_bc)
-   ?>}
-
-    
+   ?>
+    }
 }
 
-CudaDeviceFunction void NVelocity()
-{
-   <?R velocityBC(c(0,1)) ?>
- <?R
+CudaDeviceFunction void NVelocity(){<?R velocityBC(c(0,1)) ?> <?R
   reflect_to =  c(4,7,8) + 1;
   reflect_from = c(2,6,5) + 1;
   for (i in 1:3)
   {
     C( phi[reflect_to[i]], phi[reflect_from[i]] )
   }
-?>      
+?>
 
-}
-CudaDeviceFunction void SVelocity()
-{
-   <?R velocityBC(c(0,-1)) ?>
+} CudaDeviceFunction void SVelocity() {
+    <?R velocityBC(c(0,-1)) ?>
 
-<?R
+    <?R
   reflect_from =  c(4,7,8) + 1;
   reflect_to = c(2,6,5) + 1;
   for (i in 1:3)
@@ -584,7 +537,4 @@ CudaDeviceFunction void SVelocity()
     C( phi[reflect_to[i]], phi[reflect_from[i]] )
   }
 ?>
-      
 }
-
-

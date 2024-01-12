@@ -38,12 +38,8 @@ int cbFailcheck::DoIt() {
         if (!components.in(quantity.name) || quantity.isAdjoint) return false;
 
         const auto get_quantity_vec = [&](const Model::Quantity& q) -> std::vector<real_t> {
-            const auto get_from_cart = [&](Lattice<CartLattice>* lattice) {
-                return lattice->getQuantity(q, reg, 1);
-            };
-            const auto get_from_arb = [&](Lattice<ArbLattice>* lattice) {
-                return lattice->getQuantity(q, 1);
-            };
+            const auto get_from_cart = [&](Lattice<CartLattice>* lattice) { return lattice->getQuantity(q, reg, 1); };
+            const auto get_from_arb = [&](Lattice<ArbLattice>* lattice) { return lattice->getQuantity(q, 1); };
             return std::visit(OverloadSet{get_from_cart, get_from_arb}, solver->getLatticeVariant());
         };
 

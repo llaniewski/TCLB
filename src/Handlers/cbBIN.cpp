@@ -3,13 +3,13 @@ std::string cbBIN::xmlname = "BIN";
 #include "../HandlerFactory.h"
 #include "../vtkLattice.h"
 
-int cbBIN::Init () {
-		Callback::Init();
-		pugi::xml_attribute attr = node.attribute("name");
-		nm = "BIN";
-		if (attr) nm = attr.value();
-		return 0;
-	}
+int cbBIN::Init() {
+    Callback::Init();
+    pugi::xml_attribute attr = node.attribute("name");
+    nm = "BIN";
+    if (attr) nm = attr.value();
+    return 0;
+}
 
 int cbBIN::DoIt() {
     Callback::DoIt();
@@ -18,4 +18,4 @@ int cbBIN::DoIt() {
 };
 
 // Register the handler (basing on xmlname) in the Handler Factory
-template class HandlerFactory::Register< GenericAsk< cbBIN > >;
+template class HandlerFactory::Register<GenericAsk<cbBIN> >;

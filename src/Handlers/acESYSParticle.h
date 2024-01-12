@@ -2,22 +2,21 @@
 #define ACESYSPARTICLE_H
 
 #include "../CommonHandler.h"
-
-#include "vHandler.h"
 #include "Action.h"
 #include "acRemoteForceInterface.h"
+#include "vHandler.h"
 
-class  acESYSParticle  : public acRemoteForceInterface  {
-	public:
-	static std::string xmlname;
-	std::string particle_type;
-	std::string sim;
-	double gridSpacing;
-	double verletDist;
-	bool xcirc;
-	bool ycirc; //JM
-	bool zcirc; //JM
-	int Init ();
+class acESYSParticle : public acRemoteForceInterface {
+public:
+    static std::string xmlname;
+    std::string particle_type;
+    std::string sim;
+    double gridSpacing;
+    double verletDist;
+    bool xcirc;
+    bool ycirc;  // JM
+    bool zcirc;  // JM
+    int Init();
 };
 
-#endif // ACESYSPARTICLE_H
+#endif  // ACESYSPARTICLE_H

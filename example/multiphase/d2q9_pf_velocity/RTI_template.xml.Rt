@@ -30,8 +30,7 @@ time = c(3, 2)
 
 for (i in c(1,2)){
     print(names[i])
-    sink(names[i]) ?>
-<?xml version="1.0"?>
+    sink(names[i]) ?><?xml version="1.0"?>
 <!--Model:	d2q9_pf_velocity 
     Created: 	17-01-2020 
     By:		T.Mitchell -->
@@ -71,10 +70,9 @@ for (i in c(1,2)){
 	<VTK/>
 	<Solve Iterations="<?%f time[i] * to[i] ?>" output="output/">
 		<VTK Iterations="<?%f  0.5*to[i] ?>"/>
-		<Log Iterations="<?%f 0.01*to[i] ?>" />
+		<Log Iterations="<?%f 0.01*to[i] ?>"/>
 	</Solve>
-</CLBConfig>
-<?R
+</CLBConfig><?R
     sink()
 }
 ?>
