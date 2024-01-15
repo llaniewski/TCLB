@@ -9,6 +9,7 @@
 #include <set>
 #include <memory>
 #include <math.h>
+#include <cstring>
 
 std::string getPath (const std::string& str)
 {
@@ -28,38 +29,47 @@ struct base64decoder {
 			rev64[((unsigned char *)base64char)[i]] = i;
 		rev64[(unsigned char)'='] = 0;
 	};
-	void dc64(const unsigned char *txt, unsigned char *optr, int n) {
+	void dc64(const unsigned char *txt, size_t n4, unsigned char *optr, size_t n3) {
 		int v;
-		while (n > 0) {
-			v = rev64[txt[0]];
+		size_t i,j;
+		for (i=0,j=0; j < n3; i += 4, j += 3) {
+			v = 0;
+			if (i+0 < n4) v += rev64[txt[i+0]];
 			v <<= 6;
-			v += rev64[txt[1]];
+			if (i+1 < n4) v += rev64[txt[i+1]];
 			v <<= 6;
-			v += rev64[txt[2]];
+			if (i+2 < n4) v += rev64[txt[i+2]];
 			v <<= 6;
-			v += rev64[txt[3]];
+			if (i+3 < n4) v += rev64[txt[i+3]];
 
-			if (n > 2) optr[2] = v & 0xFF;
+			if (j+2 < n3) optr[j+2] = static_cast<unsigned char>(v & 0xFF);
 			v >>= 8;
-			if (n > 1) optr[1] = v & 0xFF;
+			if (j+1 < n3) optr[j+1] = static_cast<unsigned char>(v & 0xFF);
 			v >>= 8;
-			if (n > 0) optr[0] = v;
-			n -= 3;
-			optr += 3;
-			txt += 4;
+			if (j+0 < n3) optr[j+0] = static_cast<unsigned char>(v);
 		}
+		assert(j >= n3);
 	}
 
-	void decode64(const char *txt, void **optr, int len) {
-		int nlen;
-		unsigned char *ptr;
-		txt += 1;
-		dc64((unsigned char *)txt, (unsigned char *)&nlen, 4);
-		txt += 8;
-		assert(len == nlen);
-		ptr = (unsigned char *)malloc(nlen);
-		dc64((unsigned char *)txt, ptr, nlen);
-		*optr = ptr;
+	template <typename T>
+	std::vector<T> decode64(const char *txt, size_t txtlen) {
+		txt += 1; txtlen -= 1;
+		size_t len;
+		size_t len_nchar = 0;
+		if (txt[7] == '=') {
+			len_nchar = 8;
+		} else if (txt[11] == '=') {
+			len_nchar = 12;
+		}
+		assert(len_nchar != 0);
+		dc64((unsigned char *)txt, len_nchar, (unsigned char *)&len, sizeof(size_t));
+		txt += len_nchar; txtlen -= len_nchar;
+		assert(len % sizeof(T) == 0);
+		size_t ret_len = len / sizeof(T);
+		std::vector<T> ret;
+		ret.resize(ret_len);
+		dc64((unsigned char *)txt, txtlen, (unsigned char *)ret.data(), ret_len*sizeof(T));
+		return ret;
 	}
 };
 
@@ -138,9 +148,10 @@ struct Tab : public TabBase {
 		assert(pny <= ny);
 		assert(pnz <= nz);
 		size_t psize = 1L * (pnx - pdx) * (pny - pdy) * (pnz - pdz) * comp;
-		T *ptr;
-		b64.decode64(node.child_value(), (void **)&ptr, psize * sizeof(T));
-		T* tmp = ptr;
+		size_t len4 = strlen(node.child_value());
+		std::vector<T> vec = b64.decode64<T>(node.child_value(), len4);
+		assert(vec.size() == psize);
+		T* tmp = vec.data();
 		for (int z = pdz; z < pnz; z++) {
 			for (int y = pdy; y < pny; y++) {
 				for (int x = pdx; x < pnx; x++) {
@@ -152,7 +163,6 @@ struct Tab : public TabBase {
 				}
 			}
 		}
-		free(ptr);		
 	}
 };
 
@@ -160,6 +170,8 @@ struct Tabs {
 	std::string filename;
 	std::string path;
 	int dx, dy, dz, nx, ny, nz;
+	double spacing;
+	bool is_vtu;
 	typedef TabBase* TabBasePtr;
 	typedef std::map<std::string, TabBasePtr> TabMap;
 	TabMap tab;
@@ -168,16 +180,22 @@ struct Tabs {
 		path = getPath(filename);
 		printf("Reading %s\n", filename.c_str());
 		pugi::xml_document file;
+		pugi::xml_node main_el;
 		pugi::xml_node el;
 		file.load_file(filename.c_str());
-		el = file.child("VTKFile");
-		assert(el);
-		el = el.child("PImageData");
-		assert(el);
-		{
-			const char *reg;
-			reg = el.attribute("WholeExtent").value();
+		main_el = file.child("VTKFile");
+		assert(main_el);
+		if (el = main_el.child("PImageData")) {
+			is_vtu = false;
+			const char *reg = el.attribute("WholeExtent").value();
 			sscanf(reg, "%d %d %d %d %d %d", &dx, &nx, &dy, &ny, &dz, &nz);
+			const char *spa = el.attribute("Spacing").value();
+			sscanf(spa, "%lf", &spacing);
+		} else if (el = main_el.child("PUnstructuredGrid")) {
+			is_vtu = true;
+			getVTUWholeExtent(el);
+		} else {
+			assert(el);
 		}
 		printf("    Fields: ");
 		pugi::xml_node tcd = el.child("PCellData");
@@ -208,6 +226,36 @@ struct Tabs {
 		}
 	}
 
+	void getVTUWholeExtent(pugi::xml_node el) {
+		// Establish spacing
+		pugi::xml_node piece = el.child("Piece");
+		assert(piece);
+		getVTUSpacing(piece);
+		for (pugi::xml_node it = el.child("Piece"); it; it = it.next_sibling("Piece"))
+		{
+			getVTUWholeExtent(it);
+		}
+	}
+
+	void getVTUSpacing(pugi::xml_node el) {
+		std::string filename = path + el.attribute("Source").value();
+		printf("    Piece: %s\n", filename.c_str());
+		pugi::xml_document pfile;
+		pugi::xml_node pel;
+		pfile.load_file(filename.c_str());
+		pel = pfile.child("VTKFile");
+		assert(pel);
+		pel = pel.child("UnstructuredGrid");
+		assert(pel);
+		pel = pel.child("Piece");
+		assert(pel);
+		size_t npoints = pel.attribute("NumberOfPoints").as_ullong();
+		printf("      NumberOfPoints: %lu\n", npoints);
+		size_t ncells = pel.attribute("NumberOfCells").as_ullong();
+		printf("      NumberOfCells: %lu\n", ncells);
+		
+
+	}
 	void read_piece(pugi::xml_node el) {
 		size_t psize = 0;
 		int pdx, pdy, pdz, pnx, pny, pnz;
