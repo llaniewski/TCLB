@@ -665,14 +665,14 @@ inline int Geometry::loadSTL(lbRegion reg, pugi::xml_node n)
                         Dot(x, y, z);
                     }
                 }
-		output("STL: triangle hits: %ld\n", topo_hit[0]);
-		if (topo_hit[4] > 0) notice("STL: - eps-area triangles omitted: %ld\n", topo_hit[4]);
-		if (topo_hit[1] > 0) {	
-			notice("STL: - edge hits: %ld\n", topo_hit[1]);
-			notice("STL:   - resolved negatively: %ld\n", topo_hit[2]);
-			notice("STL:   - resolved positively: %ld\n", topo_hit[1] - topo_hit[3] - topo_hit[2]);
-			if (topo_hit[3] > 0) NOTICE("STL:   - could not be resolved: %ld (this can cause problems!)\n", topo_hit[3]);
-		}
+        output("STL: triangle hits: %ld\n", topo_hit[0]);
+        if (topo_hit[4] > 0) notice("STL: - eps-area triangles omitted: %ld\n", topo_hit[4]);
+        if (topo_hit[1] > 0) {	
+            notice("STL: - edge hits: %ld\n", topo_hit[1]);
+            notice("STL:   - resolved negatively: %ld\n", topo_hit[2]);
+            notice("STL:   - resolved positively: %ld\n", topo_hit[1] - topo_hit[3] - topo_hit[2]);
+            if (topo_hit[3] > 0) NOTICE("STL:   - could not be resolved: %ld (this can cause problems!)\n", topo_hit[3]);
+        }
     }
     free(tri);
     free(lev);
