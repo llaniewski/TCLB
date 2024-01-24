@@ -483,11 +483,10 @@ void RemoteForceInterface < TYPE, ROT, STORAGE, rfi_real_t, tab_allocator >::Zer
 template < rfi_type_t TYPE, rfi_rot_t ROT, rfi_storage_t STORAGE, typename rfi_real_t, typename tab_allocator >
 void RemoteForceInterface < TYPE, ROT, STORAGE, rfi_real_t, tab_allocator >::Close() {
   if (! Active()) return;
-  debug1("RFI: %s: Sending the order to kill ...\n", name.c_str());
+  print("Sending the order to kill");
   MPI_Request req;
   MPI_Isend(&kill_flag, 1, MPI_INT, 0, 0xD2, comm, &req); // kill root
   if (rank == 0) KillEverybody();
-  debug1("RFI: %s: Waiting for death ...\n", name.c_str());
   WaitForDeath();
 }
 
@@ -501,8 +500,8 @@ void RemoteForceInterface < TYPE, ROT, STORAGE, rfi_real_t, tab_allocator >::Wai
   status_vec.resize(reqs.size());
   for (int i = 0; i < reqs_len; i++) {
     MPI_Waitany(reqs.size(), &reqs[0], &ind, &status_vec[0]);
-    if (ind == reqs_len) { Death(); break; }
-    if (ind > reqs_len) { KillEverybody(); WaitForDeath(); return;}
+    if (ind == reqs_len) { print("caught death signal"); Death(); break; }
+    if (ind > reqs_len) { print("caught kill signal"); KillEverybody(); WaitForDeath(); return;}
   }
   reqs.clear();
 }
@@ -510,9 +509,10 @@ void RemoteForceInterface < TYPE, ROT, STORAGE, rfi_real_t, tab_allocator >::Wai
 
 template < rfi_type_t TYPE, rfi_rot_t ROT, rfi_storage_t STORAGE, typename rfi_real_t, typename tab_allocator >
 void RemoteForceInterface < TYPE, ROT, STORAGE, rfi_real_t, tab_allocator >::Death() {
-  debug1("RFI: %s: Death ...\n", name.c_str());
+  print("death");
   if (! Active()) return;
   Zero();
+  print("arrived at the barrier to the land of the dead");
   MPI_Barrier(intercomm);
   output("RFI: %s: Closed.\n", name.c_str());
   MPI_Comm_free(&intercomm);
@@ -523,15 +523,7 @@ void RemoteForceInterface < TYPE, ROT, STORAGE, rfi_real_t, tab_allocator >::Dea
 
 template < rfi_type_t TYPE, rfi_rot_t ROT, rfi_storage_t STORAGE, typename rfi_real_t, typename tab_allocator >
 void RemoteForceInterface < TYPE, ROT, STORAGE, rfi_real_t, tab_allocator >::WaitForDeath() {
-/*  std::vector<MPI_Status> status_vec;
-  int ind=-1;
-  status_vec.resize(death_req.size());
-  while (true) {
-    MPI_Waitany(death_req.size(), &death_req[0], &ind, &status_vec[0]);
-    if (ind == 0) { Death(); break; }
-    if (ind > 0) { KillEverybody(); }
-  }
-  return; */
+  print("wating for the sweet release of death");
   MPI_Status status;
   MPI_Wait(&death_req[0], &status);
   Death();
@@ -540,7 +532,7 @@ void RemoteForceInterface < TYPE, ROT, STORAGE, rfi_real_t, tab_allocator >::Wai
 template < rfi_type_t TYPE, rfi_rot_t ROT, rfi_storage_t STORAGE, typename rfi_real_t, typename tab_allocator >
 void RemoteForceInterface < TYPE, ROT, STORAGE, rfi_real_t, tab_allocator >::KillEverybody() {
   if (alreadyKilledEverybody) return;
-  debug1("RFI: %s: Killing everygody ...\n", name.c_str());
+  print("killing EVERYBODY");
   MPI_Request req;
   MPI_Isend(&kill_flag, 1, MPI_INT, 0, 0xD1, intercomm, &req); // kill partner
   for (int i = 0; i < masters; i++) {

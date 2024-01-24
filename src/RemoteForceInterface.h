@@ -111,6 +111,7 @@ private:
   bool alreadyKilledEverybody;
   Box myBox;
   std::vector<Box> workerBoxes;
+  inline void print(char* str) {   printf("RFI: %s[%d]: %s\n", name.c_str(), rank, str); }
 public:
   int particle_size;
   std::string name;
