@@ -339,7 +339,7 @@ then
 	AC_CHECK_HEADERS([nvml.h],[],[has_nvml="no"])
 	AC_CHECK_LIB([nvidia-ml], [nvmlInit_v2],[],[has_nvml="no"])
 
-	if test "x${has_hdf5}" != "xno"; then
+	if test "x${has_nvml}" != "xno"; then
 		AC_DEFINE([HAS_NVML], [1], [Using NVML])
 	fi
 
