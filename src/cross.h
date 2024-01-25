@@ -22,6 +22,8 @@
     #endif
     #ifdef CROSS_HIP
      #include <hip/hip_runtime.h>
+    #else
+      #define CROSS_CUDA
     #endif
     #ifdef CROSS_CPP
       #ifndef CROSS_HIP

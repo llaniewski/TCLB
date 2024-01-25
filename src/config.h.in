@@ -53,6 +53,9 @@
 /* Using HDF5 */
 #undef WITH_HDF5
 
+/* Using NVML */
+#undef HAS_NVML
+
 /* Using ParMETIS */
 #undef WITH_PARMETIS
 

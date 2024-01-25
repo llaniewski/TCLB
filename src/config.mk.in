@@ -18,6 +18,7 @@ SOURCE=$(SOURCE_CU)
 HEADERS=Global.h gpu_anim.h CartLatticeContainer.h CartLattice.h Region.h vtkLattice.h vtkOutput.h cross.h gl_helper.h Dynamics.h types.h pugixml.hpp pugiconfig.hpp
 
 OBJ  = vtkOutput.o vtuOutput.o cuda.o Global.o CartLattice.o ArbLattice.o vtkLattice.o LatticeBase.o cross.o pugixml.o Geometry.o unit.o Solver.o SyntheticTurbulence.o Sampler.o ZoneSettings.o RemoteForceInterface.o hdf5Lattice.o xpath_modification.o GetThreads.o Lists.o toArb.o PartitionArbLattice.o CudaUtils.o utils.o
+OBJ += mpi_json_info.o json.o json_to_xml.o
 
 AOUT = main empty compare simplepart
 

@@ -336,6 +336,13 @@ then
 		AC_DEFINE([GRAPHICS], [1], [Making a graphics version])
 	fi
 
+	AC_CHECK_HEADERS([nvml.h],[],[has_nvml="no"])
+	AC_CHECK_LIB([nvidia-ml], [nvmlInit_v2],[],[AC_MSG_ERROR([has_nvml="no"])])
+
+	if test "x${has_hdf5}" != "xno"; then
+		AC_DEFINE([HAS_NVML], [1], [Using NVML])
+	fi
+
 	GRID3D=""
 	if test -z "${with_cuda_arch}"; then
 		AC_CHECK_LIB([cudart], [cudaGetDeviceProperties])

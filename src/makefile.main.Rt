@@ -41,6 +41,9 @@ SOURCE_PLAN+=simplepart.cpp
 SOURCE_PLAN+=GetThreads.h GetThreads.cpp
 SOURCE_PLAN+=range_int.hpp
 SOURCE_PLAN+=Lists.h Lists.cpp Things.h
+SOURCE_PLAN+=json.cpp json.hpp
+SOURCE_PLAN+=json_to_xml.cpp json_to_xml.hpp
+SOURCE_PLAN+=mpi_json_info.cpp mpi_json_info.h
 <?R
 	h = dir("src/Handlers","[.](h|cpp)(|.Rt)$")
 	h = sub(".Rt","",h)
