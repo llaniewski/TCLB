@@ -516,7 +516,7 @@ JSON runtimeJSON() {
 
 JSON localJSON() {
 	struct passwd *pw;
-	register uid_t uid;
+	uid_t uid;
 	JSONobject user;
 	uid = geteuid ();
 	pw = getpwuid (uid);

@@ -113,7 +113,7 @@ public:
         return *this;
     }
     template <class T> inline Glue& operator<< (const std::vector<T>& t) {
-        for (int i=0; i<t.size(); i++) this->add(t[i]);
+        for (size_t i=0; i<t.size(); i++) this->add(t[i]);
         return *this;
     }
     inline const neverquote& str (){
@@ -165,7 +165,7 @@ class compress_rep {
             return this->add(t);
         }
         template <class T> inline compress_rep& operator<< (const std::vector<T>& t) {
-            for (int i=0; i<t.size(); i++) this->add(t[i]);
+            for (size_t i=0; i<t.size(); i++) this->add(t[i]);
             return *this;
         }
         inline Glue::alwaysquote str() {
