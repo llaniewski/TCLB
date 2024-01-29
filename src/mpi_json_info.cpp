@@ -4,6 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <vector>
+#include <algorithm>
 #include <map>
 #include <fstream>
 #include <cerrno>
@@ -82,20 +83,27 @@ Glue::alwaysquote pciJSON(pci_id_t pci) {
 cpu_set_t cpuSetFromPCI(pci_id_t pci) {
 	char str[1024];
 	sprintf(str, "/sys/class/pci_bus/%04x:%02x/cpuaffinity", pci.domain, pci.bus);
-	FILE *f = fopen(str,"r");
 	cpu_set_t cpuSet;
 	CPU_ZERO(&cpuSet);
-	if (f == NULL) return cpuSet;
-	unsigned int val;
+	std::vector<unsigned int> vals;
+	{
+		FILE *f = fopen(str,"r");
+		if (f == NULL) return cpuSet;
+		unsigned int val;
+		while(fscanf(f, "%x", &val)) {
+			vals.push_back(val);
+			if (getc(f) != ',') break;
+		}
+		fclose(f);
+	}
+	std::reverse(vals.begin(), vals.end());
 	int j = 0;
-	while(fscanf(f, "%x", &val)) {
+	for (unsigned int val : vals) {
 		for (int i = 0; i < 32; ++i) {
 			 if (val & (1 << i)) CPU_SET(j, &cpuSet);
 			 j++;
 		}
-		if (getc(f) != ',') break;
 	}
-	fclose(f);
 	return cpuSet;
 }
 JSON gpuJSON() {

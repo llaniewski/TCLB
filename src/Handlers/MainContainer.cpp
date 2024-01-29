@@ -20,7 +20,7 @@ int MainContainer::Init() {
 
     JSON info;
     info = stripJSON(infoglue.str());
-    if (D_MPI_RANK == 0) { output("%s\n", reformatJSON(info).c_str()); }
+//    if (D_MPI_RANK == 0) { output("%s\n", reformatJSON(info).c_str()); }
     pugi::xml_node n = solver->configfile.child("CLBConfig").append_child("Run");
     if (!JSONtoXML(info).convert(n)) exit(-1);
     n.append_attribute("model").set_value(solver->lattice->model->name.c_str());
