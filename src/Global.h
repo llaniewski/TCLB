@@ -83,10 +83,10 @@ void initSettings();
 
     #define DEBUG_SETRANK(x) {D_MPI_RANK = x; D_TERMINAL = isatty(1); }
 #if DEBUG_LEVEL < 1
-    #define DEBUG0(x) x; fflush(stdout);
-    #define DEBUG1(x) x; fflush(stdout);
-    #define DEBUG2(x) x; fflush(stdout);
-    #define DEBUG3(x) x; fflush(stdout);
+    #define DEBUG0(x) {x; fflush(stdout);}
+    #define DEBUG1(x) {x; fflush(stdout);}
+    #define DEBUG2(x) {x; fflush(stdout);}
+    #define DEBUG3(x) {x; fflush(stdout);}
 #elif DEBUG_LEVEL < 2
     #define DEBUG0(x)
     #define DEBUG1(x) x
