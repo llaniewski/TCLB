@@ -31,6 +31,9 @@ inputs:
   python:
     description: compile with python support
     default: false
+  debug:
+    description: compile with debug options
+    default: true
   options:
     description: other configure options
     default: ''
@@ -91,6 +94,11 @@ runs:
           true) CONFOPT="$CONFOPT --with-python" ;;
           false) CONFOPT="$CONFOPT --without-python" ;;
           *) echo "Wrong 'python' input in configure action"; exit -1
+        esac
+        case "${{ inputs.debug }}" in
+          true) CONFOPT="$CONFOPT --enable-debug" ;;
+          false) CONFOPT="$CONFOPT --disable-debug" ;;
+          *) echo "Wrong 'debug' input in configure action"; exit -1
         esac
         CONFOPT="$CONFOPT ${{ inputs.options }}"
         echo "Configure options:$CONFOPT"
