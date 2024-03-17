@@ -235,7 +235,7 @@ resolve.symmetries = function(D) {
     s = names(symmetries)[i]
     ch = c("X","Y","Z")[i]
     if (any(plus | minus)) { ?>
-  switch (node.NodeType & NODE_SYM<?%s ch ?>) {
+  switch (this->getNodeType() & NODE_SYM<?%s ch ?>) {
 <?R if (any(plus)) { ?>
   case NODE_Symmetry<?%s ch ?>_plus:
 <?R C(PV("node.",D[plus, "name"]), PV("node.",D[plus, s])) ?>
@@ -318,11 +318,15 @@ CudaDeviceFunction void LatticeAccess< x_t, y_t, z_t >::pop<?%s s$suffix ?>(N & 
 {
 	storage_t val; <?R
   con = make.context("constContainer.in",pocket=TRUE);
-  for (d in rows(Density)[s$load.densities]) {
+  dens = Density;
+  dens$load = s$load.densities;
+  for (d in rows(dens)) if (d$load) {
     f = rows(Fields)[[match(d$field, Fields$name)]]
     dp = c(-d$dx, -d$dy, -d$dz)
     con=load.field("val", f, p, dp,con) ?>
 	<?%s paste("node",d$name,sep=".") ?> = <?%s storage_to_real("val",f)?>; <?R
+  } else if (!is.na(d$default)) { ?>
+  <?%s paste("node",d$name,sep=".") ?> = <?%f d$default ?>; <?R
   } ?>
 }
 
@@ -422,11 +426,11 @@ CudaDeviceFunction real_t SymmetryAccess< PARENT >::<?%s paste0(this_fun, f$nice
 {
   <?R if (paste0("SYM",ch[i]) %in% NodeTypes$group) { ?>
   if (<?R C(d[i]) ?> > range_int<0>()) {
-    if ((this->NodeType() & NODE_SYM<?%s ch[i] ?>) == NODE_Symmetry<?%s ch[i] ?>_plus) {
+    if ((this->getNodeType() & NODE_SYM<?%s ch[i] ?>) == NODE_Symmetry<?%s ch[i] ?>_plus) {
       return <?%s paste0(sig, next_fun, sf$nicename) ?>(<?R C(sd,sep=", ") ?>);
     }
   } else if (<?R C(d[i]) ?> < range_int<0>()) {
-    if ((this->NodeType() & NODE_SYM<?%s ch[i] ?>) == NODE_Symmetry<?%s ch[i] ?>_minus) {
+    if ((this->getNodeType() & NODE_SYM<?%s ch[i] ?>) == NODE_Symmetry<?%s ch[i] ?>_minus) {
       return <?%s paste0(sig, next_fun, sf$nicename) ?>(<?R C(sd,sep=", ") ?>);
     }
   }

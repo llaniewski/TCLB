@@ -62,11 +62,12 @@ SetOptions = function(...) {
   }
 }
 
-AddDensity = function(name, dx=0, dy=0, dz=0, comment="", field=name, adjoint=F, group="", parameter=F,average=F, sym=c("","",""), shift=NULL, ...) {
+AddDensity = function(name, dx=0, dy=0, dz=0, comment="", field=name, adjoint=F, group="", parameter=F, average=F, default=NA, sym=c("","",""), shift=NULL, ...) {
 	if (any((parameter) && (dx != 0) && (dy != 0) && (dz != 0))) stop("Parameters cannot be streamed (AddDensity)");
 	if (missing(name)) stop("Have to supply name in AddDensity!")
 	if (missing(group)) group = name
 	if (length(sym) != 3) stop("sym provided to AddDensity have to be a vector of length 3");
+	if (average && missing(default)) default=0;
 	comment = ifelse(comment == "", name, comment);
 	dd = data.frame(
 		name=name,
@@ -79,6 +80,7 @@ AddDensity = function(name, dx=0, dy=0, dz=0, comment="", field=name, adjoint=F,
 		group=group,
 		parameter=parameter,
 		average=average,
+		default=default,
 		symX=sym[1],
 		symY=sym[2],
 		symZ=sym[3]
@@ -479,7 +481,8 @@ for (a in rows(Actions)) {
 			legend(par('usr')[2], par('usr')[3], xpd=TRUE, yjust=1, xjust=1, ncol=2, cex=0.7, bty = "n", bg="white",
 				legend = c("Previous iteration", "Newly written field", "Previously written field", "Density read", "Declared read access", "Implicit (undeclared) read access"),
 				pch=c(15,15,15,NA,NA,NA),lty=c(NA,NA,NA,1,1,1),col=c("lightblue", "green","darkgreen","black","green","gray"))
-			axis(2,at=pa_fi$boxmid,labels = Fields$name,las=1)
+			axis(2,at=pa_fi$boxmid,labels = Fields$name,las=1,gap.axis=0,cex.axis=0.6)
+			abline(h=pa_fi$boxmid,col=8,lty=3)
 			pa_col = rep("white",nrow(pa_fi))
 			pa_col[bufin] = "lightblue"
 			rect(-0.5,pa_fi$boxlower,0.5,pa_fi$boxupper,col=pa_col,border="darkblue")
@@ -500,7 +503,7 @@ for (a in rows(Actions)) {
 				pa_col[bufout] = "darkgreen"
 				pa_col[ss] = "green"
 				rect(pa_ws*pa_si-0.5,pa_fi$boxlower,pa_ws*pa_si+0.5,pa_fi$boxupper,col=pa_col)
-				rect(pa_ws*(pa_si-0.5)-0.7,pa_f/2-pa_sl/2-0.5,pa_ws*(pa_si-0.5)+0.7,pa_f/2+pa_sl/2+0.5)
+				rect(pa_ws*(pa_si-0.5)-0.7,pa_f/2-pa_sl/2-0.5,pa_ws*(pa_si-0.5)+0.7,pa_f/2+pa_sl/2+0.5,col="white")
 				text(pa_ws*(pa_si-0.5),pa_f/2,labels=sn,srt=90)
 				pa_a1x = pa_ws*(pa_si-1)+0.5
 				pa_a1y = pa_fi$boxmid
@@ -562,7 +565,7 @@ if (nrow(NodeTypes) > 0) {
           tab$mask     = NodeShift*((2^l)-1)
           tab$max      = n
           tab$bits     = l
-          tab$capacity = 2^l
+          tab$capacity = 2^l-1
           tab$shift = NodeShiftNum
           tab$groupIndex = paste("NODE",tab$group,sep="_")
           tab$save = TRUE
@@ -585,7 +588,7 @@ if (NodeShiftNum > 14) {
 ZoneBits = FlagTBits - NodeShiftNum
 ZoneShift = NodeShiftNum
 if (ZoneBits == 0) warning("No additional zones! (too many node types) - it will run, but you cannot use local settings")
-ZoneMax = 2^ZoneBits
+ZoneMax = 2^ZoneBits-1
 NodeTypes = rbind(NodeTypes,data.frame(
         name="DefaultZone",
         group="SETTINGZONE",
@@ -595,7 +598,7 @@ NodeTypes = rbind(NodeTypes,data.frame(
         max=ZoneMax,
         bits=ZoneBits,
         capacity=ZoneMax,
-        mask=(ZoneMax-1)*NodeShift,
+        mask=(ZoneMax)*NodeShift,
         shift=NodeShiftNum,
         groupIndex = "NODE_SETTINGZONE",
         save = TRUE
@@ -608,7 +611,7 @@ if (any(NodeTypes$value >= 2^FlagTBits)) stop("NodeTypes exceeds size of flag_t"
 #ALLBits = ZoneShift
 #ALLMax = 2^ZoneShift
 ALLBits = FlagTBits
-ALLMax = 2^ALLBits
+ALLMax = 2^ALLBits-1
 NodeTypes = rbind(NodeTypes,data.frame(
         name="None",
         group="NONE",
@@ -633,7 +636,7 @@ NodeTypes = rbind(NodeTypes,data.frame(
         max=ALLMax,
         bits=ALLBits,
         capacity=ALLMax,
-        mask=(ALLMax-1),
+        mask=ALLMax,
         shift=0,
         groupIndex = "NODE_ALL",
         save = FALSE
@@ -1031,4 +1034,15 @@ hash_header = function() {
 	for (l in clb_header)
 	cat("# |",l,"|\n",sep="");
 	cat("\n");
+}
+
+big_hex = function(x,bits=16) {
+    ret = ""
+    while (any(x > 0) | bits > 0) {
+      a = x %% 16
+      ret = sprintf("%01x%s",a,ret)
+      x = (x-a) / 16
+      bits = bits - 4
+    }
+    paste0("0x",ret)
 }
