@@ -89,6 +89,8 @@ AddSetting(name="aX_freq", default=0.0, comment='frequency of oscillating accele
 AddSetting(name="AccelY", default=0.0, comment='body acceleration Y', zonal=TRUE, unit="m/s2")
 AddSetting(name="AccelZ", default=0.0, comment='body acceleration Z', zonal=TRUE, unit="m/s2")
 
+AddSetting(name="LimitVelocity", default=0.0, comment='limit for particle velocity', unit="m/s")
+
 AddNodeType("RegionMeasureX",group="ADDITIONALS")
 AddNodeType("RegionMeasureY",group="ADDITIONALS")
 AddNodeType("RegionMeasureZ",group="ADDITIONALS")
