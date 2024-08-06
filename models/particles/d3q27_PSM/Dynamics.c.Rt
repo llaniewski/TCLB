@@ -562,8 +562,20 @@ CudaDeviceFunction void CalcF() {
             <?R } ?>
 
             vector_t force;
+            vector_t u_part;
 <?R
-            uparticle = PV("p.cvel.",c("x","y","z"))
+            uparticle_ = PV("p.cvel.",c("x","y","z"))
+            uparticle = PV("u_part.",c("x","y","z"))
+            C(uparticle, uparticle_)
+?>
+	if (LimitVelocity > 1e-6) {
+	        real_t u_part_l = sqrt(u_part.x*u_part.x+u_part.y*u_part.y+u_part.z*u_part.z);
+	        if (u_part_l > LimitVelocity) {
+			u_part_l = LimitVelocity / u_part_l;
+<?R	C(uparticle, uparticle*PV("u_part_l")) ?>
+		}
+	}
+<?R
             force = PV("force.",c("x","y","z"))
             localCoverage = PV("localCoverage")
 
