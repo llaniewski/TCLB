@@ -1,0 +1,57 @@
+<?R
+?>
+
+CudaDeviceFunction real_t getJ(){
+	return 0;
+}
+    
+CudaDeviceFunction vector_t getU(){
+	vector_t u;
+	return u;
+}
+
+CudaDeviceFunction float2 Color() {
+        float2 ret;
+        vector_t u = getU();
+        ret.x = sqrt(u.x*u.x + u.y*u.y);
+        if (NodeType == NODE_Solid){
+                ret.y = 0;
+        } else {
+                ret.y = 1;
+        }
+        return ret;
+}
+
+
+CudaDeviceFunction void Init() {
+    <?R
+    C(PV(tab$field),0);
+    ?>
+}
+
+CudaDeviceFunction void Run() {
+    switch (NodeType & NODE_BOUNDARY) {
+	case NODE_Wall:
+		Wall();
+		break;
+    }
+    if (NodeType & NODE_COLLISION)
+    {
+		Collision();
+    }
+}
+
+CudaDeviceFunction void Wall()
+{
+<?R
+    C(PV(tab$field),0);
+?>
+}
+
+CudaDeviceFunction void Collision()
+{
+<?R
+    C(PV(tab$field),0);
+?>
+}
+
