@@ -1,10 +1,15 @@
 <?R
+    source("conf.R")
 ?>
 
 CudaDeviceFunction real_t getJ(){
 	return 0;
 }
-    
+
+CudaDeviceFunction real_t getC(){
+	return Concentration;
+}
+
 CudaDeviceFunction vector_t getU(){
 	vector_t u;
 	return u;
@@ -14,11 +19,6 @@ CudaDeviceFunction float2 Color() {
         float2 ret;
         vector_t u = getU();
         ret.x = sqrt(u.x*u.x + u.y*u.y);
-        if (NodeType == NODE_Solid){
-                ret.y = 0;
-        } else {
-                ret.y = 1;
-        }
         return ret;
 }
 
@@ -48,10 +48,58 @@ CudaDeviceFunction void Wall()
 ?>
 }
 
+<?R
+    c_table = function(x) {
+        cat("\n")
+        write.table(x, row.names=FALSE, col.names=FALSE, sep=", ", eol=",\n")
+    }
+    sph_n = length(sph_weights)
+?>
+const int sph_n = <?%d sph_n ?>;
+CudaConstantMemory double sph_points[<?%d 3*sph_n ?>] = {<?R c_table(sph_points) ?>};
+CudaConstantMemory double sph_weights[<?%d sph_n ?>] = {<?R c_table(sph_weights) ?>};
+
 CudaDeviceFunction void Collision()
 {
 <?R
-    C(PV(tab$field),0);
+    k = length(polies)
+    ms = PV(tab$field)
+    dim(ms) = c(length(polies),nrow(dirs))
+    m = PV("m[",1:k-1,"]")
+    lam = PV("lambda[",1:k-1,"]")
+?>
+    const int k = <?%d k ?>;
+    real_t m[k];
+<?R
+    C(m,ms %*% rep(1,6))
+?>
+    real_t lambda[k]; 
+    real_t res[k]; 
+    real_t mat[k*k];
+    for (int j=0; j<k; j++) {
+        res[j] = -m[j];
+        for (int g=0; g<k; g++) {
+                mat[j+g*k] = 0;
+        }
+    }
+    for (int i=0; i<sph_n; i++) {
+        real_t x = sph_points[0+3*i];
+        real_t y = sph_points[1+3*i];
+        real_t z = sph_points[2+3*i];
+        real_t poly[k]; <?R
+        C(PV("poly[",1:k-1,"]"), polies); ?>
+        real_t a = 0;
+        for (int j=0; j<k; j++) a += lambda[j]*poly[j];
+        real_t b = exp(a)*sph_weights[i];
+        for (int j=0; j<k; j++) {
+            res[j] += poly[j]*b;
+            for (int g=0; g<k; g++) {
+                mat[j+g*k] += poly[j]*poly[g]*b;
+            }
+        }
+    }
+<?R
+    C(ms,0);
 ?>
 }
 
