@@ -2,17 +2,21 @@
     source("conf.R")
 ?>
 
-CudaDeviceFunction real_t getJ(){
+CudaDeviceFunction real_t getJ() {
 	return 0;
 }
 
-CudaDeviceFunction real_t getC(){
+CudaDeviceFunction real_t getC() {
 	return Concentration;
 }
 
-CudaDeviceFunction vector_t getU(){
+CudaDeviceFunction vector_t getU() {
 	vector_t u;
 	return u;
+}
+
+CudaDeviceFunction real_t getR() {
+	return resL2;
 }
 
 CudaDeviceFunction float2 Color() {
@@ -71,32 +75,39 @@ CudaDeviceFunction void Collision()
     const int k = <?%d k ?>;
     real_t m[k];
 <?R
-    C(m,ms %*% rep(1,6))
+    C(m,ms %*% rep(1,nrow(dirs)))
 ?>
     real_t lambda[k]; 
-    real_t res[k]; 
-    real_t mat[k*k];
-    for (int j=0; j<k; j++) {
-        res[j] = -m[j];
-        for (int g=0; g<k; g++) {
-                mat[j+g*k] = 0;
-        }
-    }
-    for (int i=0; i<sph_n; i++) {
-        real_t x = sph_points[0+3*i];
-        real_t y = sph_points[1+3*i];
-        real_t z = sph_points[2+3*i];
-        real_t poly[k]; <?R
-        C(PV("poly[",1:k-1,"]"), polies); ?>
-        real_t a = 0;
-        for (int j=0; j<k; j++) a += lambda[j]*poly[j];
-        real_t b = exp(a)*sph_weights[i];
+    for (int j=0; j<k; j++) lambda[j] = 0;
+    lambda[0] = log(m[0]);
+    for (int iter=0; iter<20; iter++) {
+        real_t res[k]; 
+        real_t mat[k*k];
         for (int j=0; j<k; j++) {
-            res[j] += poly[j]*b;
+            res[j] = -m[j];
             for (int g=0; g<k; g++) {
-                mat[j+g*k] += poly[j]*poly[g]*b;
+                    mat[j+g*k] = 0;
             }
         }
+        for (int i=0; i<sph_n; i++) {
+            real_t x = sph_points[0+3*i];
+            real_t y = sph_points[1+3*i];
+            real_t z = sph_points[2+3*i];
+            real_t poly[k];
+            <?R C(PV("poly[",1:k-1,"]"), polies); ?>
+            real_t a = 0;
+            for (int j=0; j<k; j++) a += lambda[j]*poly[j];
+            real_t b = exp(a)*sph_weights[i];
+            for (int j=0; j<k; j++) {
+                res[j] += poly[j]*b;
+                for (int g=0; g<k; g++) {
+                    mat[j+g*k] += poly[j]*poly[g]*b;
+                }
+            }
+        }
+        resL2 = 0;
+        for (int j=0; j<k; j++) resL2 = res[j]*res[j];
+        resL2 = sqrt(resL2);
     }
 <?R
     C(ms,0);

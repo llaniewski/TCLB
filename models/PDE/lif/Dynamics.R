@@ -35,19 +35,24 @@ G = solve(R[sel,sel]) %*% diag(diag(R)[sel])
 monomials = PV("x")^I$x * PV("y")^I$y * PV("z")^I$z
 polies = monomials[pick] %*% G
 
-dirs = data.frame(x=c(1,-1,0,0,0,0), y=c(0,0,1,-1,0,0), z=c(0,0,0,0,1,-1))
+dirs = data.frame(
+    x=c(0,1,-1,0, 0,0, 0),
+    y=c(0,0, 0,1,-1,0, 0),
+    z=c(0,0, 0,0, 0,1,-1)
+)
 tab = expand.grid(poly=1:K, dir=seq_len(nrow(dirs)))
-tab$moment = paste("m",tab$poly,sep="_")
-tab$field = paste(tab$moment,tab$dir,sep="_")
+tab$field = paste0("m_",tab$dir,"[",tab$poly-1,"]")
 tab$dx = dirs$x[tab$dir]
 tab$dy = dirs$y[tab$dir]
 tab$dz = dirs$z[tab$dir]
 
 AddDensity( name=tab$field, dx=tab$dx, dy=tab$dy, dz=tab$dz, group="f")
+AddField( name="resL2", group="res")
 
 AddQuantity(name="J", unit="1")
 AddQuantity(name="C", unit="1")
 AddQuantity(name="U", unit="1", vector=T)
+AddQuantity(name="R", unit="1")
 
 
 AddSetting(name="Source", default=0, zonal=T)
