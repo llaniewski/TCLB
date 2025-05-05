@@ -1,9 +1,12 @@
 <?xml version="1.0"?>
 <CLBConfig version="2.0" output="output/" permissive="true">
-	<Geometry nx="3" ny="3" nz="3">
+	<Geometry nx="15" ny="15" nz="15">
 		<Collision>
 			<Box/>
 		</Collision>
+		<None name="source">
+			<Box dx="7" nx="1" dy="7" ny="1" dz="7" nz="1"/>
+		</None>
 		<Wall mask="ALL">
             <Box nx="1"/><Box dx="-1"/>
             <Box ny="1"/><Box dy="-1"/>
@@ -11,6 +14,9 @@
 		</Wall>
 	</Geometry>
 	<Model>
+		<Param name="Source" value="1.0" zone="source"/>
 	</Model>
-	<Solve Iterations="1"/>
+	<VTK/>
+	<VTK Iterations="1"/>
+	<Solve Iterations="30"/>
 </CLBConfig>

@@ -3,7 +3,7 @@
 ?>
 
 CudaDeviceFunction real_t getJ() {
-	return 0;
+	return m_7[0] + m_6[0] + m_5[0] + m_4[0] + m_3[0] + m_2[0] + m_1[0];
 }
 
 CudaDeviceFunction real_t getC() {
@@ -12,11 +12,14 @@ CudaDeviceFunction real_t getC() {
 
 CudaDeviceFunction vector_t getU() {
 	vector_t u;
+    u.x = m_7[1] + m_6[1] + m_5[1] + m_4[1] + m_3[1] + m_2[1] + m_1[1];
+    u.y = m_7[2] + m_6[2] + m_5[2] + m_4[2] + m_3[2] + m_2[2] + m_1[2];
+    u.z = m_7[3] + m_6[3] + m_5[3] + m_4[3] + m_3[3] + m_2[3] + m_1[3];
 	return u;
 }
 
 CudaDeviceFunction real_t getR() {
-	return resL2;
+	return resL2(0,0,0);
 }
 
 CudaDeviceFunction float2 Color() {
@@ -105,7 +108,7 @@ CudaDeviceFunction void Collision()
     real_t lambda[k]; 
     for (int j=0; j<k; j++) lambda[j] = 0;
     //lambda[0] = log(m[0]);
-    for (int iter=0; iter<20; iter++) {
+    for (int iter=0; iter<15; iter++) {
         real_t res[k]; 
         real_t mat[k*k];
         for (int j=0; j<k; j++) {
@@ -114,9 +117,9 @@ CudaDeviceFunction void Collision()
                     mat[j+g*k] = 0;
             }
         }
-        printf("lambda = [");
-        for (int g=0; g<k; g++) printf(" %lg", lambda[g]);
-        printf(" ]\n");
+        //printf("lambda = [");
+        //for (int g=0; g<k; g++) printf(" %lg", lambda[g]);
+        //printf(" ]\n");
         for (int i=0; i<sph_n; i++) {
             real_t x = sph_points[0+3*i];
             real_t y = sph_points[1+3*i];
@@ -144,21 +147,23 @@ CudaDeviceFunction void Collision()
             for (int g=0; g<k; g++) printf(" %lg", mat[j+g*k]);
             printf(" ]\n");
         }
-        */
+        
         printf("res = [");
         for (int g=0; g<k; g++) printf(" %lg", res[g]);
         printf(" ]\n");
-
+*/
         resL2 = 0;
         for (int j=0; j<k; j++) resL2 += res[j]*res[j];
         resL2 = sqrt(resL2);
-        printf("iter:%d resL2: %lg\n", iter, resL2);
+//        printf("iter:%d resL2: %lg\n", iter, resL2);
         chol_solve(k, mat, res);
         for (int j=0; j<k; j++) lambda[j] = lambda[j] - res[j];
     }
-<?R
-    C(ms,0);
-?>
+    for (int j=0; j<k; j++) {
+    <?R for (i in seq_len(nrow(dirs))) { ?>
+        m_<?%d i ?>[j] = 0;
+    <?R } ?>
+    }
 
     for (int i=0; i<sph_n; i++) {
         real_t x = sph_points[0+3*i];
@@ -168,13 +173,18 @@ CudaDeviceFunction void Collision()
         <?R C(PV("poly[",1:k-1,"]"), polies); ?>
         real_t a = 0;
         for (int j=0; j<k; j++) a += lambda[j]*poly[j];
-        real_t b = exp(a)*sph_weights[i];
+        real_t l = exp(a) + Source;
+        real_t b = l*sph_weights[i];
+        real_t flux;
+        for (int j=0; j<k; j++) {
+            m_1[j] += poly[j]*b;
+        }
         <?R for (i in seq_len(nrow(dirs))) { ?>
-            real_t flux = <?R C(sum(PV(c("x","y","z"))*c(dirs$x[i],dirs$y[i],dirs$z[i]))) ?>;
+            flux = <?R C(sum(PV(c("x","y","z"))*c(dirs$x[i],dirs$y[i],dirs$z[i]))) ?>;
             if (flux > 0) {
                 for (int j=0; j<k; j++) {
                     m_<?%d i ?>[j] += poly[j]*b*flux;
-                    m[j] -= poly[j]*b*flux;
+                    m_1[j] -= poly[j]*b*flux;
                 }
             }
         <?R } ?>
