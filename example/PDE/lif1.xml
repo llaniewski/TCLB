@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<CLBConfig version="2.0" output="output/" permissive="true">
+	<Geometry nx="3" ny="3" nz="3">
+		<Collision>
+			<Box/>
+		</Collision>
+		<Wall mask="ALL">
+            <Box nx="1"/><Box dx="-1"/>
+            <Box ny="1"/><Box dy="-1"/>
+            <Box nz="1"/><Box dz="-1"/>
+		</Wall>
+	</Geometry>
+	<Model>
+	</Model>
+	<Solve Iterations="1"/>
+</CLBConfig>
