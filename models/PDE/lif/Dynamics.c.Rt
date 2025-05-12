@@ -180,7 +180,7 @@ CudaDeviceFunction void Collision()
             m_1[j] += poly[j]*b;
         }
         <?R for (i in seq_len(nrow(dirs))) { ?>
-            flux = <?R C(sum(PV(c("x","y","z"))*c(dirs$x[i],dirs$y[i],dirs$z[i]))) ?>;
+            flux = <?R C(PV("SpeedOfLight")*sum(PV(c("x","y","z"))*c(dirs$x[i],dirs$y[i],dirs$z[i]))) ?>;
             if (flux > 0) {
                 for (int j=0; j<k; j++) {
                     m_<?%d i ?>[j] += poly[j]*b*flux;

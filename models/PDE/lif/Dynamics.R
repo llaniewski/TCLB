@@ -13,7 +13,7 @@ sph_points = cbind(
 )
 sph_points[abs(sph_points) < 1e-14] = 0
 
-N = 2
+N = 3
 I = expand.grid(x = 0:N, y = 0:N, z = 0:N)
 I = I[rowSums(I) <= N,]
 I = I[order(rowSums(I),-rowMax(I),-I[,1],-I[,2],-I[,3]),]
@@ -56,6 +56,7 @@ AddQuantity(name="R", unit="1")
 
 
 AddSetting(name="Source", default=0, zonal=T)
+AddSetting(name="SpeedOfLight", default=1/sqrt(3), zonal=T)
 AddSetting(name="Concentration", default=0, zonal=T)
 AddSetting(name="Absorption", default=0)
 AddSetting(name="Emission", default=0)
