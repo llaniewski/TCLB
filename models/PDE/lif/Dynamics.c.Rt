@@ -117,9 +117,6 @@ CudaDeviceFunction void Collision()
                     mat[j+g*k] = 0;
             }
         }
-        //printf("lambda = [");
-        //for (int g=0; g<k; g++) printf(" %lg", lambda[g]);
-        //printf(" ]\n");
         for (int i=0; i<sph_n; i++) {
             real_t x = sph_points[0+3*i];
             real_t y = sph_points[1+3*i];
@@ -127,35 +124,25 @@ CudaDeviceFunction void Collision()
             real_t poly[k];
             <?R C(PV("poly[",1:k-1,"]"), polies); ?>
             real_t a = 0;
-//        printf("poly = [");
-//        for (int g=0; g<k; g++) printf(" %lg", poly[g]);
-//        printf(" ]\n");
             for (int j=0; j<k; j++) a += lambda[j]*poly[j];
             real_t b = exp(a)*sph_weights[i];
-//            printf("i:%d a:%lg b:%lg w:%lg\n",i,a,b, sph_weights[i]);
             for (int j=0; j<k; j++) {
-                res[j] += poly[j]*b;
-                for (int g=0; g<k; g++) {
+                for (int g=j; g<k; g++) {
                     mat[j+g*k] += poly[j]*poly[g]*b;
                 }
             }
         }
 
-/*        printf("mat = \n");
         for (int j=0; j<k; j++) {
-            printf("[");
-            for (int g=0; g<k; g++) printf(" %lg", mat[j+g*k]);
-            printf(" ]\n");
+            res[j] = mat[0+j*k] - m[j];
+            for (int g=0; g<j; g++) {
+                mat[j+g*k] = mat[g+j*k];
+            }
         }
-        
-        printf("res = [");
-        for (int g=0; g<k; g++) printf(" %lg", res[g]);
-        printf(" ]\n");
-*/
         resL2 = 0;
         for (int j=0; j<k; j++) resL2 += res[j]*res[j];
         resL2 = sqrt(resL2);
-//        printf("iter:%d resL2: %lg\n", iter, resL2);
+
         chol_solve(k, mat, res);
         for (int j=0; j<k; j++) lambda[j] = lambda[j] - res[j];
     }
