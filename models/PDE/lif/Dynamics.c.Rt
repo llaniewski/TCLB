@@ -132,7 +132,13 @@ CudaDeviceFunction void Collision()
                 }
             }
         }
-
+        real_t fac = m[0]/mat[0];
+        lambda[0] = lambda[0]*log(fac);
+        for (int j=0; j<k; j++) {
+            for (int g=j; g<k; g++) {
+                mat[j+g*k] = mat[j+g*k] * fac;
+            }
+        }        
         for (int j=0; j<k; j++) {
             res[j] = mat[0+j*k] - m[j];
             for (int g=0; g<j; g++) {
