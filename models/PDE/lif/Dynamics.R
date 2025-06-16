@@ -13,7 +13,7 @@ sph_points = cbind(
 )
 sph_points[abs(sph_points) < 1e-14] = 0
 
-N = 3
+N = 2
 I = expand.grid(x = 0:N, y = 0:N, z = 0:N)
 I = I[rowSums(I) <= N,]
 I = I[order(rowSums(I),-rowMax(I),-I[,1],-I[,2],-I[,3]),]

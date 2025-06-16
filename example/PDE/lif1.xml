@@ -1,11 +1,15 @@
 <?xml version="1.0"?>
 <CLBConfig version="2.0" output="output/" permissive="true">
-	<Geometry nx="15" ny="15" nz="15">
+	<Units>
+	<Param value="1m" gauge="4"/>
+	<Param value="1m/s" gauge="0.04"/>
+	</Units>
+	<Geometry nx="8m" ny="8m" nz="8m">
 		<Collision>
 			<Box/>
 		</Collision>
 		<None name="source">
-			<Box dx="7" nx="1" dy="7" ny="1" dz="7" nz="1"/>
+			<Sphere dx="3.5m" nx="1m" dy="3.5m" ny="1m" dz="3.5m" nz="1m"/>
 		</None>
 		<Wall mask="ALL">
             <Box nx="1"/><Box dx="-1"/>
@@ -14,9 +18,9 @@
 		</Wall>
 	</Geometry>
 	<Model>
-		<Param name="Source" value="1.0" zone="source"/>
+		<Param name="Source" value="1.0/m3s" zone="source"/>
 	</Model>
 	<VTK/>
-	<VTK Iterations="1"/>
-	<Solve Iterations="100"/>
+	<VTK Iterations="0.1s"/>
+	<Solve Iterations="1s"/>
 </CLBConfig>
