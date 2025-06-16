@@ -1,0 +1,109 @@
+<?R
+    source("conf.R")
+    f = PV(tab$field)
+    U = cbind(tab$dx,tab$dy,tab$dz)
+    u = PV("u.",c("x","y","z"))
+
+    c_table = function(x) {
+        cat("\n")
+        write.table(x, row.names=FALSE, col.names=FALSE, sep=", ", eol=",\n")
+    }
+    sph_n = length(sph_weights)
+?>
+const int sph_n = <?%d sph_n ?>;
+const int M = <?%d M ?>;
+CudaConstantMemory double sph_points[<?%d 3*sph_n ?>] = {<?R c_table(sph_points) ?>};
+CudaConstantMemory double sph_weights[<?%d sph_n ?>] = {<?R c_table(sph_weights) ?>};
+
+
+
+
+CudaDeviceFunction real_t getJ() {
+    real_t J = 0;
+    for (int j=0; j<M; j++) J = J + f[j] * sph_weights[j];
+	return J;
+}
+
+CudaDeviceFunction real_t getC() {
+	return Concentration;
+}
+
+CudaDeviceFunction vector_t getU() {
+	vector_t u;
+    u.x = 0;
+    u.y = 0;
+    u.z = 0;
+    for (int j=0; j<M; j++) {
+        u.x = u.x + f[j] * sph_points[0+j*3] * sph_weights[j];
+        u.y = u.y + f[j] * sph_points[1+j*3] * sph_weights[j];
+        u.z = u.z + f[j] * sph_points[2+j*3] * sph_weights[j];
+    }
+	return u;
+}
+
+CudaDeviceFunction float2 Color() {
+        float2 ret;
+        ret.x = getJ();
+        ret.y = 1;
+        return ret;
+}
+
+
+CudaDeviceFunction void Init() {
+    for (int j=0; j<M; j++) f[j] = 0;
+}
+
+CudaDeviceFunction void Run() {
+    switch (NodeType & NODE_BOUNDARY) {
+	case NODE_Wall:
+		Wall();
+		break;
+    }
+    if (NodeType & NODE_COLLISION)
+    {
+		Collision();
+    }
+}
+
+CudaDeviceFunction void Wall()
+{
+    for (int j=0; j<M; j++) f[j] = 0;
+}
+
+
+CudaDeviceFunction void Collision()
+{
+    <?R for (i in seq_len(nrow(sph_points))) { 
+        x = sph_points[i,1]
+        y = sph_points[i,2]
+        z = sph_points[i,3]
+        get4 = function(dx,dy,dz) {
+            PV("f",i-1,"(",dx,",",dy,",",dz,")")
+        }
+        get3 = function(dx,dy) {
+            if (z >= 0) {
+                get4(dx,dy,-1)*z + get4(dx,dy,0)*(1-z)
+            } else {
+                get4(dx,dy,1)*(-z) + get4(dx,dy,0)*(1+z)
+            }
+        }
+        get2 = function(dx) {
+            if (y >= 0) {
+                get3(dx,-1)*y + get3(dx,0)*(1-y)
+            } else {
+                get3(dx,1)*(-y) + get3(dx,0)*(1+y)
+            }
+        }
+        get1 = function() {
+            if (x >= 0) {
+                get2(-1)*x + get2(0)*(1-x)
+            } else {
+                get2(1)*(-x) + get2(0)*(1+x)
+            }
+        }
+        C(PV("f[",i-1,"]"),get1())
+    }
+    ?>
+    for (int j=0; j<M; j++) f[j] += Source;
+}
+
