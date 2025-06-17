@@ -40,6 +40,13 @@ dirs = data.frame(
     y=c(0,0, 0,1,-1,0, 0),
     z=c(0,0, 0,0, 0,1,-1)
 )
+# dirs = expand.grid(
+#     x=-1:1,
+#     y=-1:1,
+#     z=-1:1
+# )
+# dirs = dirs[order(rowSums(abs(dirs)),-abs(dirs$x),-dirs$x,-abs(dirs$y),-dirs$y,-abs(dirs$z),-dirs$z),]
+
 tab = expand.grid(poly=1:K, dir=seq_len(nrow(dirs)))
 tab$field = paste0("m_",tab$dir,"[",tab$poly-1,"]")
 tab$dx = dirs$x[tab$dir]

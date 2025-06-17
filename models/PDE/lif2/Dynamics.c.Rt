@@ -73,32 +73,37 @@ CudaDeviceFunction void Wall()
 
 CudaDeviceFunction void Collision()
 {
-    <?R for (i in seq_len(nrow(sph_points))) { 
+    <?R
+    SpeedOfLight = PV("SpeedOfLight")
+    for (i in seq_len(nrow(sph_points))) { 
         x = sph_points[i,1]
         y = sph_points[i,2]
         z = sph_points[i,3]
+        sx = SpeedOfLight*x
+        sy = SpeedOfLight*y
+        sz = SpeedOfLight*z
         get4 = function(dx,dy,dz) {
             PV("f",i-1,"(",dx,",",dy,",",dz,")")
         }
         get3 = function(dx,dy) {
             if (z >= 0) {
-                get4(dx,dy,-1)*z + get4(dx,dy,0)*(1-z)
+                get4(dx,dy,-1)*sz + get4(dx,dy,0)*(sz-1)*(-1)
             } else {
-                get4(dx,dy,1)*(-z) + get4(dx,dy,0)*(1+z)
+                get4(dx,dy,1)*sz*(-1) + get4(dx,dy,0)*(1+sz)
             }
         }
         get2 = function(dx) {
             if (y >= 0) {
-                get3(dx,-1)*y + get3(dx,0)*(1-y)
+                get3(dx,-1)*sy + get3(dx,0)*(sy-1)*(-1)
             } else {
-                get3(dx,1)*(-y) + get3(dx,0)*(1+y)
+                get3(dx,1)*sy*(-1) + get3(dx,0)*(1+sy)
             }
         }
         get1 = function() {
             if (x >= 0) {
-                get2(-1)*x + get2(0)*(1-x)
+                get2(-1)*sx + get2(0)*(sx-1)*(-1)
             } else {
-                get2(1)*(-x) + get2(0)*(1+x)
+                get2(1)*sx*(-1) + get2(0)*(1+sx)
             }
         }
         C(PV("f[",i-1,"]"),get1())
