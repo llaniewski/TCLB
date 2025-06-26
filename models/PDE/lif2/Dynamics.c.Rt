@@ -106,7 +106,29 @@ CudaDeviceFunction void Collision()
                 get2(1)*sx*(-1) + get2(0)*(1+sx)
             }
         }
-        C(PV("f[",i-1,"]"),get1())
+        get0 = function() {
+            ret = get4(0,0,0)
+            if (x >= 0) {
+                ret = ret + (get4(-1,0,0) - get4(0,0,0))*sx
+            } else {
+                ret = ret + (get4(0,0,0) - get4(1,0,0))*sx
+            }
+            if (y >= 0) {
+                ret = ret + (get4(0,-1,0) - get4(0,0,0))*sy
+            } else {
+                ret = ret + (get4(0,0,0) - get4(0,1,0))*sy
+            }
+            if (z >= 0) {
+                ret = ret + (get4(0,0,-1) - get4(0,0,0))*sz
+            } else {
+                ret = ret + (get4(0,0,0) - get4(0,0,1))*sz
+            }
+        }
+        if (Options$trilin) {
+            C(PV("f[",i-1,"]"),get1())
+        } else {
+            C(PV("f[",i-1,"]"),get0())
+        }
     }
     ?>
     for (int j=0; j<M; j++) f[j] += Source;
