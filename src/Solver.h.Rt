@@ -29,6 +29,8 @@
 #ifdef GRAPHICS
     const int desired_fps = 10;
 	class GPUAnimBitmap;
+#elif WITH_SDL_WINDOW
+	const int desired_fps = 15;
 #else
     const int desired_fps = 1;
 #endif

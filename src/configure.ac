@@ -49,6 +49,14 @@ AC_ARG_ENABLE([graphics],
 	AS_HELP_STRING([--enable-graphics],
 		[make a GUI version]))
 
+AC_ARG_ENABLE([sdl],
+	AS_HELP_STRING([--enable-sdl],
+		[make a GUI version with SDL2]))
+
+AC_ARG_ENABLE([opencv],
+	AS_HELP_STRING([--enable-opencv],
+		[make a version with opencv interation]))
+
 AC_ARG_ENABLE([double],
 	AS_HELP_STRING([--enable-double],
 		[make a double precision version]))
@@ -412,6 +420,25 @@ else
 	AC_DEFINE([WARPSIZE], [1], [Using the CUDA standard 32 warp size])
 	AC_DEFINE([GRID3D], [1], [Using 3D block grid in HIP])
 fi
+
+if test "x${enable_sdl}" == "xyes"
+then
+	CPPFLAGS="${CPPFLAGS} $(pkg-config sdl2 --cflags)"
+	LDFLAGS="${LDFLAGS} $(pkg-config sdl2 --libs)"
+	AC_DEFINE([WITH_SDL_WINDOW], [1], [Making a sdl version])
+fi
+
+if test "x${enable_opencv}" == "xyes"
+then
+	CPPFLAGS="${CPPFLAGS} $(pkg-config opencv4 --cflags)"
+	LDFLAGS="${LDFLAGS} $(pkg-config opencv4 --libs)"
+	AC_DEFINE([WITH_OPENCV], [1], [Making a opencv version])
+fi
+
+
+
+
+
 
 if test "x${with_x_mod}" != "x"
 then

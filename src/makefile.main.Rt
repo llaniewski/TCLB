@@ -38,6 +38,7 @@ SOURCE_PLAN+=simplepart.cpp
 SOURCE_PLAN+=GetThreads.h GetThreads.cpp
 SOURCE_PLAN+=range_int.hpp
 SOURCE_PLAN+=Lists.h Lists.cpp Things.h
+SOURCE_PLAN+=gui.cpp gui.h
 <?R
 	h = dir("src/Handlers","[.](h|cpp)(|.Rt)$")
 	h = sub(".Rt","",h)

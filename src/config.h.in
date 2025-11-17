@@ -23,6 +23,12 @@
 /* Making a GUI version */
 #undef GRAPHICS
 
+/* Making a SDL2 version */
+#undef WITH_SDL_WINDOW
+
+/* Making a OpenCV version */
+#undef WITH_OPENCV
+
 /* Making a double precision version */
 #undef CALC_DOUBLE_PRECISION
 

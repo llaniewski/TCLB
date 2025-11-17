@@ -27,6 +27,13 @@
 
 #include "GetThreads.h"
 
+#ifdef WITH_SDL_WINDOW
+	#include "gui.h"
+
+	gui_window* window = NULL;
+#endif
+
+
 // Reads units from configure file and applies them to the solver
 int readUnits(pugi::xml_node config, Solver* solver) {
 	pugi::xml_node set = config.child("Units");
@@ -150,6 +157,14 @@ int MainCallback(int seg, int tot, Solver* solver) {
 	}
 	MPI_Bcast(&steps, 1, MPI_INT, 0, MPMD.local);
 	solver->EventLoop();
+	#ifdef WITH_SDL_WINDOW
+		if (window != NULL) {
+			int ret = window->eventloop();
+			if (ret) {
+				ERROR("Should close\n");
+			}
+		}
+	#endif
 	CudaEventRecord( start, 0 );
 	CudaEventSynchronize( start );
 	iter = 0;
@@ -400,6 +415,11 @@ int main ( int argc, char * argv[] )
 	CudaEventRecord( start, 0 );
 	solver->lattice->Callback((int(*)(int, int, void*)) MainCallback, (void*) solver);
 
+	#ifdef WITH_SDL_WINDOW
+		window = new gui_window(800,600,solver);
+	#endif
+
+
 	// Running main handler (it makes all the magic)
 	{
 		Handler hand(config, solver);
@@ -408,6 +428,10 @@ int main ( int argc, char * argv[] )
 			return -1;
 		}
 	}
+
+	#ifdef WITH_SDL_WINDOW
+		if (window != NULL) delete window;
+	#endif
 
 	// Finish and clean up
 	debug2("CudaFree ...\n");
