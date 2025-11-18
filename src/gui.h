@@ -14,23 +14,10 @@
 #include <cuda.h>
 #include <cuda_gl_interop.h>
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_ttf.h>
-#include <SDL2/SDL_image.h>
+class gui_window_implementation;
 
-
-struct gui_window {
-    Solver * solver;
-    int window_width;
-    int window_height;
-	SDL_Window* sdl_window;
-	SDL_Renderer* sdl_renderer;
-	SDL_Texture* sdl_display;
-  SDL_Texture *sdl_texture;
-  SDL_Surface* sdl_surface;
-  uchar4* outputBitmap;
-  SDL_Rect srcrect, dstrect;
-  int calibrate();
+class gui_window {
+    gui_window_implementation* impl;
 public:	
     gui_window(int window_width_, int window_height_, Solver * solver_);
     ~gui_window();

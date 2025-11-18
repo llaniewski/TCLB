@@ -1,5 +1,8 @@
 #include <opencv2/opencv.hpp>
 #include "gui.h"
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
+#include <SDL2/SDL_image.h>
 
 using namespace cv;
 
@@ -10,20 +13,45 @@ void check_pointer(void* ptr) {
 	}
 }
 
-int gui_window::calibrate() {
+class gui_window_implementation {
+    Solver * solver;
+    int window_width;
+    int window_height;
+	SDL_Window* sdl_window;
+	SDL_Renderer* sdl_renderer;
+	SDL_Texture* sdl_display;
+	SDL_Texture *sdl_texture;
+	SDL_Surface* sdl_surface;
+	uchar4* outputBitmap;
+	SDL_Rect srcrect, dstrect;
+	cv::VideoCapture cap;
+	cv::Size target_size;
+	cv::Mat H;
+	int calibrate();
+public:
+	gui_window_implementation(int window_width_, int window_height_, Solver * solver_);
+	int eventloop();
+	~gui_window_implementation();
+};
+
+gui_window::gui_window(int window_width_, int window_height_, Solver * solver_) :
+	impl(new gui_window_implementation(window_width_, window_height_, solver_)) {
+}
+
+int gui_window::eventloop() {
+	return impl->eventloop();
+}
+
+gui_window::~gui_window() {
+	if (impl) delete impl;
+}
+
+
+int gui_window_implementation::calibrate() {
 	int board_width = 7;
 	int board_height = 5;
 	double mar = 0.5;
-	namedWindow("Video Player");//Declaring the video to show the video//
-	VideoCapture cap(0);//Declaring an object to capture stream of frames from default camera//
-	if (!cap.isOpened()){ //This section prompt an error message if no video stream is found//
-		cout << "No video stream detected" << endl;
-		system("pause");
-		return-1;
-	}
-	cap.set(CAP_PROP_FRAME_WIDTH,1920);
-	cap.set(CAP_PROP_FRAME_HEIGHT,1080);
-
+	
 	// SDL_SetRenderDrawColor(sdl_renderer, 0, 0, 0, 255);
 	SDL_SetRenderDrawColor(sdl_renderer, 128, 128, 128, 255);
 	SDL_RenderClear(sdl_renderer);
@@ -88,32 +116,36 @@ int gui_window::calibrate() {
 	printf("%d %d\n",(int) corners.size().width,(int) corners.size().height);
 
 
-	Size target_size(window_width,window_height);
+	target_size.width = window_width;
+	target_size.height = window_height;
 	std::vector<cv::Point3f> object_points;
 	double square_size = target_size.width/(board_width+1);
-	for (int i = 0; i < board_height; ++i) {
-		for (int j = 0; j < board_width; ++j) {
-			object_points.push_back(cv::Point3f(check_x[j+1], check_y[i+1], 0));
+	printf("%d %d\n",(int) check_x.size(),(int) check_y.size());
+	printf("%d %d\n",(int) board_width,(int) board_height);
+	for (int iy = 1; iy<=board_height; iy++) {
+		for (int ix = 1; ix<=board_width; ix++) {
+			object_points.push_back(cv::Point3f(check_x[ix], check_y[iy], 0));
 		}
 	}
-
-	Mat H = findHomography(object_points, corners);
-	while (true) {
-		Mat myImage, warped_image;
-		cap >> myImage;
-		warpPerspective(myImage, warped_image, H, target_size,WARP_INVERSE_MAP);
-		imshow("Video Player", warped_image);//Showing the video//
-		char c = (char)waitKey(1);//Allowing 25 milliseconds frame processing time and initiating break condition//
-		if (c == 27){ //If 'Esc' is entered break the loop//
-			break;
-		}
-	}
-
+	
+	H = findHomography(object_points, corners);
+	
+	return 0;
 }
 
 
-gui_window::gui_window(int window_width_, int window_height_, Solver * solver_) : solver(solver_), window_width(window_width_), window_height(window_height_) {
+gui_window_implementation::gui_window_implementation(int window_width_, int window_height_, Solver * solver_)
+	: solver(solver_), window_width(window_width_), window_height(window_height_), cap(0) {
     output("Initializing SDL window\n");
+
+	if (!cap.isOpened()){ //This section prompt an error message if no video stream is found//
+		cout << "No video stream detected" << endl;
+		exit(-1);
+	}
+	cap.set(CAP_PROP_FRAME_WIDTH,1920);
+	cap.set(CAP_PROP_FRAME_HEIGHT,1080);
+
+
     // sdl_window = SDL_CreateWindow("Graphical Window", SDL_WINDOWPOS_UNDEFINED_DISPLAY(1), SDL_WINDOWPOS_UNDEFINED_DISPLAY(1), sx, sy, SDL_WINDOW_FULLSCREEN);
     sdl_window = SDL_CreateWindow("Graphical Window", 0, 0, window_width, window_height, 0);
 	check_pointer(sdl_window);
@@ -149,14 +181,17 @@ gui_window::gui_window(int window_width_, int window_height_, Solver * solver_) 
 	dstrect.x = 0;
 	dstrect.x = (window_width - dstrect.w)/2;
 	dstrect.y = (window_height - dstrect.h)/2;
+	namedWindow("Video Player");//Declaring the video to show the video//
 
 	calibrate();
+	
 
 }
 
-int gui_window::eventloop() {
+int gui_window_implementation::eventloop() {
 	SDL_Event event;
     int ret = 0;
+	
 	solver->lattice->Color(outputBitmap); // Updating graphics
 	SDL_LockSurface(sdl_surface);
 	CudaMemcpy(sdl_surface->pixels, outputBitmap, sizeof(uchar4)*solver->region.sizeL(), cudaMemcpyDeviceToHost);
@@ -168,8 +203,52 @@ int gui_window::eventloop() {
 	SDL_RenderClear(sdl_renderer);
 	SDL_RenderCopy(sdl_renderer, sdl_texture, &srcrect, &dstrect);
 	SDL_SetRenderDrawColor(sdl_renderer, 255, 255, 255, 255);
-	SDL_RenderDrawLine(sdl_renderer, 0, 0, 200, 200);
+	//SDL_RenderDrawLine(sdl_renderer, 0, 0, 200, 200);
     SDL_RenderPresent( sdl_renderer );
+
+	Mat myImage, newImage, labelImage, newImage2, binImage, camImage;
+
+	cap >> camImage;
+	if (camImage.empty()) exit(2);
+
+	warpPerspective(camImage, myImage, H, target_size,WARP_INVERSE_MAP);
+
+	cvtColor(myImage, newImage, cv::COLOR_RGB2GRAY);
+	threshold(newImage, binImage, 20, 1, THRESH_BINARY_INV);
+
+	Mat stats, centroids;
+	int nLabels = connectedComponentsWithStats(binImage, labelImage, stats, centroids);
+
+	vector<int> index(nLabels-1, 0);
+	for (int i = 0; i < nLabels-1; i++) index[i] = i + 1;
+
+	const int CV_AREA = ConnectedComponentsTypes::CC_STAT_AREA;
+	size_t idx_b = 0xFFFFFF;
+	int idx_b_max = 0;
+	for (size_t i=1;i<nLabels;i++) {
+		int area = stats.at<int>(i,CV_AREA);
+		if (area > idx_b_max) {
+			idx_b = i;
+			idx_b_max = area;
+		}
+	}
+
+	Vec3b col1(0, 0, 255);
+	Vec3b col2(0, 255, 0);
+	Mat dst(myImage.size(), CV_8UC3);
+	for(int r = 0; r < dst.rows; ++r){
+		for(int c = 0; c < dst.cols; ++c){
+			int label = labelImage.at<int>(r, c);
+			Vec3b &pixel = dst.at<Vec3b>(r, c);
+			if (label == idx_b) {
+				pixel = col1;
+			} else {
+				pixel = col2;
+			}
+		}
+	}
+	imshow("Video Player", dst);
+	waitKey(1);
 
 	while( SDL_PollEvent(&event) )
 	{
@@ -182,10 +261,12 @@ int gui_window::eventloop() {
 			ret = 1;
 		}
 	}
+	
     return 0;
 }
 
-gui_window::~gui_window() {
+gui_window_implementation::~gui_window_implementation() {
+	cap.release();
 	CudaFree( outputBitmap );
     output("Killing SDL window\n");
 }
