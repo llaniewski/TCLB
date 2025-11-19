@@ -91,6 +91,15 @@ int gui_window_implementation::calibrate() {
 		Mat myImage, gray;
 		Mat corn;
 		cap >> myImage;
+		printf("Cam: %7lg %7lg %7lg %7lg %7lg %7lg\n",
+			cap.get(CAP_PROP_BRIGHTNESS),
+			cap.get(CAP_PROP_CONTRAST),
+			cap.get(CAP_PROP_SATURATION),
+			cap.get(CAP_PROP_FOCUS),
+			cap.get(CAP_PROP_ZOOM),
+			cap.get(CAP_PROP_AUTO_EXPOSURE)
+		);
+
 		cvtColor(myImage, gray, COLOR_BGR2GRAY);
 		bool ret = findChessboardCorners(gray, Size(board_width,board_height), corn);
 		if (ret) {
@@ -136,6 +145,57 @@ int gui_window_implementation::calibrate() {
 	
 	H = findHomography(object_points, corners);
 	
+	SDL_SetRenderDrawColor(sdl_renderer, 0, 0, 0, 255);
+	SDL_RenderClear(sdl_renderer);
+	for (int ix = 0; ix<=board_width; ix++) {
+		for (int iy = 0; iy<=board_height; iy++) {
+			SDL_SetRenderDrawColor(sdl_renderer, 255, rand() % 255, rand() % 255, 255);
+			SDL_Rect rect;
+			rect.x = check_x[ix];
+			rect.y = check_y[iy];
+			rect.w = check_x[ix+1] - check_x[ix];
+			rect.h = check_y[iy+1] - check_y[iy];
+			SDL_RenderFillRect(sdl_renderer, &rect);
+		}
+	}
+    SDL_RenderPresent( sdl_renderer );
+	waitKey(200);
+
+	namedWindow("R");
+	namedWindow("G");
+	namedWindow("B");
+	while (true) {
+		Mat camImage, myImage;
+		cap >> camImage;
+		warpPerspective(camImage, myImage, H, target_size,WARP_INVERSE_MAP);
+
+		// Vec3d vavg = 0;
+		// for(int i=0; i<myImage.rows; i++) {
+		// 	for(int j=0; j<myImage.cols; j++) {
+		// 		Vec3d v = myImage.at<Vec3b>(r, c);
+		// 		vavg += v;
+		// 	}
+		// }
+		// vavg = vavg / (myImage.rows*myImage.cols);
+		// Vec3d vavg = 0;
+		// for(int i=0; i<myImage.rows; i++) {
+		// 	for(int j=0; j<myImage.cols; j++) {
+		// 		Vec3d v = myImage.at<Vec3b>(r, c);
+		// 		vavg += v;
+		// 	}
+		// }
+
+		imshow("Video Player", myImage);
+		Mat chanImage;
+		extractChannel(myImage, chanImage, 0); imshow("R", chanImage);
+		extractChannel(myImage, chanImage, 1); imshow("G", chanImage);
+		extractChannel(myImage, chanImage, 2); imshow("B", chanImage);
+		char c = (char)waitKey(1);
+		if (c == 27){ 
+			break;
+		}
+	}
+
 	return 0;
 }
 
@@ -156,6 +216,7 @@ gui_window_implementation::gui_window_implementation(int window_width_, int wind
 	}
 	cap.set(CAP_PROP_FRAME_WIDTH,1920);
 	cap.set(CAP_PROP_FRAME_HEIGHT,1080);
+	cap.set(CAP_PROP_AUTOFOCUS, 0);
 
 
     // sdl_window = SDL_CreateWindow("Graphical Window", SDL_WINDOWPOS_UNDEFINED_DISPLAY(1), SDL_WINDOWPOS_UNDEFINED_DISPLAY(1), sx, sy, SDL_WINDOW_FULLSCREEN);
@@ -241,9 +302,9 @@ int gui_window_implementation::eventloop() {
 
 	warpPerspective(camImage, myImage, H, target_size,WARP_INVERSE_MAP);
 
-	cvtColor(myImage, newImage, cv::COLOR_RGB2GRAY);
-	extractChannel(myImage, newImage, 0);
-	threshold(newImage, binImage, 20, 1, THRESH_BINARY_INV);
+	//cvtColor(myImage, newImage, cv::COLOR_RGB2GRAY);
+	extractChannel(myImage, newImage, 2);
+	threshold(newImage, binImage, 80, 1, THRESH_BINARY_INV);
 
 	Mat stats, centroids;
 	int nLabels = connectedComponentsWithStats(binImage, labelImage, stats, centroids);
