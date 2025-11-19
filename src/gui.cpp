@@ -17,6 +17,7 @@ class gui_window_implementation {
     Solver * solver;
     int window_width;
     int window_height;
+	int window_scale;
 	SDL_Window* sdl_window;
 	SDL_Renderer* sdl_renderer;
 	SDL_Texture* sdl_display;
@@ -27,6 +28,10 @@ class gui_window_implementation {
 	cv::VideoCapture cap;
 	cv::Size target_size;
 	cv::Mat H;
+	lbRegion reg;
+	SDL_Rect subreg;
+	std::vector<flag_t> nodetypes_save;
+	std::vector<flag_t> nodetypes;
 	int calibrate();
 public:
 	gui_window_implementation(int window_width_, int window_height_, Solver * solver_);
@@ -77,6 +82,11 @@ int gui_window_implementation::calibrate() {
 
 	Mat corners;
 	int state = 0;
+	SDL_Rect rect;
+	rect.x = 0.2*mar * window_width / (board_width+1+2*mar);
+	rect.y = 0.2*mar * window_height / (board_height+1+2*mar);
+	rect.w = 0.8*mar * window_width / (board_width+1+2*mar);
+	rect.h = 0.8*mar * window_height / (board_height+1+2*mar);
 	while (true) {
 		Mat myImage, gray;
 		Mat corn;
@@ -98,11 +108,6 @@ int gui_window_implementation::calibrate() {
 			} else {
 				SDL_SetRenderDrawColor(sdl_renderer, 255, 0, 0, 255);
 			}
-			SDL_Rect rect;
-			rect.x = 10;
-			rect.y = 10;
-			rect.w = 20;
-			rect.h = 20;
 			SDL_RenderFillRect(sdl_renderer, &rect);
 			SDL_RenderPresent( sdl_renderer );
 		}
@@ -116,15 +121,16 @@ int gui_window_implementation::calibrate() {
 	printf("%d %d\n",(int) corners.size().width,(int) corners.size().height);
 
 
-	target_size.width = window_width;
-	target_size.height = window_height;
 	std::vector<cv::Point3f> object_points;
 	double square_size = target_size.width/(board_width+1);
 	printf("%d %d\n",(int) check_x.size(),(int) check_y.size());
 	printf("%d %d\n",(int) board_width,(int) board_height);
 	for (int iy = 1; iy<=board_height; iy++) {
 		for (int ix = 1; ix<=board_width; ix++) {
-			object_points.push_back(cv::Point3f(check_x[ix], check_y[iy], 0));
+			object_points.push_back(cv::Point3f(
+				(check_x[ix] - dstrect.x)/window_scale - subreg.x,
+				(check_y[iy] - dstrect.y)/window_scale - subreg.y,
+			0));
 		}
 	}
 	
@@ -137,6 +143,12 @@ int gui_window_implementation::calibrate() {
 gui_window_implementation::gui_window_implementation(int window_width_, int window_height_, Solver * solver_)
 	: solver(solver_), window_width(window_width_), window_height(window_height_), cap(0) {
     output("Initializing SDL window\n");
+
+	reg = solver->lattice->region;
+	// <?R if ("Wall" %in% NodeTypes$name) { ?>
+	// 	flag_t NodeType = NODE_Wall;
+	// 	data->lattice->FlagOverwrite(&NodeType,r); // Overwrite mesh flags with flags from 'mask' table
+	// <?R } ?>
 
 	if (!cap.isOpened()){ //This section prompt an error message if no video stream is found//
 		cout << "No video stream detected" << endl;
@@ -167,31 +179,47 @@ gui_window_implementation::gui_window_implementation(int window_width_, int wind
 												solver->region.nx, solver->region.ny);
 	check_pointer(sdl_texture);
 	CudaMalloc( &outputBitmap, sizeof(uchar4)*solver->region.sizeL());
-	srcrect.w = solver->region.nx;
-	srcrect.h = solver->region.ny;
+	srcrect.w = reg.nx;
+	srcrect.h = reg.ny;
 	srcrect.x = 0;
 	srcrect.y = 0;
 
-	double sx = (double) window_width / solver->region.nx;
-	double sy = (double) window_height / solver->region.ny;
-	double s = sx;
-	if (sy > s) s = sy;
-	dstrect.w = s * solver->region.nx;
-	dstrect.h = s * solver->region.ny;
-	dstrect.x = 0;
+	double sx = (double) window_width / reg.nx;
+	double sy = (double) window_height / reg.ny;
+	window_scale = sx;
+	if (sy > window_scale) window_scale = sy;
+	dstrect.w = window_scale * reg.nx;
+	dstrect.h = window_scale * reg.ny;
 	dstrect.x = (window_width - dstrect.w)/2;
 	dstrect.y = (window_height - dstrect.h)/2;
 	namedWindow("Video Player");//Declaring the video to show the video//
 
-	calibrate();
-	
+	{
+		SDL_Rect A;
+		A.w = window_width / window_scale;
+		A.h = window_height / window_scale;
+		A.x = -(window_width / window_scale - reg.nx)/2;
+		A.y = -(window_height / window_scale - reg.ny)/2;
+		SDL_IntersectRect(&A, &srcrect, &subreg);
+		printf("%d %d %d %d\n",(int)subreg.x,(int)subreg.y,(int)subreg.w,(int)subreg.h);
+		target_size.width = subreg.w;
+		target_size.height = subreg.h;
+	}
 
+	calibrate();
 }
 
 int gui_window_implementation::eventloop() {
 	SDL_Event event;
     int ret = 0;
 	
+	if (nodetypes.size() == 0) {
+		nodetypes.resize(reg.sizeL());
+		nodetypes_save.resize(reg.sizeL());
+		solver->lattice->GetFlags(reg, nodetypes.data());
+		solver->lattice->GetFlags(reg, nodetypes_save.data());
+	}
+
 	solver->lattice->Color(outputBitmap); // Updating graphics
 	SDL_LockSurface(sdl_surface);
 	CudaMemcpy(sdl_surface->pixels, outputBitmap, sizeof(uchar4)*solver->region.sizeL(), cudaMemcpyDeviceToHost);
@@ -214,6 +242,7 @@ int gui_window_implementation::eventloop() {
 	warpPerspective(camImage, myImage, H, target_size,WARP_INVERSE_MAP);
 
 	cvtColor(myImage, newImage, cv::COLOR_RGB2GRAY);
+	extractChannel(myImage, newImage, 0);
 	threshold(newImage, binImage, 20, 1, THRESH_BINARY_INV);
 
 	Mat stats, centroids;
@@ -233,6 +262,7 @@ int gui_window_implementation::eventloop() {
 		}
 	}
 
+	Vec3b col0(0, 0, 0);
 	Vec3b col1(0, 0, 255);
 	Vec3b col2(0, 255, 0);
 	Mat dst(myImage.size(), CV_8UC3);
@@ -242,13 +272,27 @@ int gui_window_implementation::eventloop() {
 			Vec3b &pixel = dst.at<Vec3b>(r, c);
 			if (label == idx_b) {
 				pixel = col1;
+			} if (label == 0) {
+				pixel = col0;
 			} else {
 				pixel = col2;
 			}
+			int x = c + subreg.x;
+			int y = r + subreg.y;
+			if (x - subreg.x < subreg.w && y - subreg.y < subreg.h) {
+				size_t off = reg.offset(x,y);
+				if (label == 0) {
+					nodetypes[off] = nodetypes_save[off];
+				} else {
+					nodetypes[off] = NODE_Wall;
+				}
+			}
 		}
 	}
-	imshow("Video Player", dst);
+	imshow("Video Player", newImage);
 	waitKey(1);
+
+	solver->lattice->FlagOverwrite(nodetypes.data(),reg);
 
 	while( SDL_PollEvent(&event) )
 	{
