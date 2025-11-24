@@ -52,6 +52,10 @@ CudaDeviceFunction vector_t getU(){
         u.y += BC[1]*0.5;
     }
 <?R } ?>
+    if (NodeType == NODE_Wall) {
+        u.x = 0;
+        u.y = 0;
+    }
     u.x += GravitationX*0.5;
     u.y += GravitationY*0.5;
 	u.z = 0.0;
@@ -62,7 +66,7 @@ CudaDeviceFunction float2 Color() {
         float2 ret;
         vector_t u = getU();
         ret.x = sqrt(u.x*u.x + u.y*u.y);
-        if (NodeType == NODE_Wall){
+        if (NodeType == NODE_Solid){
                 ret.y = 0;
         } else {
                 ret.y = 1;
