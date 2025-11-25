@@ -36,7 +36,7 @@ class gui_window_implementation {
 	std::vector<flag_t> nodetypes_save;
 	std::vector<flag_t> nodetypes;
 	TripleBuf< Mat > frame_buf;
-	int calibrate();
+	int calibrate(bool show = true);
 	Vec3d dir, mean;
 	double lower, upper;
 	Mat GetBin(bool show=false);
@@ -87,11 +87,11 @@ Mat gui_window_implementation::GetBin(bool show) {
 
 	if (show) {
 		Mat myImage;
-		warpPerspective(gray, myImage, H, target_size,WARP_INVERSE_MAP);
+		warpPerspective(gray, myImage, H, target_size,WARP_INVERSE_MAP | INTER_NEAREST, BORDER_CONSTANT, 0);
 		imshow("Color", myImage);
 	}
 	Mat bin;
-	warpPerspective(low, bin, H, target_size,WARP_INVERSE_MAP);
+	warpPerspective(low, bin, H, target_size,WARP_INVERSE_MAP | INTER_NEAREST, BORDER_CONSTANT, 0);
 	if (show) {
 		imshow("Lower", bin);
 	}
@@ -99,11 +99,10 @@ Mat gui_window_implementation::GetBin(bool show) {
 }
 
 
-int gui_window_implementation::calibrate() {
+int gui_window_implementation::calibrate(bool show) {
 	int board_width = 14;
 	int board_height = 7;
 	double mar = 0.5;
-
 	SDL_SetRenderDrawColor(sdl_renderer, 128, 128, 128, 255);
 	SDL_RenderClear(sdl_renderer);
 	std::vector<double> check_x, check_y;
@@ -166,7 +165,8 @@ int gui_window_implementation::calibrate() {
 			auto now = std::chrono::steady_clock::now();
 			auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - last_unknown);
         	if (elapsed.count() > 2) break;
-		} else {
+		}
+		if (show) {
 			imshow("Video Player", myImage);
 			char c = (char)waitKey(1);
 			if (c == 27) break;
@@ -194,8 +194,11 @@ int gui_window_implementation::calibrate() {
 	SDL_RenderClear(sdl_renderer);
 	for (int ix = 0; ix<=board_width; ix++) {
 		for (int iy = 0; iy<=board_height; iy++) {
-			int a = 255*ix/board_width;
-			int b = 255*iy/board_height;
+			// int a = 255*ix/board_width;
+			// int b = 255*iy/board_height;
+			int a = rand() % 256;
+			int b = rand() % 256;
+			//int b = 0;
 			SDL_SetRenderDrawColor(sdl_renderer, a,0,b, 255);
 			SDL_Rect rect;
 			rect.x = check_x[ix];
@@ -208,50 +211,57 @@ int gui_window_implementation::calibrate() {
     SDL_RenderPresent( sdl_renderer );
 	waitKey(1000);
 
-	Matx33d cov;
-	double total = 0;
-	mean = Vec3d::zeros();
-	cov = Matx33d::zeros();
-	auto gather_start = std::chrono::steady_clock::now();
-	while (true) {
-		Mat camImage, myImage;
-		cap >> camImage;
-		warpPerspective(camImage, myImage, H, target_size,WARP_INVERSE_MAP);
-		for(int x=0; x<myImage.rows; x++) {
-			for(int y=0; y<myImage.cols; y++) {
-				Vec3d v = myImage.at<Vec3b>(x, y);
-				total++;
-				for (int i=0; i<3; i++) {
-					mean(i) += v[i];
-					for (int j=0; j<3; j++) cov(i,j) += v[i]*v[j];
+	while(true) {
+		Matx33d cov;
+		double total = 0;
+		mean = Vec3d::zeros();
+		cov = Matx33d::zeros();
+		auto gather_start = std::chrono::steady_clock::now();
+		while (true) {
+			Mat camImage, myImage;
+			cap >> camImage;
+			warpPerspective(camImage, myImage, H, target_size,WARP_INVERSE_MAP);
+			for(int x=0; x<myImage.rows; x++) {
+				for(int y=0; y<myImage.cols; y++) {
+					Vec3d v = myImage.at<Vec3b>(x, y);
+					total++;
+					for (int i=0; i<3; i++) {
+						mean(i) += v[i];
+						for (int j=0; j<3; j++) cov(i,j) += v[i]*v[j];
+					}
 				}
 			}
+			auto now = std::chrono::steady_clock::now();
+			auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - gather_start);
+			if (elapsed.count() > 1) break;
 		}
-		auto now = std::chrono::steady_clock::now();
-		auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - gather_start);
-		if (elapsed.count() > 2) break;
+
+		mean = mean / total;
+		cov = cov / total;
+		for (int i=0; i<3; i++) for (int j=0; j<3; j++) cov(i,j) = cov(i,j) - mean(i)*mean(j);
+
+		int idx = 2;
+		{
+			Vec3d val;
+			Matx33d vec, vect;
+			SVDecomp(cov, val, vec, vect);
+			output("mean = [ %5lg, %5lg, %5lg ]\n",mean(0),mean(1),mean(2));
+			output("sd = [ %5lg, %5lg, %5lg ]\n",sqrt(val(0)),sqrt(val(1)),sqrt(val(2)));
+			dir = Vec3d(vec(0,idx),vec(1,idx),vec(2,idx));
+			double mx = 0;
+			for (int i=0; i<3;i++) if (fabs(dir(i)) > fabs(mx)) mx = dir(i);
+			if (mx < 0) dir = -dir;
+			output("dir = [ %5lg, %5lg, %5lg ]\n",dir(0),dir(1),dir(2));
+			double sd = sqrt(val[idx]);
+			lower = -sd*2.5;
+			upper =  sd*2.5;
+		}
+		Mat binImage = GetBin(true);
+		char c = (char)waitKey(1);
+		if (c == 27){ 
+			break;
+		}
 	}
-
-	mean = mean / total;
-	cov = cov / total;
-	for (int i=0; i<3; i++) for (int j=0; j<3; j++) cov(i,j) = cov(i,j) - mean(i)*mean(j);
-
-	int idx = 2;
-	{
-		Vec3d val;
-		Matx33d vec, vect;
-		SVDecomp(cov, val, vec, vect);
-		output("sd = [ %5lg, %5lg, %5lg ]\n",sqrt(val(0)),sqrt(val(1)),sqrt(val(2)));
-		dir = Vec3d(vec(0,idx),vec(1,idx),vec(2,idx));
-		double mx = 0;
-		for (int i=0; i<3;i++) if (fabs(dir(i)) > fabs(mx)) mx = dir(i);
-		if (mx < 0) dir = -dir;
-		output("dir = [ %5lg, %5lg, %5lg ]\n",dir(0),dir(1),dir(2));
-		double sd = sqrt(val[idx]);
-		lower = -sd*2.5;
-		upper =  sd*2.5;
-	}
-
 	// while (true) {
 	// 	Mat camImage, myImage;
 	// 	cap >> camImage;
@@ -301,12 +311,37 @@ gui_window_implementation::gui_window_implementation(int window_width_, int wind
 	}
 	cap.set(CAP_PROP_FRAME_WIDTH,1920);
 	cap.set(CAP_PROP_FRAME_HEIGHT,1080);
-	//cap.set(CAP_PROP_AUTOFOCUS, 0);
 	cap.set(CAP_PROP_BUFFERSIZE, 1);
 	cap.set(CAP_PROP_FOURCC, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'));
     cap.set(CAP_PROP_FPS, 30);
 
+//                            gain 0x00980913 (int)    : min=0 max=255 step=1 default=0 value=0 flags=has-min-max
+	cap.set(CAP_PROP_GAIN, 0);
+//         white_balance_automatic 0x0098090c (bool)   : default=1 value=1
+	cap.set(CAP_PROP_AUTO_WB, 0);
+//            power_line_frequency 0x00980918 (menu)   : min=0 max=2 default=2 value=2 (60 Hz)
+//       white_balance_temperature 0x0098091a (int)    : min=2000 max=6500 step=1 default=4000 value=5044 flags=inactive, has-min-max
+	cap.set(CAP_PROP_WB_TEMPERATURE, 6500);
+//                       sharpness 0x0098091b (int)    : min=0 max=255 step=1 default=128 value=128 flags=has-min-max
+	cap.set(CAP_PROP_SHARPNESS, 0);
+//          backlight_compensation 0x0098091c (int)    : min=0 max=1 step=1 default=0 value=0 flags=has-min-max
+// Camera Controls
+//                   auto_exposure 0x009a0901 (menu)   : min=0 max=3 default=3 value=3 (Aperture Priority Mode)
+	cap.set(CAP_PROP_AUTO_EXPOSURE, 1);
+//          exposure_time_absolute 0x009a0902 (int)    : min=3 max=2047 step=1 default=250 value=83 flags=inactive, has-min-max
+	cap.set(CAP_PROP_EXPOSURE, 250);
+//      exposure_dynamic_framerate 0x009a0903 (bool)   : default=0 value=1
+//                    pan_absolute 0x009a0908 (int)    : min=-36000 max=36000 step=3600 default=0 value=0 flags=has-min-max
+//                   tilt_absolute 0x009a0909 (int)    : min=-36000 max=36000 step=3600 default=0 value=0 flags=has-min-max
+//                  focus_absolute 0x009a090a (int)    : min=0 max=250 step=5 default=0 value=0 flags=inactive, has-min-max
+	cap.set(CAP_PROP_FOCUS, 0);
+//      focus_automatic_continuous 0x009a090c (bool)   : default=1 value=1
+	cap.set(CAP_PROP_AUTOFOCUS, 0);
+//                   zoom_absolute 0x009a090d (int)    : min=100 max=500 step=1 default=100 value=100 flags=has-min-max
+
+
 	SDL_Init(SDL_INIT_VIDEO);
+
 
 	fullscreen = false;
 	display = 0;
@@ -314,7 +349,9 @@ gui_window_implementation::gui_window_implementation(int window_width_, int wind
         display = 1;
 		fullscreen = true;
     }
-
+	if (fullscreen) {
+		SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0");
+	}
     SDL_Rect bounds;
     SDL_GetDisplayBounds(display, &bounds);
 
@@ -411,53 +448,74 @@ int gui_window_implementation::eventloop() {
 
 
 	Mat binImage, labelImage;
-	binImage = GetBin(false);
+	binImage = GetBin(true);
 
 	Mat stats, centroids;
-	int nLabels = connectedComponentsWithStats(binImage, labelImage, stats, centroids);
-
-	vector<int> index(nLabels-1, 0);
-	for (int i = 0; i < nLabels-1; i++) index[i] = i + 1;
+	int nLabels = connectedComponentsWithStats(binImage, labelImage, stats, centroids, 4, CV_32S);
 
 	const int CV_AREA = ConnectedComponentsTypes::CC_STAT_AREA;
-	size_t idx_b = 0xFFFFFF;
+	const int area_limit = 200;
+	int idx_b = 0;
 	int idx_b_max = 0;
 	for (size_t i=1;i<nLabels;i++) {
 		int area = stats.at<int>(i,CV_AREA);
+		if (area < area_limit) continue;
 		if (area > idx_b_max) {
 			idx_b = i;
 			idx_b_max = area;
 		}
 	}
-
+	if (idx_b != 0) {
+		printf("area[0] = %d, area[%d] = %d (%d)\n", stats.at<int>(0,CV_AREA), idx_b, stats.at<int>(idx_b,CV_AREA), idx_b_max);
+	}
+	
 	Vec3b col0(0, 0, 0);
-	Vec3b col1(0, 0, 255);
+	Vec3b col1(255, 255, 255);
 	Vec3b col2(0, 255, 0);
+	Vec3b col3(255, 0, 0);
 	Mat dst(binImage.size(), CV_8UC3);
+	bool hap = true;
 	for(int r = 0; r < dst.rows; ++r){
 		for(int c = 0; c < dst.cols; ++c){
 			int label = labelImage.at<int>(r, c);
 			Vec3b &pixel = dst.at<Vec3b>(r, c);
-			if (label == idx_b) {
-				pixel = col1;
-			} if (label == 0) {
+			int type;
+			if (label == 0) {
+				type = 0;
+			} else if (label == idx_b) {
+				type = 1;
+			} else if (label > 0) {
+				int area = stats.at<int>(label,CV_AREA);
+				if (area < area_limit) {
+					type = 3;
+				} else {
+					type = 2;
+				}
+			}
+			if  (type == 0) {
 				pixel = col0;
-			} else {
+			} else if  (type == 1) {
+				pixel = col1;
+				if (hap) printf("Happened\n");
+				hap = false;
+			} else if  (type == 2) {
 				pixel = col2;
+			} else {
+				pixel = col3;
 			}
 			int x = c + subreg.x;
 			int y = r + subreg.y;
 			if (x - subreg.x < subreg.w && y - subreg.y < subreg.h) {
 				size_t off = reg.offset(x,y);
-				if (label == 0) {
-					nodetypes[off] = nodetypes_save[off];
-				} else {
+				if (type == 1 or type == 2) {
 					nodetypes[off] = NODE_Wall;
+				} else {
+					nodetypes[off] = nodetypes_save[off];
 				}
 			}
 		}
 	}
-	//imshow("Video Player", dst);
+	imshow("Comp", dst);
 	waitKey(1);
 
 	solver->lattice->FlagOverwrite(nodetypes.data(),reg);
