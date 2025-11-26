@@ -14,6 +14,8 @@ void check_pointer(void* ptr) {
 	}
 }
 
+const int least_sq_size = 9;
+
 class gui_window_implementation {
     Solver * solver;
     int window_width;
@@ -37,7 +39,8 @@ class gui_window_implementation {
 	std::vector<flag_t> nodetypes;
 	TripleBuf< Mat > frame_buf;
 	int calibrate(bool show = true);
-	Vec3d dir, mean;
+	Mat dark;
+	Matx<double, least_sq_size, 1> filter_coef;
 	double lower, upper;
 	Mat GetBin(bool show=false);
 public:
@@ -59,44 +62,50 @@ gui_window::~gui_window() {
 }
 
 Mat gui_window_implementation::GetBin(bool show) {
-	Mat camImage, cropImage;
+	Mat camImage, myImage;
 	cap >> camImage;
-	if (show) imshow("Video Player", camImage);
 
-	warpPerspective(camImage, cropImage, H, target_size,WARP_INVERSE_MAP | INTER_NEAREST, BORDER_CONSTANT, 0);
+	warpPerspective(camImage, myImage, H, target_size,WARP_INVERSE_MAP | INTER_NEAREST, BORDER_CONSTANT, 0);
 
-	Mat gray(cropImage.size(), CV_8U);
-	Mat upp(cropImage.size(), CV_8U);
-	Mat low(cropImage.size(), CV_8U);
-	for(int x=0; x<cropImage.rows; x++) {
-		for(int y=0; y<cropImage.cols; y++) {
-			Vec3d v = cropImage.at<Vec3b>(x, y);
-			v = v - mean;
-			double val = v.dot(dir);
-			gray.at<unsigned char>(x, y) = val+128;
-			if (val < lower) {
+	Mat gray(myImage.size(), CV_8U);
+	Mat low(myImage.size(), CV_8U);
+	Mat green(myImage.size(), CV_8U);
+	for(int x=0; x<myImage.rows; x++) {
+		imshow("Color", myImage);
+		for(int y=0; y<myImage.cols; y++) {
+			Vec3d v1 = myImage.at<Vec3b>(x, y);
+			Vec3d v2 = dark.at<Vec3b>(x, y);
+			Vec3d v = v1 - v2;
+			double g = v[1];
+			double a;
+			a = v[0]/255;
+			double r[] = {a*a, (1-a)*(1-a),2*a*(1-a)};
+			a = v[2]/255;
+			double b[] = {a*a, (1-a)*(1-a),2*a*(1-a)};
+			double all[] = {r[0]*b[0],r[1]*b[0],r[2]*b[0],
+							r[0]*b[1],r[1]*b[1],r[2]*b[1],
+							r[0]*b[2],r[1]*b[2],r[2]*b[2]};
+			double gr = g;
+			for (int i=0; i<least_sq_size; i++) {
+				gr -= all[i] * filter_coef(i,0);
+			}
+			gray.at<unsigned char>(x,y) = gr + 128;
+			green.at<unsigned char>(x,y) = g + 128;
+			if (gr < -50) {
 				low.at<unsigned char>(x, y) = 255;
 			} else {
 				low.at<unsigned char>(x, y) = 0;
-			}
-			if (val > upper) {
-				upp.at<unsigned char>(x, y) = 255;
-			} else {
-				upp.at<unsigned char>(x, y) = 0;
 			}
 		}
 	}
 
 	if (show) {
-		imshow("Color", cropImage);
-	}
-
-	if (show) {
-		Mat myImage = gray;
-		//warpPerspective(gray, myImage, H, target_size,WARP_INVERSE_MAP | INTER_NEAREST, BORDER_CONSTANT, 0);
-		imshow("Filtered", myImage);
+		imshow("Color", myImage);
+		imshow("Gray", gray);
+		imshow("Green", green);
 	}
 	Mat bin = low;
+	//Canny(gray, bin, 50,60);
 	//warpPerspective(low, bin, H, target_size,WARP_INVERSE_MAP | INTER_NEAREST, BORDER_CONSTANT, 0);
 	if (show) {
 		imshow("Lower", bin);
@@ -196,127 +205,151 @@ int gui_window_implementation::calibrate(bool show) {
 	
 	H = findHomography(object_points, corners);
 	
+
 	SDL_SetRenderDrawColor(sdl_renderer, 0, 0, 0, 255);
 	SDL_RenderClear(sdl_renderer);
-	// std::vector<int> ab((board_width+1)*(board_height+1)*2);
-	// for (int ix = 0; ix<=board_width; ix++) {
-	// 	for (int iy = 0; iy<=board_height; iy++) {
-	// 		int a = rand() % 256;
-	// 		int b = rand() % 256;
-	// 		if (ix == 0 or ix == board_width or iy == 0 or iy == board_height) {
-	// 			a = 0;
-	// 			b = 0;
-	// 		}
-	// 		ab[0+(iy+(ix)*(board_height+1))*2] = a;
-	// 		ab[1+(iy+(ix)*(board_height+1))*2] = b;
-	// 	}
-	// }
-	// for (int x = 0; x<window_width; x++) {
-	// 	for (int y = 0; y<=window_height; y++) {
-	// 		//x = (ix + mar) * window_width / (board_width+1+2*mar)
-	// 		double dx = 1.0 * x * (board_width+1+2*mar) / window_width - mar;
-	// 		int ix = floor(dx);
-	// 		dx = dx - ix;
-	// 		double dy = 1.0 * y * (board_height+1+2*mar) / window_height - mar;
-	// 		int iy = floor(dy);
-	// 		dy = dy - iy;
-	// 		if (ix >= 0 and ix < board_width and iy >= 0 or iy < board_height) {
-	// 			double a1 = ab[0+(iy+(ix)*(board_height+1))*2]*(1-dx);
-	// 			double a1 = ab[0+(iy+(ix)*(board_height+1))*2];
-	// 		} else {
+    SDL_RenderPresent( sdl_renderer );
 
-	// 		}
-			
-
-
-	// for (int ix = 0; ix<=board_width; ix++) {
-	// 	for (int iy = 0; iy<=board_height; iy++) {
-	// 		// int a = 255*ix/board_width;
-	// 		// int b = 255*iy/board_height;
-	// 		int a = rand() % 256;
-	// 		int b = rand() % 256;
-	// 		//int b = 0;
-	// 		SDL_SetRenderDrawColor(sdl_renderer, a,0,b, 255);
-	// 		SDL_Rect rect;
-	// 		rect.x = check_x[ix];
-	// 		rect.y = check_y[iy];
-	// 		rect.w = check_x[ix+1] - check_x[ix];
-	// 		rect.h = check_y[iy+1] - check_y[iy];
-	// 		SDL_RenderFillRect(sdl_renderer, &rect);
-	// 	}
-	// }
-	for (int x = 0; x<window_width; x++) {
-		for (int y = 0; y<=window_height; y++) {
-			int a = (1-cos(8 * 3.1415 * x/window_width))/2*255;
-			int b = (1-cos(8 * 3.1415 * y/window_height))/2*255;
-			SDL_SetRenderDrawColor(sdl_renderer, a,0,b, 255);
-			SDL_RenderDrawPoint(sdl_renderer,x,y);
+	{
+		auto start = std::chrono::steady_clock::now();
+		while (true) {
+			Mat camImage, myImage;
+			cap >> camImage;
+			warpPerspective(camImage, dark, H, target_size,WARP_INVERSE_MAP);
+			auto now = std::chrono::steady_clock::now();
+			auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - start);
+			if (elapsed.count() > 1) break;
 		}
 	}
+	imshow("Dark",dark);
+
+	SDL_SetRenderDrawColor(sdl_renderer, 0, 0, 0, 255);
+	SDL_RenderClear(sdl_renderer);
+
+	for (int ix = 0; ix<=board_width; ix++) {
+		for (int iy = 0; iy<=board_height; iy++) {
+			// int a = 255*ix/board_width;
+			// int b = 255*iy/board_height;
+			int a = rand() % 256;
+			int b = rand() % 256;
+			//int b = 0;
+			SDL_SetRenderDrawColor(sdl_renderer, a,0,b, 255);
+			SDL_Rect rect;
+			rect.x = check_x[ix];
+			rect.y = check_y[iy];
+			rect.w = check_x[ix+1] - check_x[ix];
+			rect.h = check_y[iy+1] - check_y[iy];
+			SDL_RenderFillRect(sdl_renderer, &rect);
+		}
+	}
+	// for (int x = 0; x<window_width; x++) {
+	// 	for (int y = 0; y<=window_height; y++) {
+	// 		int a = (1-cos(8 * 3.1415 * x/window_width))/2*255;
+	// 		int b = (1-cos(8 * 3.1415 * y/window_height))/2*255;
+	// 		SDL_SetRenderDrawColor(sdl_renderer, a,0,b, 255);
+	// 		SDL_RenderDrawPoint(sdl_renderer,x,y);
+	// 	}
+	// }
     SDL_RenderPresent( sdl_renderer );
 	waitKey(1000);
 
-	while(true) {
-		Matx33d cov;
-		double total = 0;
-		mean = Vec3d::zeros();
-		cov = Matx33d::zeros();
+	{
+		
+		// Mat XTX(least_sq_size,least_sq_size,CV_64F);
+		// Mat XTY(least_sq_size,1,CV_64F);
+		Matx<double, least_sq_size,least_sq_size> XTX;
+		Matx<double, least_sq_size, 1> XTY;
+		
+		for (int i=0; i<least_sq_size; i++) {
+			XTY(i,0) = 0;
+			for (int j=0; j<least_sq_size; j++) {
+				XTX(i,j) = 0;
+			}
+		}
 		auto gather_start = std::chrono::steady_clock::now();
 		while (true) {
 			Mat camImage, myImage;
 			cap >> camImage;
 			warpPerspective(camImage, myImage, H, target_size,WARP_INVERSE_MAP);
-			{
-				Mat R,G,B;
-				cv::extractChannel(myImage, R, 0);
-				cv::extractChannel(myImage, G, 1);
-				cv::extractChannel(myImage, B, 2);
-				imshow("R", R);
-				imshow("G", G);
-				imshow("B", B);
-			}
-			
+
 			for(int x=0; x<myImage.rows; x++) {
 				for(int y=0; y<myImage.cols; y++) {
-					Vec3d v = myImage.at<Vec3b>(x, y);
-					total++;
-					for (int i=0; i<3; i++) {
-						mean(i) += v[i];
-						for (int j=0; j<3; j++) cov(i,j) += v[i]*v[j];
+					Vec3d v1 = myImage.at<Vec3b>(x, y);
+					Vec3d v2 = dark.at<Vec3b>(x, y);
+					Vec3d v = v1 - v2;
+					double g = v[1];
+					double a;
+					a = v[0]/255;
+					double r[] = {a*a, (1-a)*(1-a),2*a*(1-a)};
+					a = v[2]/255;
+					double b[] = {a*a, (1-a)*(1-a),2*a*(1-a)};
+					double all[] = {r[0]*b[0],r[1]*b[0],r[2]*b[0],
+									r[0]*b[1],r[1]*b[1],r[2]*b[1],
+									r[0]*b[2],r[1]*b[2],r[2]*b[2]};
+					for (int i=0; i<least_sq_size; i++) {
+						XTY(i,0) += all[i] * g;
+						for (int j=0; j<least_sq_size; j++) {
+							XTX(i,j) += all[i] * all[j];
+						}
 					}
 				}
 			}
 			auto now = std::chrono::steady_clock::now();
 			auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - gather_start);
+			bool ret = solve(XTX, XTY, filter_coef);
+			if (ret) {
+				Mat gray(myImage.size(), CV_8U);
+				Mat green(myImage.size(), CV_8U);
+				double mean = 0;
+				double var_g = 0;
+				double var_gr = 0;
+				double total = 0;
+				for(int x=0; x<myImage.rows; x++) {
+					for(int y=0; y<myImage.cols; y++) {
+						Vec3d v1 = myImage.at<Vec3b>(x, y);
+						Vec3d v2 = dark.at<Vec3b>(x, y);
+						Vec3d v = v1 - v2;
+						double g = v[1];
+						double a;
+						a = v[0]/255;
+						double r[] = {a*a, (1-a)*(1-a),2*a*(1-a)};
+						a = v[2]/255;
+						double b[] = {a*a, (1-a)*(1-a),2*a*(1-a)};
+						double all[] = {r[0]*b[0],r[1]*b[0],r[2]*b[0],
+										r[0]*b[1],r[1]*b[1],r[2]*b[1],
+										r[0]*b[2],r[1]*b[2],r[2]*b[2]};
+						double gr = g;
+						for (int i=0; i<least_sq_size; i++) {
+							gr -= all[i] * filter_coef(i,0);
+						}
+						gray.at<unsigned char>(x,y) = gr + 128;
+						green.at<unsigned char>(x,y) = g+128;
+						total += 1;
+						mean += g;
+						var_g += g*g;
+						var_gr += gr*gr;
+					}
+				}
+				mean = mean / total;
+				var_g = var_g / total - mean*mean;
+				var_gr = var_gr / total;
+				printf("mean: %6lg, sd: %6lg, after filter: %6lg\n",mean, sqrt(var_g), sqrt(var_gr));
+				imshow("Color", myImage);
+				imshow("Gray", gray);
+				imshow("Green", green);
+			}
+		// char c = (char)waitKey(1);
+		// if (c == 27){ 
+		// 	break;
+		// }
 			if (elapsed.count() > 1) break;
 		}
-
-		mean = mean / total;
-		cov = cov / total;
-		for (int i=0; i<3; i++) for (int j=0; j<3; j++) cov(i,j) = cov(i,j) - mean(i)*mean(j);
-
-		int idx = 2;
-		{
-			Vec3d val;
-			Matx33d vec, vect;
-			SVDecomp(cov, val, vec, vect);
-			output("mean = [ %5lg, %5lg, %5lg ]\n",mean(0),mean(1),mean(2));
-			output("sd = [ %5lg, %5lg, %5lg ]\n",sqrt(val(0)),sqrt(val(1)),sqrt(val(2)));
-			dir = Vec3d(vec(0,idx),vec(1,idx),vec(2,idx));
-			double mx = 0;
-			for (int i=0; i<3;i++) if (fabs(dir(i)) > fabs(mx)) mx = dir(i);
-			if (mx < 0) dir = -dir;
-			output("dir = [ %5lg, %5lg, %5lg ]\n",dir(0),dir(1),dir(2));
-			double sd = sqrt(val[idx]);
-			lower = -sd*2.5;
-			upper =  sd*2.5;
-		}
-		Mat binImage = GetBin(true);
-		char c = (char)waitKey(1);
-		if (c == 27){ 
-			break;
-		}
 	}
+
+	SDL_SetRenderDrawColor(sdl_renderer, 0, 0, 0, 255);
+	SDL_RenderClear(sdl_renderer);
+    SDL_RenderPresent( sdl_renderer );
+	waitKey(1000);
 	// while (true) {
 	// 	Mat camImage, myImage;
 	// 	cap >> camImage;
@@ -506,7 +539,7 @@ int gui_window_implementation::eventloop() {
 	binImage = GetBin(true);
 
 	Mat stats, centroids;
-	int nLabels = connectedComponentsWithStats(binImage, labelImage, stats, centroids, 4, CV_32S);
+	int nLabels = connectedComponentsWithStats(binImage, labelImage, stats, centroids, 8, CV_32S);
 
 	const int CV_AREA = ConnectedComponentsTypes::CC_STAT_AREA;
 	const int area_limit = 200;
@@ -529,7 +562,6 @@ int gui_window_implementation::eventloop() {
 	Vec3b col2(0, 255, 0);
 	Vec3b col3(255, 0, 0);
 	Mat dst(binImage.size(), CV_8UC3);
-	bool hap = true;
 	for(int r = 0; r < dst.rows; ++r){
 		for(int c = 0; c < dst.cols; ++c){
 			int label = labelImage.at<int>(r, c);
@@ -551,8 +583,6 @@ int gui_window_implementation::eventloop() {
 				pixel = col0;
 			} else if  (type == 1) {
 				pixel = col1;
-				if (hap) printf("Happened\n");
-				hap = false;
 			} else if  (type == 2) {
 				pixel = col2;
 			} else {
