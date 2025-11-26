@@ -59,16 +59,18 @@ gui_window::~gui_window() {
 }
 
 Mat gui_window_implementation::GetBin(bool show) {
-	Mat camImage, myImage;
+	Mat camImage, cropImage;
 	cap >> camImage;
 	if (show) imshow("Video Player", camImage);
 
-	Mat gray(camImage.size(), CV_8U);
-	Mat upp(camImage.size(), CV_8U);
-	Mat low(camImage.size(), CV_8U);
-	for(int x=0; x<camImage.rows; x++) {
-		for(int y=0; y<camImage.cols; y++) {
-			Vec3d v = camImage.at<Vec3b>(x, y);
+	warpPerspective(camImage, cropImage, H, target_size,WARP_INVERSE_MAP | INTER_NEAREST, BORDER_CONSTANT, 0);
+
+	Mat gray(cropImage.size(), CV_8U);
+	Mat upp(cropImage.size(), CV_8U);
+	Mat low(cropImage.size(), CV_8U);
+	for(int x=0; x<cropImage.rows; x++) {
+		for(int y=0; y<cropImage.cols; y++) {
+			Vec3d v = cropImage.at<Vec3b>(x, y);
 			v = v - mean;
 			double val = v.dot(dir);
 			gray.at<unsigned char>(x, y) = val+128;
@@ -86,12 +88,16 @@ Mat gui_window_implementation::GetBin(bool show) {
 	}
 
 	if (show) {
-		Mat myImage;
-		warpPerspective(gray, myImage, H, target_size,WARP_INVERSE_MAP | INTER_NEAREST, BORDER_CONSTANT, 0);
-		imshow("Color", myImage);
+		imshow("Color", cropImage);
 	}
-	Mat bin;
-	warpPerspective(low, bin, H, target_size,WARP_INVERSE_MAP | INTER_NEAREST, BORDER_CONSTANT, 0);
+
+	if (show) {
+		Mat myImage = gray;
+		//warpPerspective(gray, myImage, H, target_size,WARP_INVERSE_MAP | INTER_NEAREST, BORDER_CONSTANT, 0);
+		imshow("Filtered", myImage);
+	}
+	Mat bin = low;
+	//warpPerspective(low, bin, H, target_size,WARP_INVERSE_MAP | INTER_NEAREST, BORDER_CONSTANT, 0);
 	if (show) {
 		imshow("Lower", bin);
 	}
@@ -192,20 +198,59 @@ int gui_window_implementation::calibrate(bool show) {
 	
 	SDL_SetRenderDrawColor(sdl_renderer, 0, 0, 0, 255);
 	SDL_RenderClear(sdl_renderer);
-	for (int ix = 0; ix<=board_width; ix++) {
-		for (int iy = 0; iy<=board_height; iy++) {
-			// int a = 255*ix/board_width;
-			// int b = 255*iy/board_height;
-			int a = rand() % 256;
-			int b = rand() % 256;
-			//int b = 0;
+	// std::vector<int> ab((board_width+1)*(board_height+1)*2);
+	// for (int ix = 0; ix<=board_width; ix++) {
+	// 	for (int iy = 0; iy<=board_height; iy++) {
+	// 		int a = rand() % 256;
+	// 		int b = rand() % 256;
+	// 		if (ix == 0 or ix == board_width or iy == 0 or iy == board_height) {
+	// 			a = 0;
+	// 			b = 0;
+	// 		}
+	// 		ab[0+(iy+(ix)*(board_height+1))*2] = a;
+	// 		ab[1+(iy+(ix)*(board_height+1))*2] = b;
+	// 	}
+	// }
+	// for (int x = 0; x<window_width; x++) {
+	// 	for (int y = 0; y<=window_height; y++) {
+	// 		//x = (ix + mar) * window_width / (board_width+1+2*mar)
+	// 		double dx = 1.0 * x * (board_width+1+2*mar) / window_width - mar;
+	// 		int ix = floor(dx);
+	// 		dx = dx - ix;
+	// 		double dy = 1.0 * y * (board_height+1+2*mar) / window_height - mar;
+	// 		int iy = floor(dy);
+	// 		dy = dy - iy;
+	// 		if (ix >= 0 and ix < board_width and iy >= 0 or iy < board_height) {
+	// 			double a1 = ab[0+(iy+(ix)*(board_height+1))*2]*(1-dx);
+	// 			double a1 = ab[0+(iy+(ix)*(board_height+1))*2];
+	// 		} else {
+
+	// 		}
+			
+
+
+	// for (int ix = 0; ix<=board_width; ix++) {
+	// 	for (int iy = 0; iy<=board_height; iy++) {
+	// 		// int a = 255*ix/board_width;
+	// 		// int b = 255*iy/board_height;
+	// 		int a = rand() % 256;
+	// 		int b = rand() % 256;
+	// 		//int b = 0;
+	// 		SDL_SetRenderDrawColor(sdl_renderer, a,0,b, 255);
+	// 		SDL_Rect rect;
+	// 		rect.x = check_x[ix];
+	// 		rect.y = check_y[iy];
+	// 		rect.w = check_x[ix+1] - check_x[ix];
+	// 		rect.h = check_y[iy+1] - check_y[iy];
+	// 		SDL_RenderFillRect(sdl_renderer, &rect);
+	// 	}
+	// }
+	for (int x = 0; x<window_width; x++) {
+		for (int y = 0; y<=window_height; y++) {
+			int a = (1-cos(8 * 3.1415 * x/window_width))/2*255;
+			int b = (1-cos(8 * 3.1415 * y/window_height))/2*255;
 			SDL_SetRenderDrawColor(sdl_renderer, a,0,b, 255);
-			SDL_Rect rect;
-			rect.x = check_x[ix];
-			rect.y = check_y[iy];
-			rect.w = check_x[ix+1] - check_x[ix];
-			rect.h = check_y[iy+1] - check_y[iy];
-			SDL_RenderFillRect(sdl_renderer, &rect);
+			SDL_RenderDrawPoint(sdl_renderer,x,y);
 		}
 	}
     SDL_RenderPresent( sdl_renderer );
@@ -221,6 +266,16 @@ int gui_window_implementation::calibrate(bool show) {
 			Mat camImage, myImage;
 			cap >> camImage;
 			warpPerspective(camImage, myImage, H, target_size,WARP_INVERSE_MAP);
+			{
+				Mat R,G,B;
+				cv::extractChannel(myImage, R, 0);
+				cv::extractChannel(myImage, G, 1);
+				cv::extractChannel(myImage, B, 2);
+				imshow("R", R);
+				imshow("G", G);
+				imshow("B", B);
+			}
+			
 			for(int x=0; x<myImage.rows; x++) {
 				for(int y=0; y<myImage.cols; y++) {
 					Vec3d v = myImage.at<Vec3b>(x, y);
