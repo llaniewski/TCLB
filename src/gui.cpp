@@ -3,7 +3,9 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL_image.h>
-#include "TripleBuf.hpp"
+#include <thread>
+#include <latch>
+#include "WaitFreeTripleBuf.hpp"
 
 using namespace cv;
 
@@ -20,7 +22,7 @@ class gui_window_implementation {
     Solver * solver;
     int window_width;
     int window_height;
-	int window_scale;
+	double window_scale;
 	int display;
 	bool fullscreen;
 	SDL_Window* sdl_window;
@@ -37,12 +39,15 @@ class gui_window_implementation {
 	SDL_Rect subreg;
 	std::vector<flag_t> nodetypes_save;
 	std::vector<flag_t> nodetypes;
-	TripleBuf< Mat > frame_buf;
+	wf3b::WaitFreeTripleBuf< Mat > camBuf;
+	std::jthread camThread, sdlThread;
 	int calibrate(bool show = true);
 	Mat dark;
 	Matx<double, least_sq_size, 1> filter_coef;
 	double lower, upper;
-	Mat GetBin(bool show=false);
+	Mat getLabelImage(bool show);
+	void camLoop(std::stop_token st);
+	void sdlLoop(std::stop_token st);
 public:
 	gui_window_implementation(int window_width_, int window_height_, Solver * solver_);
 	int eventloop();
@@ -60,59 +65,6 @@ int gui_window::eventloop() {
 gui_window::~gui_window() {
 	if (impl) delete impl;
 }
-
-Mat gui_window_implementation::GetBin(bool show) {
-	Mat camImage, myImage;
-	cap >> camImage;
-
-	warpPerspective(camImage, myImage, H, target_size,WARP_INVERSE_MAP | INTER_NEAREST, BORDER_CONSTANT, 0);
-
-	Mat gray(myImage.size(), CV_8U);
-	Mat low(myImage.size(), CV_8U);
-	Mat green(myImage.size(), CV_8U);
-	for(int x=0; x<myImage.rows; x++) {
-		imshow("Color", myImage);
-		for(int y=0; y<myImage.cols; y++) {
-			Vec3d v1 = myImage.at<Vec3b>(x, y);
-			Vec3d v2 = dark.at<Vec3b>(x, y);
-			Vec3d v = v1 - v2;
-			double g = v[1];
-			double a;
-			a = v[0]/255;
-			double r[] = {a*a, (1-a)*(1-a),2*a*(1-a)};
-			a = v[2]/255;
-			double b[] = {a*a, (1-a)*(1-a),2*a*(1-a)};
-			double all[] = {r[0]*b[0],r[1]*b[0],r[2]*b[0],
-							r[0]*b[1],r[1]*b[1],r[2]*b[1],
-							r[0]*b[2],r[1]*b[2],r[2]*b[2]};
-			double gr = g;
-			for (int i=0; i<least_sq_size; i++) {
-				gr -= all[i] * filter_coef(i,0);
-			}
-			gray.at<unsigned char>(x,y) = gr + 128;
-			green.at<unsigned char>(x,y) = g + 128;
-			if (gr < -50) {
-				low.at<unsigned char>(x, y) = 255;
-			} else {
-				low.at<unsigned char>(x, y) = 0;
-			}
-		}
-	}
-
-	if (show) {
-		imshow("Color", myImage);
-		imshow("Gray", gray);
-		imshow("Green", green);
-	}
-	Mat bin = low;
-	//Canny(gray, bin, 50,60);
-	//warpPerspective(low, bin, H, target_size,WARP_INVERSE_MAP | INTER_NEAREST, BORDER_CONSTANT, 0);
-	if (show) {
-		imshow("Lower", bin);
-	}
-	return bin;
-}
-
 
 int gui_window_implementation::calibrate(bool show) {
 	int board_width = 14;
@@ -179,7 +131,7 @@ int gui_window_implementation::calibrate(bool show) {
 		if (fullscreen) {
 			auto now = std::chrono::steady_clock::now();
 			auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - last_unknown);
-        	if (elapsed.count() > 2) break;
+        	if (elapsed.count() > 1) break;
 		}
 		if (show) {
 			imshow("Video Player", myImage);
@@ -221,7 +173,7 @@ int gui_window_implementation::calibrate(bool show) {
 			if (elapsed.count() > 1) break;
 		}
 	}
-	imshow("Dark",dark);
+	//imshow("Dark",dark);
 
 	SDL_SetRenderDrawColor(sdl_renderer, 0, 0, 0, 255);
 	SDL_RenderClear(sdl_renderer);
@@ -334,9 +286,9 @@ int gui_window_implementation::calibrate(bool show) {
 				var_g = var_g / total - mean*mean;
 				var_gr = var_gr / total;
 				printf("mean: %6lg, sd: %6lg, after filter: %6lg\n",mean, sqrt(var_g), sqrt(var_gr));
-				imshow("Color", myImage);
-				imshow("Gray", gray);
-				imshow("Green", green);
+				// imshow("Color", myImage);
+				// imshow("Gray", gray);
+				// imshow("Green", green);
 			}
 		// char c = (char)waitKey(1);
 		// if (c == 27){ 
@@ -459,7 +411,8 @@ gui_window_implementation::gui_window_implementation(int window_width_, int wind
 	window_height = bounds.h;
 
 	if (fullscreen) {
-		sdl_renderer = SDL_CreateRenderer(sdl_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+		//sdl_renderer = SDL_CreateRenderer(sdl_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+		sdl_renderer = SDL_CreateRenderer(sdl_window, -1, SDL_RENDERER_ACCELERATED);
 	} else {
 		sdl_renderer = SDL_CreateRenderer(sdl_window, -1, SDL_RENDERER_ACCELERATED);
 	}
@@ -480,7 +433,7 @@ gui_window_implementation::gui_window_implementation(int window_width_, int wind
 												solver->region.nx, solver->region.ny);
 	check_pointer(sdl_texture);
 
-	CudaMalloc( &outputBitmap, sizeof(uchar4)*solver->region.sizeL());
+	CudaMalloc( &outputBitmap, sizeof(uchar4)*reg.sizeL());
 	srcrect.w = reg.nx;
 	srcrect.h = reg.ny;
 	srcrect.x = 0;
@@ -501,13 +454,147 @@ gui_window_implementation::gui_window_implementation(int window_width_, int wind
 		A.x = -(window_width / window_scale - reg.nx)/2;
 		A.y = -(window_height / window_scale - reg.ny)/2;
 		SDL_IntersectRect(&A, &srcrect, &subreg);
-		printf("%d %d %d %d\n",(int)subreg.x,(int)subreg.y,(int)subreg.w,(int)subreg.h);
 		target_size.width = subreg.w;
 		target_size.height = subreg.h;
 	}
 
-	calibrate();
+	
+	//std::latch calibrated(2);
+	output("Calibrating...\n");
+	calibrate(false);
+	output("Calibrated\n");
+	destroyAllWindows();
+    // camThread = std::jthread{[this](std::stop_token st) {	
+	// 	//calibrated.arrive_and_wait();
+	// 	camLoop(st);
+	// }};
+	// //calibrated.arrive_and_wait();
+	// sdlThread = std::jthread{[this](std::stop_token st) { sdlLoop(st); }};
 }
+
+Mat gui_window_implementation::getLabelImage(bool show) {
+	Mat camImage, myImage;
+	cap >> camImage;
+	warpPerspective(camImage, myImage, H, target_size,WARP_INVERSE_MAP | INTER_NEAREST, BORDER_CONSTANT, 0);
+	Mat gray(myImage.size(), CV_8U);
+	Mat low(myImage.size(), CV_8U);
+	for(int x=0; x<myImage.rows; x++) {
+		for(int y=0; y<myImage.cols; y++) {
+			Vec3d v1 = myImage.at<Vec3b>(x, y);
+			Vec3d v2 = dark.at<Vec3b>(x, y);
+			Vec3d v = v1 - v2;
+			double g = v[1];
+			double a;
+			a = v[0]/255;
+			double r[] = {a*a, (1-a)*(1-a),2*a*(1-a)};
+			a = v[2]/255;
+			double b[] = {a*a, (1-a)*(1-a),2*a*(1-a)};
+			double all[] = {r[0]*b[0],r[1]*b[0],r[2]*b[0],
+							r[0]*b[1],r[1]*b[1],r[2]*b[1],
+							r[0]*b[2],r[1]*b[2],r[2]*b[2]};
+			double gr = g;
+			for (int i=0; i<least_sq_size; i++) {
+				gr -= all[i] * filter_coef(i,0);
+			}
+			gray.at<unsigned char>(x,y) = gr + 128;
+			if (gr < -20) {
+				low.at<unsigned char>(x, y) = 255;
+			} else {
+				low.at<unsigned char>(x, y) = 0;
+			}
+		}
+	}
+	Mat binImage = low;
+	//Canny(gray, bin, 50,60);
+	Mat labelImage, stats, centroids;
+	int nLabels = connectedComponentsWithStats(binImage, labelImage, stats, centroids, 8, CV_32S);
+	const int CV_AREA = ConnectedComponentsTypes::CC_STAT_AREA;
+	const int area_limit = 100;
+	int idx_b = 0;
+	int idx_b_max = 0;
+	for (size_t i=1;i<nLabels;i++) {
+		int area = stats.at<int>(i,CV_AREA);
+		if (area < area_limit) continue;
+		if (area > idx_b_max) {
+			idx_b = i;
+			idx_b_max = area;
+		}
+	}
+	for (int r = 0; r < labelImage.rows; ++r) {
+		for (int c = 0; c < labelImage.cols; ++c) {
+			int label = labelImage.at<int>(r, c);
+			int type;
+			if (label == 0) {
+				type = 0;
+			} else if (label == idx_b) {
+				type = 1;
+			} else if (label > 0) {
+				int area = stats.at<int>(label,CV_AREA);
+				if (area < area_limit) {
+					type = 3;
+				} else {
+					type = 2;
+				}
+			}
+			label = type;
+		}
+	}
+	if (show) {
+		Vec3b col0(0, 0, 0);
+		Vec3b col1(255, 255, 255);
+		Vec3b col2(0, 255, 0);
+		Vec3b col3(255, 0, 0);
+		Mat dst(Size(binImage.cols*2,binImage.rows*2), CV_8UC3);
+		for(int r = 0; r < binImage.rows; ++r){
+			for(int c = 0; c < binImage.cols; ++c){
+				{
+					int type = labelImage.at<int>(r, c);
+					Vec3b &pixel = dst.at<Vec3b>(r, c);
+					if  (type == 0) {
+						pixel = col0;
+					} else if  (type == 1) {
+						pixel = col1;
+					} else if  (type == 2) {
+						pixel = col2;
+					} else {
+						pixel = col3;
+					}
+				}
+				{
+					Vec3b &pixel = dst.at<Vec3b>(binImage.rows+r, c);
+					Vec3b &color = myImage.at<Vec3b>(r, c);
+					pixel = color;
+				}
+				{
+					Vec3b &pixel = dst.at<Vec3b>(r, binImage.cols+c);
+					int v = gray.at<unsigned char>(r, c);
+					pixel = Vec3b(v,v,v);
+				}
+			}
+		}
+		// imshow("Color", myImage);
+		// imshow("Gray", gray);
+		// imshow("Binary", bin);
+		imshow("Comp", dst);
+		waitKey(1);
+	}
+	return labelImage;
+}
+
+
+void gui_window_implementation::camLoop(std::stop_token st) {
+	bool show = true;
+	while (not st.stop_requested()) {
+		Mat labelImage = getLabelImage(show);
+		camBuf.produce([&labelImage](std::span< Mat > data) { data[0] = labelImage.clone(); });
+	}
+	printf("Finishing camloop\n");
+}
+
+void gui_window_implementation::sdlLoop(std::stop_token st) {
+	
+}
+
 
 int gui_window_implementation::eventloop() {
 	SDL_Event event;
@@ -534,76 +621,26 @@ int gui_window_implementation::eventloop() {
 	//SDL_RenderDrawLine(sdl_renderer, 0, 0, 200, 200);
     SDL_RenderPresent( sdl_renderer );
 
-
-	Mat binImage, labelImage;
-	binImage = GetBin(true);
-
-	Mat stats, centroids;
-	int nLabels = connectedComponentsWithStats(binImage, labelImage, stats, centroids, 8, CV_32S);
-
-	const int CV_AREA = ConnectedComponentsTypes::CC_STAT_AREA;
-	const int area_limit = 200;
-	int idx_b = 0;
-	int idx_b_max = 0;
-	for (size_t i=1;i<nLabels;i++) {
-		int area = stats.at<int>(i,CV_AREA);
-		if (area < area_limit) continue;
-		if (area > idx_b_max) {
-			idx_b = i;
-			idx_b_max = area;
-		}
-	}
-	if (idx_b != 0) {
-		printf("area[0] = %d, area[%d] = %d (%d)\n", stats.at<int>(0,CV_AREA), idx_b, stats.at<int>(idx_b,CV_AREA), idx_b_max);
-	}
-	
-	Vec3b col0(0, 0, 0);
-	Vec3b col1(255, 255, 255);
-	Vec3b col2(0, 255, 0);
-	Vec3b col3(255, 0, 0);
-	Mat dst(binImage.size(), CV_8UC3);
-	for(int r = 0; r < dst.rows; ++r){
-		for(int c = 0; c < dst.cols; ++c){
-			int label = labelImage.at<int>(r, c);
-			Vec3b &pixel = dst.at<Vec3b>(r, c);
-			int type;
-			if (label == 0) {
-				type = 0;
-			} else if (label == idx_b) {
-				type = 1;
-			} else if (label > 0) {
-				int area = stats.at<int>(label,CV_AREA);
-				if (area < area_limit) {
-					type = 3;
-				} else {
-					type = 2;
-				}
-			}
-			if  (type == 0) {
-				pixel = col0;
-			} else if  (type == 1) {
-				pixel = col1;
-			} else if  (type == 2) {
-				pixel = col2;
-			} else {
-				pixel = col3;
-			}
-			int x = c + subreg.x;
-			int y = r + subreg.y;
-			if (x - subreg.x < subreg.w && y - subreg.y < subreg.h) {
-				size_t off = reg.offset(x,y);
-				if (type == 1 or type == 2) {
-					nodetypes[off] = NODE_Wall;
-				} else {
-					nodetypes[off] = nodetypes_save[off];
+	// for (Mat& labelImage : camBuf.consume()) {
+	{
+		Mat labelImage = getLabelImage(true);
+		for(int r = 0; r < labelImage.rows; ++r){
+			for(int c = 0; c < labelImage.cols; ++c){
+				int type = labelImage.at<int>(r, c);
+				int x = c + subreg.x;
+				int y = r + subreg.y;
+				if (x - subreg.x < subreg.w && y - subreg.y < subreg.h) {
+					size_t off = reg.offset(x,y);
+					if (type == 1 or type == 2) {
+						nodetypes[off] = NODE_Wall;
+					} else {
+						nodetypes[off] = nodetypes_save[off];
+					}
 				}
 			}
 		}
+		solver->lattice->FlagOverwrite(nodetypes.data(),reg);
 	}
-	imshow("Comp", dst);
-	waitKey(1);
-
-	solver->lattice->FlagOverwrite(nodetypes.data(),reg);
 
 	while( SDL_PollEvent(&event) )
 	{

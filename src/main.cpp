@@ -416,7 +416,7 @@ int main ( int argc, char * argv[] )
 	solver->lattice->Callback((int(*)(int, int, void*)) MainCallback, (void*) solver);
 
 	#ifdef WITH_SDL_WINDOW
-		window = new gui_window(800,600,solver);
+		window = new gui_window(960,540,solver);
 	#endif
 
 

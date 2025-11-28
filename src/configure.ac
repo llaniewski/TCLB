@@ -65,9 +65,9 @@ AC_ARG_WITH([storage],
 	AS_HELP_STRING([--with-storage],
 		[type of storage used: half, half-shift, float, float-shift, double]))
 
-AC_ARG_ENABLE([cpp11],
-	AS_HELP_STRING([--enable-cpp11],
-		[enable C++ 11 standard]))
+AC_ARG_ENABLE([cpp],
+	AS_HELP_STRING([--with-cpp],
+		[C++ standard to use (11/17/20/23)]))
 
 AC_ARG_WITH([cuda-arch],
 	AS_HELP_STRING([--with-cuda-arch=arch],
@@ -171,6 +171,8 @@ AC_ARG_WITH([cpp-flags],
 		[privide additionals flags for the compiler]),
 	[CONF_CPPFLAGS="$withval"])		
 
+
+minimal_cpp=11
 NVFLAGS=""
 
 if test "x${COMPILER_BINDIR}" != "x"
@@ -423,6 +425,7 @@ fi
 
 if test "x${enable_sdl}" == "xyes"
 then
+	minimal_cpp=20
 	CPPFLAGS="${CPPFLAGS} $(pkg-config sdl2 --cflags)"
 	LDFLAGS="${LDFLAGS} $(pkg-config sdl2 --libs)"
 	AC_DEFINE([WITH_SDL_WINDOW], [1], [Making a sdl version])
@@ -864,11 +867,24 @@ then
 fi
 
 
-if test "x${enable_cpp11}" != "xno"
+if test "x${with_cpp}" != "x"
 then
-	CPPFLAGS="${CPPFLAGS} -std=c++11"
-	NVFLAGS="${NVFLAGS} -std=c++11"
+	if test "${with_cpp}" -lt "${minimal_cpp}"
+	then
+		AC_MSG_ERROR([Requested CPP standard below minimal needed for other options])
+	else
+		cpp_standard="${with_cpp}"
+	fi
+else
+	cpp_standard="${minimal_cpp}"
 fi
+
+if test "x${cpp_standard}" != "x"
+then
+	CPPFLAGS="${CPPFLAGS} -std=c++${cpp_standard}"
+	NVFLAGS="${NVFLAGS} -std=c++${cpp_standard}"
+fi
+
 
 AC_CHECK_HEADERS([chrono],[AC_DEFINE([USE_STEADY_CLOCK], [1], [Using chrono's steady_clock])],[])
 

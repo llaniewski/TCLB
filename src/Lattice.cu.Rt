@@ -1040,7 +1040,7 @@ void Lattice::IterateAction(int action, int niter, int iter_type)
 void Lattice::FlagOverwrite(flag_t * mask, lbRegion over)
 {
 	if (region.isEqual(over)) {
-		output("overwriting all flags\n");
+		debug1("overwriting all flags\n");
 		CudaMemcpy(container->NodeType, mask, sizeof(flag_t)*region.sizeL(), CudaMemcpyHostToDevice);
 	} else {
 		lbRegion inter = region.intersect(over);
