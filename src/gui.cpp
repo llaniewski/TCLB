@@ -44,6 +44,7 @@ class gui_window_implementation {
 	int calibrate(bool show = true);
 	Mat dark;
 	Matx<double, least_sq_size, 1> filter_coef;
+	cv::aruco::ArucoDetector aruco_detector;
 	double lower, upper;
 	Mat getLabelImage(bool show);
 	void camLoop(std::stop_token st);
@@ -379,6 +380,12 @@ gui_window_implementation::gui_window_implementation(int window_width_, int wind
 	cap.set(CAP_PROP_AUTOFOCUS, 0);
 //                   zoom_absolute 0x009a090d (int)    : min=100 max=500 step=1 default=100 value=100 flags=has-min-max
 
+	cv::aruco::DetectorParameters detectorParams = cv::aruco::DetectorParameters();
+	detectorParams.adaptiveThreshWinSizeStep = 5;
+	cv::aruco::Dictionary dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_250);
+	aruco_detector = cv::aruco::ArucoDetector(dictionary, detectorParams);
+
+
 
 	SDL_Init(SDL_INIT_VIDEO);
 
@@ -461,7 +468,7 @@ gui_window_implementation::gui_window_implementation(int window_width_, int wind
 	
 	//std::latch calibrated(2);
 	output("Calibrating...\n");
-	calibrate(false);
+	calibrate(true);
 	output("Calibrated\n");
 	destroyAllWindows();
     // camThread = std::jthread{[this](std::stop_token st) {	
@@ -497,7 +504,7 @@ Mat gui_window_implementation::getLabelImage(bool show) {
 				gr -= all[i] * filter_coef(i,0);
 			}
 			gray.at<unsigned char>(x,y) = gr + 128;
-			if (gr < -20) {
+			if (gr < -40) {
 				low.at<unsigned char>(x, y) = 255;
 			} else {
 				low.at<unsigned char>(x, y) = 0;
@@ -522,8 +529,8 @@ Mat gui_window_implementation::getLabelImage(bool show) {
 	}
 	for (int r = 0; r < labelImage.rows; ++r) {
 		for (int c = 0; c < labelImage.cols; ++c) {
-			int label = labelImage.at<int>(r, c);
-			int type;
+			auto& label = labelImage.at<int>(r, c);
+			int type = 0;
 			if (label == 0) {
 				type = 0;
 			} else if (label == idx_b) {
@@ -539,6 +546,40 @@ Mat gui_window_implementation::getLabelImage(bool show) {
 			label = type;
 		}
 	}
+
+	vector<int> ids;
+	vector<vector<Point2f> > corners, rejected;
+
+	// detect markers and estimate pose
+	aruco_detector.detectMarkers(myImage, corners, ids, rejected);
+
+	size_t nMarkers = corners.size();
+	vector<Vec3d> rvecs(nMarkers), tvecs(nMarkers);
+
+	Mat graycopy;
+	gray.copyTo(graycopy);
+	if(!ids.empty()) {
+		for (size_t i=0; i<ids.size(); i++) {
+			{
+				vector<Point2i> cr(corners[i].begin(), corners[i].end());
+				//fillPoly(labelImage, cr,1);
+			}
+			{
+				auto& cr = corners[i];
+				double cx = ( cr[3].x + cr[2].x + cr[1].x + cr[0].x )/4.;
+				double cy = ( cr[3].y + cr[2].y + cr[1].y + cr[0].y )/4.;
+				double vx = ( -cr[3].y - cr[2].x + cr[1].y + cr[0].x )/4.;
+				double vy = ( cr[3].x - cr[2].y - cr[1].x + cr[0].y )/4.;
+				circle(labelImage, Point2i(cx,cy), 70, 1, FILLED);
+			}
+		}
+		cv::aruco::drawDetectedMarkers(graycopy, corners, ids);
+	}
+
+	if(!rejected.empty()) {
+		cv::aruco::drawDetectedMarkers(graycopy, rejected, noArray(), Scalar(100, 0, 255));
+	}
+
 	if (show) {
 		Vec3b col0(0, 0, 0);
 		Vec3b col1(255, 255, 255);
@@ -568,6 +609,11 @@ Mat gui_window_implementation::getLabelImage(bool show) {
 				{
 					Vec3b &pixel = dst.at<Vec3b>(r, binImage.cols+c);
 					int v = gray.at<unsigned char>(r, c);
+					pixel = Vec3b(v,v,v);
+				}
+				{
+					Vec3b &pixel = dst.at<Vec3b>(binImage.rows+r, binImage.cols+c);
+					int v = graycopy.at<unsigned char>(r, c);
 					pixel = Vec3b(v,v,v);
 				}
 			}
